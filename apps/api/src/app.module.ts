@@ -2,11 +2,19 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { queueNames } from '@lore/shared';
 import { env } from './config';
-import { InfrastructureService } from './infrastructure.service';
+import { DatabaseModule } from './database/database.module';
+import { AuthModule } from './auth/auth.module';
+import { ChannelsModule } from './channels/channels.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { HealthController } from './health.controller';
 const redis = new URL(env.REDIS_URL);
 @Module({
   imports: [
+    DatabaseModule,
+    AuthModule,
+    ChannelsModule,
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     BullModule.forRoot({
       connection: {
         host: redis.hostname,
@@ -31,6 +39,6 @@ const redis = new URL(env.REDIS_URL);
     ),
   ],
   controllers: [HealthController],
-  providers: [InfrastructureService],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

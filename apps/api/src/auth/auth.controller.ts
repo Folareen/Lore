@@ -1,0 +1,96 @@
+import {
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Post,
+  Query,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import type { CookieOptions, Request, Response } from 'express';
+import { z } from 'zod';
+import { env } from '../config';
+import { AuthService, oauthMaxAge, sessionMaxAge } from './auth.service';
+import {
+  AuthenticatedRequest,
+  assertMutation,
+  cookieValue,
+  SessionGuard,
+} from './session.guard';
+const options: CookieOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/api',
+};
+const stateOptions: CookieOptions = { ...options, path: '/api/auth/twitch' };
+const callbackSchema = z.object({
+  state: z.string().regex(/^[a-f0-9]{64}$/),
+  code: z.string().min(1).max(2048).optional(),
+  error: z.string().max(200).optional(),
+});
+@Controller('auth')
+export class AuthController {
+  constructor(@Inject(AuthService) private readonly auth: AuthService) {}
+  @Get('twitch')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  async start(@Res() response: Response) {
+    response.setHeader('Cache-Control', 'no-store');
+    const login = await this.auth.beginLogin();
+    response.cookie('lore_oauth', login.browser, {
+      ...stateOptions,
+      maxAge: oauthMaxAge,
+    });
+    response.redirect(login.url);
+  }
+  @Get('twitch/callback')
+  async callback(
+    @Query() query: unknown,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Referrer-Policy', 'no-referrer');
+    response.clearCookie('lore_oauth', stateOptions);
+    const parsed = callbackSchema.safeParse(query);
+    if (!parsed.success)
+      throw new BadRequestException('Invalid OAuth callback');
+    const browser = cookieValue(request, 'lore_oauth');
+    if (!browser || !/^[a-f0-9]{64}$/.test(browser))
+      throw new UnauthorizedException('OAuth browser binding missing');
+    const token = await this.auth.completeLogin(
+      parsed.data.state,
+      browser,
+      parsed.data.error ? undefined : parsed.data.code,
+      cookieValue(request, 'lore_session'),
+    );
+    response.cookie('lore_session', token, {
+      ...options,
+      maxAge: sessionMaxAge,
+    });
+    response.redirect(`${env.APP_ORIGIN}/api/auth/session`);
+  }
+  @Get('session')
+  @UseGuards(SessionGuard)
+  session(@Req() request: AuthenticatedRequest) {
+    return request.auth;
+  }
+  @Post('logout')
+  @HttpCode(204)
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const token = cookieValue(request, 'lore_session');
+    if (token) {
+      assertMutation(request, token);
+      await this.auth.logout(token);
+    }
+    response.clearCookie('lore_session', options);
+  }
+}

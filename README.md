@@ -4,7 +4,7 @@ Every stream has a story. Lore remembers it.
 
 A submission for the **Codex x TwitchCon Hackathon**.
 
-pnpm monorepo for the Lore Twitch community memory product. This is a runnable project foundation; authentication, Twitch integrations, AI workflows, and the three product surfaces are still to be implemented.
+pnpm monorepo for the Lore Twitch community memory product. Includes backend Twitch authentication, channel settings, and team management. Live event capture, AI workflows, and the three product surfaces remain to be implemented.
 
 ## Local setup
 
@@ -42,6 +42,7 @@ pnpm build               # Build shared, API, and web in order
 pnpm typecheck
 pnpm lint
 pnpm test
+pnpm test:integration    # Requires TEST_DATABASE_URL and local PostgreSQL/Redis
 pnpm format:check
 pnpm db:logs
 pnpm db:down              # Stops services; named data volumes remain
@@ -52,11 +53,15 @@ pnpm db:seed              # Idempotent demo channel seed
 
 Run `pnpm --filter @lore/api start` and `pnpm --filter @lore/web start` after building to run without watchers. `pnpm db:seed` creates only a channel labeled **Demo fixture**; it is not yet the complete hosted demo dataset.
 
-The initial migration enables pgvector and creates the bootstrap channel table. Model selection and vector dimensions remain open; no embedding dimension is guessed here.
+Migrations enable pgvector and create users, channels, memberships, OAuth connections, OAuth state, sessions, and audit records. Domain tables and vector dimensions follow their features.
 
 ## Configuration
 
 The root [`.env.example`](.env.example) lists local settings. Copy it to `.env`; keep real credentials out of Git. The applications, migration tools, and Compose read this root file. Restart the applications after changing it. Provider and OAuth secrets belong only in the API; never expose them through `NEXT_PUBLIC_` variables.
+
+For Twitch login, register `http://localhost:3000/api/auth/twitch/callback` and configure the three auth values in `.env` using `.env.example` as the reference. Generate the encryption key with `openssl rand -base64 32`. See [backend conventions](docs/backend.md#auth-and-management-api) for endpoints and session/role behavior. Without credentials, local health checks work and login returns 503.
+
+Integration tests use mocked Twitch responses and real PostgreSQL/Redis. Set `TEST_DATABASE_URL` explicitly to a local test-capable connection (for example, the URL in `.env.example`). Its user needs `CREATEDB`; each run creates and drops a uniquely named database. CI runs these tests too.
 
 If services fail, start Docker Desktop and check `pnpm db:logs`. Changing PostgreSQL initialization credentials does not change an existing database volume. `pnpm db:down` preserves data; adding `--volumes` to Compose shutdown deletes it.
 
