@@ -19,17 +19,11 @@ Condensed from [pipethedev’s TypeScript Anti-Slop gist](https://gist.github.co
 11. Explain constraints in comments; remove obsolete code after refactoring.
 12. Review added complexity and preserve existing behavior during cleanup.
 
-## Applying these rules in Lore
+## Shared contracts
 
-- **Contracts:** use Zod in `packages/shared` for contracts consumed across workspaces and infer types with `z.infer`. Keep API-only configuration and provider details inside `apps/api`.
-- **Entry points:** parse HTTP input, Twitch payloads, environment configuration, provider responses, and persisted BullMQ payloads at their respective receiving boundaries. A worker is a new boundary even if a producer validated its input earlier. Zod’s `safeParse` is appropriate when rejection needs explicit handling.
-- **Authentication and authorization:** schema validation establishes shape. NestJS must still check sessions, channel membership, visibility, and allowed transitions for each protected operation. EventSub verification must use the exact raw request bytes.
-- **Persistence:** use Drizzle’s inferred row and insert types. Keep explicit public response projections so private evidence and credentials cannot leave the API accidentally.
-- **Architecture:** use standard NestJS modules and injection. Keep channel-scoped repositories and the OpenAI/Gemini `AiProvider` interface because they enforce ownership and support distinct implementations. Framework controllers can delegate to services.
-- **Assertions:** a TypeScript assertion does not validate runtime data. Do not cast Twitch, AI, queue, or request payloads into trusted types. Local integration assertions need a clear contract; do not use `as any` to suppress a mismatch.
-- **Reliability:** preserve bounded retries, idempotency, durable event acceptance, dependency health reporting, and secret redaction when simplifying code.
+Use Zod schemas and inferred types in `packages/shared` for cross-workspace contracts. Keep feature-specific helpers with their feature. Type assertions do not validate external data; do not use `as any` to hide mismatches. Keep `safeParse` where validation failures need explicit handling.
 
-MongoDB-specific examples from the source are outside this PostgreSQL/Drizzle project. The shared workspace remains the home for shared contracts, rather than miscellaneous utilities.
+Stack-specific rules live in [frontend conventions](frontend.md) and [backend conventions](backend.md).
 
 ## Before completing a change
 

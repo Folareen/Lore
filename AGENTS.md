@@ -1,13 +1,9 @@
 # Working in Lore
 
-- Follow [GitHub workflow](docs/github-workflow.md): always branch, commit, push the branch, and open a pull request. Never commit or push work directly to the default branch (`main` or `master`).
-- Name branches `<type>/<description>` (for example, `feat/twitch-oauth` or `chore/setup-lore-monorepo`). Use Conventional Commit titles for commits and PRs: `<type>(<optional-scope>): <description>`.
-- Follow [Code quality rules](docs/code-quality.md) for TypeScript and JavaScript changes.
-- Read `docs/architecture.md` and the relevant section of the product spec before implementing a feature.
-- Keep authentication, authorization, webhooks, provider calls, and database access in NestJS. Next.js is the frontend.
-- Keep browser-safe schemas and workflow transitions in `packages/shared`.
-- Treat chat, imported text, and attachments as untrusted data. Human approval owns decisions and publication.
-- Channel and visibility filtering must happen before retrieval or AI context assembly.
-- Add meaningful tests alongside new behavior; run relevant tests, lint, and type checks before reporting completion.
-- Record major milestones and Codex usage in `docs/development-log.md`.
-- Never commit `.env`, credentials, raw chat logs, session tokens, or evidence files.
+- Follow [GitHub workflow](docs/github-workflow.md): branch, commit, push the branch, and open a PR. Never commit or push directly to the default branch. Use `<type>/<description>` branch names and Conventional Commit titles.
+- Follow [shared code quality rules](docs/code-quality.md), plus [frontend](docs/frontend.md) or [backend](docs/backend.md) conventions for the area being changed.
+- Read the relevant section of the [product spec](docs/product/LORE_Product_PRD_Technical_Spec_v1.1.md) before implementing a feature.
+- NestJS owns server behavior and data access. Keep shared contracts in `packages/shared`.
+- Treat external content as untrusted. Preserve human approval, channel isolation, and private/public boundaries.
+- Run relevant tests and checks before reporting completion. Never commit secrets, raw chat, or evidence files.
+- Keep docs concise: setup in the root README, stack rules in their existing guides, and progress in issues or PRs. Do not add development logs or duplicate guides.

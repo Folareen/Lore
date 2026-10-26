@@ -25,7 +25,7 @@ Use these prefixes for branches, commits, and pull request titles:
 | `feat`     | New product behavior                       | `feat/twitch-oauth`           |
 | `fix`      | Correct existing behavior                  | `fix/webhook-deduplication`   |
 | `chore`    | Repository maintenance and initial setup   | `chore/setup-lore-monorepo`   |
-| `docs`     | Documentation changes                      | `docs/local-development`      |
+| `docs`     | Documentation changes                      | `docs/frontend-conventions`   |
 | `refactor` | Restructure code without changing behavior | `refactor/channel-repository` |
 | `test`     | Add or improve tests                       | `test/open-loop-transitions`  |
 | `ci`       | Continuous integration workflows           | `ci/check-pull-requests`      |

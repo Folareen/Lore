@@ -27,12 +27,12 @@ PostgreSQL uses port **55432** and Redis uses **56379** to reduce conflicts with
 
 ## Workspace
 
-| Path              | Purpose                                                                             |
-| ----------------- | ----------------------------------------------------------------------------------- |
-| `apps/api`        | NestJS: server logic, Drizzle, health checks, BullMQ queue registrations            |
-| `apps/web`        | Next.js App Router, React, Tailwind CSS; frontend only                              |
-| `packages/shared` | Zod schemas, workflow transitions, shared types and queue names                     |
-| `docs`            | Product spec, setup guide, architecture, implementation backlog, development record |
+| Path              | Purpose                                                                  |
+| ----------------- | ------------------------------------------------------------------------ |
+| `apps/api`        | NestJS: server logic, Drizzle, health checks, BullMQ queue registrations |
+| `apps/web`        | Next.js App Router, React, Tailwind CSS; frontend only                   |
+| `packages/shared` | Zod schemas, workflow transitions, shared types and queue names          |
+| `docs`            | Product spec and frontend, backend, code quality, and GitHub conventions |
 
 ## Commands
 
@@ -54,7 +54,13 @@ Run `pnpm --filter @lore/api start` and `pnpm --filter @lore/web start` after bu
 
 The initial migration enables pgvector and creates the bootstrap channel table. Model selection and vector dimensions remain open; no embedding dimension is guessed here.
 
-Environment variables and troubleshooting are in [local development](docs/local-development.md). See the [documentation index](docs/README.md) for the source specification and next implementation steps.
+## Configuration
+
+The root [`.env.example`](.env.example) lists local settings. Copy it to `.env`; keep real credentials out of Git. The applications, migration tools, and Compose read this root file. Restart the applications after changing it. Provider and OAuth secrets belong only in the API; never expose them through `NEXT_PUBLIC_` variables.
+
+If services fail, start Docker Desktop and check `pnpm db:logs`. Changing PostgreSQL initialization credentials does not change an existing database volume. `pnpm db:down` preserves data; adding `--volumes` to Compose shutdown deletes it.
+
+See the [documentation index](docs/README.md) for coding conventions and the product specification.
 
 ## Contributing
 
