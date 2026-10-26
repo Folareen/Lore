@@ -17,3 +17,7 @@ User requested relevant clean-code rules from pipethedev’s TypeScript Anti-Slo
 ## 2026-10-26 — GitHub submission setup
 
 Added Codex x TwitchCon Hackathon submission wording to the README and documented the branch, commit, push, and pull request workflow in `docs/github-workflow.md` and `AGENTS.md`. Prepared the initial project branch from the existing remote `master` history, retaining its MIT license.
+
+## 2026-10-26 — Conventional naming
+
+Standardized branch names as `<type>/<description>` and commit/PR titles using Conventional Commit prefixes. Renamed the setup branch to `chore/setup-lore-monorepo`; its original setup commit already uses `chore:`.

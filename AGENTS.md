@@ -1,7 +1,7 @@
 # Working in Lore
 
 - Follow [GitHub workflow](docs/github-workflow.md): always branch, commit, push the branch, and open a pull request. Never commit or push work directly to the default branch (`main` or `master`).
-
+- Name branches `<type>/<description>` (for example, `feat/twitch-oauth` or `chore/setup-lore-monorepo`). Use Conventional Commit titles for commits and PRs: `<type>(<optional-scope>): <description>`.
 - Follow [Code quality rules](docs/code-quality.md) for TypeScript and JavaScript changes.
 - Read `docs/architecture.md` and the relevant section of the product spec before implementing a feature.
 - Keep authentication, authorization, webhooks, provider calls, and database access in NestJS. Next.js is the frontend.
