@@ -2,6 +2,7 @@
 
 Local setup and commands live in the [project README](../README.md).
 
+- [Design system](design-system.md)
 - [Frontend conventions](frontend.md)
 - [Backend conventions](backend.md)
 - [Shared code quality rules](code-quality.md)

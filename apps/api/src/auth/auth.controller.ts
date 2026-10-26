@@ -26,7 +26,7 @@ const options: CookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',
   sameSite: 'lax',
-  path: '/api',
+  path: '/',
 };
 const stateOptions: CookieOptions = { ...options, path: '/api/auth/twitch' };
 const callbackSchema = z.object({
@@ -73,7 +73,17 @@ export class AuthController {
       ...options,
       maxAge: sessionMaxAge,
     });
-    response.redirect(`${env.APP_ORIGIN}/api/auth/session`);
+    response.redirect(`${env.APP_ORIGIN}/app`);
+  }
+  @Get('status')
+  status() {
+    return {
+      twitchConfigured: Boolean(
+        env.TWITCH_CLIENT_ID &&
+        env.TWITCH_CLIENT_SECRET &&
+        env.AUTH_ENCRYPTION_KEY,
+      ),
+    };
   }
   @Get('session')
   @UseGuards(SessionGuard)

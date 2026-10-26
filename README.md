@@ -4,7 +4,7 @@ Every stream has a story. Lore remembers it.
 
 A submission for the **Codex x TwitchCon Hackathon**.
 
-pnpm monorepo for the Lore Twitch community memory product. Includes backend Twitch authentication, channel settings, and team management. Live event capture, AI workflows, and the three product surfaces remain to be implemented.
+pnpm monorepo for the Lore Twitch community memory product. Includes Twitch sign-in, channel settings, and team management with a light/dark frontend. Live event capture, AI workflows, and the three product surfaces remain to be implemented.
 
 ## Local setup
 
@@ -21,7 +21,7 @@ pnpm db:seed
 pnpm dev
 ```
 
-Open the frontend at http://localhost:3000. The API is at http://127.0.0.1:4000/api/health and is also available through http://localhost:3000/api/health. API health checks PostgreSQL and Redis and returns HTTP 503 if either is unavailable.
+Open the landing page at http://localhost:3000. Explore the labeled workspace fixtures at http://localhost:3000/preview without a Twitch account. Real authenticated pages live under `/app`; sign-in is at `/login`. The API is at http://127.0.0.1:4000/api/health and is also available through http://localhost:3000/api/health. API health checks PostgreSQL and Redis and returns HTTP 503 if either is unavailable.
 
 PostgreSQL uses port **55432** and Redis uses **56379** to reduce conflicts with other local projects. Both bind to localhost. Set ports and matching connection URLs in `.env` together if you change them. Docker starts only the database and Redis; the applications run on your host with hot reload.
 
