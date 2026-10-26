@@ -1,1 +1,61 @@
 # Lore
+
+Every stream has a story. Lore remembers it.
+
+A submission for the **Codex x TwitchCon Hackathon**.
+
+pnpm monorepo for the Lore Twitch community memory product. This is a runnable project foundation; authentication, Twitch integrations, AI workflows, and the three product surfaces are still to be implemented.
+
+## Local setup
+
+Requires Node 22 (see `.nvmrc`), pnpm 10.32.1, and Docker with Compose v2.
+
+```sh
+corepack enable
+corepack prepare pnpm@10.32.1 --activate
+pnpm install
+cp .env.example .env
+pnpm db:up
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
+```
+
+Open the frontend at http://localhost:3000. The API is at http://127.0.0.1:4000/api/health and is also available through http://localhost:3000/api/health. API health checks PostgreSQL and Redis and returns HTTP 503 if either is unavailable.
+
+PostgreSQL uses port **55432** and Redis uses **56379** to reduce conflicts with other local projects. Both bind to localhost. Set ports and matching connection URLs in `.env` together if you change them. Docker starts only the database and Redis; the applications run on your host with hot reload.
+
+## Workspace
+
+| Path              | Purpose                                                                             |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| `apps/api`        | NestJS: server logic, Drizzle, health checks, BullMQ queue registrations            |
+| `apps/web`        | Next.js App Router, React, Tailwind CSS; frontend only                              |
+| `packages/shared` | Zod schemas, workflow transitions, shared types and queue names                     |
+| `docs`            | Product spec, setup guide, architecture, implementation backlog, development record |
+
+## Commands
+
+```sh
+pnpm dev                 # Build shared contracts, then watch all workspaces
+pnpm build               # Build shared, API, and web in order
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm format:check
+pnpm db:logs
+pnpm db:down              # Stops services; named data volumes remain
+pnpm db:generate          # Generate a migration after editing the Drizzle schema
+pnpm db:migrate           # Apply checked-in migrations
+pnpm db:seed              # Idempotent demo channel seed
+```
+
+Run `pnpm --filter @lore/api start` and `pnpm --filter @lore/web start` after building to run without watchers. `pnpm db:seed` creates only a channel labeled **Demo fixture**; it is not yet the complete hosted demo dataset.
+
+The initial migration enables pgvector and creates the bootstrap channel table. Model selection and vector dimensions remain open; no embedding dimension is guessed here.
+
+Environment variables and troubleshooting are in [local development](docs/local-development.md). See the [documentation index](docs/README.md) for the source specification and next implementation steps.
+
+## Contributing
+
+Follow the [GitHub workflow](docs/github-workflow.md): create a branch, commit, push that branch, and open a pull request against the default branch.

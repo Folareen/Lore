@@ -1,0 +1,101 @@
+{
+  "id": "0adec6b4-6517-459f-a97c-8d0387d9381f",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.channels": {
+      "name": "channels",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "twitch_channel_id": {
+          "name": "twitch_channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origin": {
+          "name": "origin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chat_retention_days": {
+          "name": "chat_retention_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 7
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "channels_slug_unique": {
+          "name": "channels_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        },
+        "channels_twitch_channel_id_unique": {
+          "name": "channels_twitch_channel_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "twitch_channel_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "channels_retention_bootstrap_limit": {
+          "name": "channels_retention_bootstrap_limit",
+          "value": "\"channels\".\"chat_retention_days\" BETWEEN 1 AND 7"
+        },
+        "channels_origin_valid": {
+          "name": "channels_origin_valid",
+          "value": "\"channels\".\"origin\" IN ('live_twitch', 'manual_import', 'demo_fixture')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
