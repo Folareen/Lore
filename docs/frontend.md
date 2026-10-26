@@ -1,6 +1,6 @@
 # Frontend conventions
 
-Applies to `apps/web`: Next.js App Router, React, TypeScript, and Tailwind CSS. Follow the shared [code quality rules](code-quality.md).
+Applies to `apps/web`: Next.js App Router, React, TypeScript, and Tailwind CSS. Follow the shared [code quality rules](code-quality.md) and [design system](design-system.md).
 
 - Organize routes and layouts in `src/app`. Keep feature components and hooks near their consumers; move components into a shared folder when multiple features need them.
 - Use PascalCase for React components, `useX` for hooks, and kebab-case for ordinary files. Preserve Next.js special filenames such as `page.tsx` and `layout.tsx`.
@@ -12,6 +12,7 @@ Applies to `apps/web`: Next.js App Router, React, TypeScript, and Tailwind CSS. 
 - Provide loading, empty, error, and submitting states. Show actionable failure messages and prevent duplicate submissions.
 - Use semantic HTML, labeled inputs, keyboard-accessible controls, visible focus, and responsive layouts. Use links for navigation and buttons for actions.
 - Render chat and AI content as text by default. Do not inject untrusted HTML. Hiding a control in the UI never substitutes for API permission checks.
+- Ship features end to end with their backend behavior and contracts. A backend endpoint alone does not complete a user-facing feature.
 - Test meaningful interactions and permission-dependent UI behavior as features are added. Verify mobile layout and keyboard navigation for changed screens.
 
 Read the installed Next.js guides referenced by `apps/web/AGENTS.md` when using framework APIs.

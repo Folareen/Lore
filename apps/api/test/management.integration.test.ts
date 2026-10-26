@@ -89,11 +89,12 @@ async function login(code: keyof typeof identities): Promise<Login> {
     { Cookie: start.cookie },
   );
   expect(response.status).toBe(302);
-  expect(response.headers.get('location')).toBe(`${origin}/api/auth/session`);
+  expect(response.headers.get('location')).toBe(`${origin}/app`);
   const rawCookie = response.headers
     .getSetCookie()
     .find((value) => value.startsWith('lore_session='))!;
   expect(rawCookie).toContain('HttpOnly');
+  expect(rawCookie).toContain('Path=/;');
   expect(rawCookie).toContain('SameSite=Lax');
   const cookie = rawCookie.split(';')[0];
   const token = cookie.split('=')[1];
@@ -211,6 +212,21 @@ afterAll(async () => {
   await admin.end();
 });
 describe('auth and channel management over HTTP and PostgreSQL', () => {
+  it('reports login availability without exposing secrets and redirects browser OAuth failures safely', async () => {
+    const status = await request('/auth/status');
+    expect(status.status).toBe(200);
+    expect(await status.json()).toEqual({ twitchConfigured: true });
+    const failed = await request(
+      '/auth/twitch/callback?state=bad',
+      undefined,
+      'GET',
+      undefined,
+      { Accept: 'text/html' },
+    );
+    expect(failed.status).toBe(302);
+    expect(failed.headers.get('location')).toBe(`${origin}/login?error=signin`);
+  });
+
   it('stores encrypted credentials and hashed sessions, returning only safe user fields', async () => {
     const result = await pool.query(
       'SELECT encrypted_tokens FROM oauth_connections WHERE user_id = $1',

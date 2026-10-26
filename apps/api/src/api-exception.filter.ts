@@ -6,12 +6,22 @@ import {
   HttpException,
   Logger,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
+import { env } from './config';
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(ApiExceptionFilter.name);
   catch(error: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
+    const request = host.switchToHttp().getRequest<Request>();
+    if (
+      error instanceof HttpException &&
+      request.path.startsWith('/api/auth/twitch') &&
+      request.get('accept')?.includes('text/html')
+    ) {
+      response.redirect(`${env.APP_ORIGIN}/login?error=signin`);
+      return;
+    }
     if (error instanceof HttpException) {
       const body = error.getResponse();
       response

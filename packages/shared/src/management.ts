@@ -29,3 +29,23 @@ export const channelResponseSchema = z.strictObject({
   chatRetentionDays: z.number().int(),
   connected: z.boolean(),
 });
+
+export const authStatusSchema = z.strictObject({
+  twitchConfigured: z.boolean(),
+});
+export const membershipResponseSchema = z.strictObject({
+  userId: z.uuid(),
+  twitchUserId: z.string(),
+  login: z.string(),
+  displayName: z.string(),
+  role: teamRoleSchema,
+  verificationState: z.literal('owner_approved'),
+});
+export const membershipGrantResponseSchema = z.strictObject({
+  userId: z.uuid(),
+  role: teamRoleSchema,
+  verificationState: z.literal('owner_approved'),
+});
+export type Session = z.infer<typeof sessionResponseSchema>;
+export type Channel = z.infer<typeof channelResponseSchema>;
+export type Membership = z.infer<typeof membershipResponseSchema>;

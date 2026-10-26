@@ -1,0 +1,7 @@
+Built-in ImageGen; original project illustration.
+
+Initial prompt:
+Three original friendly indie-game community characters around a purple keepsake box of colorful memory tickets: violet headphone-wearing ghost, coral creature in mint cap, butter-yellow star. Clean editorial illustration with restrained shading, purple/lilac/coral/mint/cream palette, transparent cutout, no text, logos, UI, frames, or background.
+
+Final edit prompt:
+Preserve the three-character composition, identities, headphones, cap, star, ticket and purple memory box. Remove colored glow, bloom, haze, vignette and dark background. Use completely transparent alpha outside crisp cutout silhouettes. Flatten shading to matte colored paper with restrained dimension. Use simple dark oval eyes and a cheerful indie-community feel. No text or extra objects.
