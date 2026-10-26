@@ -5,6 +5,29 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: lore
+          POSTGRES_PASSWORD: lore_test
+          POSTGRES_DB: lore_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lore -d lore_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://lore:lore_test@127.0.0.1:5432/lore_test
+      DATABASE_URL: postgresql://lore:lore_test@127.0.0.1:5432/lore_test
+      REDIS_URL: redis://127.0.0.1:6379
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -17,4 +40,5 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm test:integration
       - run: pnpm build

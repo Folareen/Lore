@@ -21,7 +21,8 @@
     "db:logs": "docker compose logs -f postgres redis",
     "db:generate": "pnpm --filter @lore/api db:generate",
     "db:migrate": "pnpm --filter @lore/api db:migrate",
-    "db:seed": "pnpm --filter @lore/api db:seed"
+    "db:seed": "pnpm --filter @lore/api db:seed",
+    "test:integration": "pnpm --filter @lore/shared build && pnpm --filter @lore/api build && vitest run --config vitest.integration.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
