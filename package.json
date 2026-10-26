@@ -1,0 +1,35 @@
+{
+  "name": "lore",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22.19.0 <23",
+    "pnpm": ">=10 <11"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @lore/shared build && pnpm -r --parallel dev",
+    "build": "pnpm --filter @lore/shared build && pnpm --filter @lore/api build && pnpm --filter @lore/web build",
+    "typecheck": "pnpm --filter @lore/shared build && pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres redis",
+    "db:generate": "pnpm --filter @lore/api db:generate",
+    "db:migrate": "pnpm --filter @lore/api db:migrate",
+    "db:seed": "pnpm --filter @lore/api db:seed"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "eslint": "^10.0.0",
+    "typescript-eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "@types/node": "^22.0.0"
+  }
+}

@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+node_modules
+dist
+.next
+coverage
+docs/product/LORE_Product_PRD_Technical_Spec_v1.1.md
+apps/api/drizzle/meta
+**/next-env.d.ts
