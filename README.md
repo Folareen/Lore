@@ -4,7 +4,7 @@ Every stream has a story. Lore remembers it.
 
 A submission for the **Codex x TwitchCon Hackathon**.
 
-pnpm monorepo for the Lore Twitch community memory product. Includes Twitch sign-in, channel settings, team management, and opt-in EventSub ingestion with a light/dark frontend. AI workflows and the three product surfaces follow in later features.
+pnpm monorepo for the Lore Twitch community memory product. Includes Twitch sign-in, channel settings, team management, opt-in EventSub ingestion, promise capture, and a next-stream brief with a light/dark frontend. AI extraction, moderator workflows and public community memory follow in later features.
 
 ## Local setup
 
@@ -22,6 +22,8 @@ pnpm dev
 ```
 
 Open the landing page at http://localhost:3000. Explore the labeled workspace fixtures at http://localhost:3000/preview without a Twitch account. Real authenticated pages live under `/app`; sign-in is at `/login`. The API is at http://127.0.0.1:4000/api/health and is also available through http://localhost:3000/api/health. API health checks PostgreSQL and Redis and returns HTTP 503 if either is unavailable.
+
+Try promise capture without credentials at `/preview?view=streamer`, then open **Next-stream brief**. Demo changes stay in the browser and reset on refresh. Authenticated equivalents are `/app/streamer` and `/app/brief`; the overview also has quick capture. Save an explicit commitment, move it through its allowed statuses, and include a reason when fulfilling or cancelling it. The brief lists saved active promises and links to their sources; it does not call an AI provider. Twitch commands appear after refreshing the promises list once ingestion has processed them. If Twitch registration is blocked by 2FA, this preview and the mocked integration tests remain usable.
 
 PostgreSQL uses port **55432** and Redis uses **56379** to reduce conflicts with other local projects. Both bind to localhost. Set ports and matching connection URLs in `.env` together if you change them. Docker starts only the database and Redis; the applications run on your host with hot reload.
 

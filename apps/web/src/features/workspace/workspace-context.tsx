@@ -10,9 +10,26 @@ import {
   type Membership,
   type Session,
   type GrantMembership,
+  canTransitionOpenLoop,
+  openLoopResponseSchema,
+  openLoopPageSchema,
+  openLoopHistorySchema,
+  streamBriefSchema,
+  type CreateOpenLoop,
+  type OpenLoop,
+  type OpenLoopHistory,
+  type OpenLoopPage,
+  type OpenLoopStatus,
+  type TransitionOpenLoop,
+  type StreamBrief,
 } from '@lore/shared';
 import { ApiError, apiRequest } from '../../lib/api';
 import { previewPeople } from '../../lib/preview-data';
+import {
+  fixtureHistory,
+  previewBrief,
+  previewOpenLoops,
+} from '../../lib/preview-open-loops';
 type Workspace = {
   session: Session;
   channels: Channel[];
@@ -26,7 +43,31 @@ type Workspace = {
   grant: (input: GrantMembership) => Promise<void>;
   remove: (userId: string) => Promise<void>;
   logout: () => Promise<void>;
-  href: (view: 'overview' | 'settings' | 'team' | 'account') => string;
+  loadLoops: (
+    channelId: string,
+    options: { status?: OpenLoopStatus; cursor?: string },
+    signal?: AbortSignal,
+  ) => Promise<OpenLoopPage>;
+  loadLoop: (
+    channelId: string,
+    loopId: string,
+    signal?: AbortSignal,
+  ) => Promise<OpenLoop>;
+  captureLoop: (channelId: string, input: CreateOpenLoop) => Promise<OpenLoop>;
+  transitionLoop: (
+    channelId: string,
+    loop: OpenLoop,
+    input: TransitionOpenLoop,
+  ) => Promise<OpenLoop>;
+  loadLoopHistory: (
+    channelId: string,
+    loopId: string,
+    signal?: AbortSignal,
+  ) => Promise<OpenLoopHistory[]>;
+  loadBrief: (channelId: string, signal?: AbortSignal) => Promise<StreamBrief>;
+  href: (
+    view: 'overview' | 'streamer' | 'brief' | 'settings' | 'team' | 'account',
+  ) => string;
 };
 const WorkspaceContext = createContext<Workspace | null>(null);
 export function WorkspaceProvider({
@@ -44,8 +85,16 @@ export function WorkspaceProvider({
   const [channels, setChannels] = useState(initialChannels);
   const [selectedId, setSelectedId] = useState(initialChannels[0]?.id);
   const [demoMembers, setDemoMembers] = useState(previewPeople);
+  const [demoLoops, setDemoLoops] = useState(previewOpenLoops);
+  const [demoHistory, setDemoHistory] = useState<
+    Record<string, OpenLoopHistory[]>
+  >(() =>
+    Object.fromEntries(
+      previewOpenLoops.map((loop) => [loop.id, fixtureHistory(loop)]),
+    ),
+  );
   const selected = channels.find((channel) => channel.id === selectedId);
-  const href = (view: 'overview' | 'settings' | 'team' | 'account') =>
+  const href: Workspace['href'] = (view) =>
     preview
       ? `/preview${view === 'overview' ? '' : `?view=${view}`}`
       : `/app${view === 'overview' ? '' : `/${view}`}`;
@@ -181,6 +230,187 @@ export function WorkspaceProvider({
     router.replace('/login');
     router.refresh();
   }
+  async function loadLoops(
+    channelId: string,
+    options: { status?: OpenLoopStatus; cursor?: string },
+    signal?: AbortSignal,
+  ) {
+    if (preview)
+      return {
+        items: demoLoops
+          .filter(
+            (loop) =>
+              loop.channelId === channelId &&
+              (!options.status || loop.status === options.status),
+          )
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+        nextCursor: null,
+      };
+    const query = new URLSearchParams({
+      ...(options.status ? { status: options.status } : {}),
+      ...(options.cursor ? { cursor: options.cursor } : {}),
+    });
+    return request(
+      `/channels/${channelId}/open-loops?${query}`,
+      openLoopPageSchema,
+      'GET',
+      undefined,
+      signal,
+    );
+  }
+  function requirePreviewConnection(channelId: string) {
+    if (
+      !channels.some((channel) => channel.id === channelId && channel.connected)
+    )
+      throw new Error('Reconnect the channel before changing open loops.');
+  }
+  async function loadLoop(
+    channelId: string,
+    loopId: string,
+    signal?: AbortSignal,
+  ) {
+    if (!preview)
+      return request(
+        `/channels/${channelId}/open-loops/${loopId}`,
+        openLoopResponseSchema,
+        'GET',
+        undefined,
+        signal,
+      );
+    const loop = demoLoops.find(
+      (item) => item.channelId === channelId && item.id === loopId,
+    );
+    if (!loop) throw new Error('Open loop not found.');
+    return loop;
+  }
+  async function captureLoop(
+    channelId: string,
+    input: CreateOpenLoop,
+  ): Promise<OpenLoop> {
+    if (!preview)
+      return request(
+        `/channels/${channelId}/open-loops`,
+        openLoopResponseSchema,
+        'POST',
+        input,
+      );
+    requirePreviewConnection(channelId);
+    const now = new Date().toISOString();
+    const loop: OpenLoop = {
+      id: input.requestId,
+      channelId,
+      wording: input.wording,
+      ownerLabel: input.ownerLabel || null,
+      dueContext: input.dueContext || null,
+      status: 'confirmed',
+      version: 1,
+      origin: 'demo_fixture',
+      captureMethod: 'dashboard',
+      createdAt: now,
+      updatedAt: now,
+      source: { excerpt: input.wording, originalAvailable: null },
+    };
+    setDemoLoops((current) => [
+      loop,
+      ...current.filter((item) => item.id !== loop.id),
+    ]);
+    setDemoHistory((current) => ({
+      ...current,
+      [loop.id]: [
+        {
+          version: 1,
+          fromStatus: null,
+          toStatus: 'confirmed',
+          reason: null,
+          actorTwitchUserId: session.user.twitchUserId,
+          occurredAt: now,
+        },
+      ],
+    }));
+    return loop;
+  }
+  async function transitionLoop(
+    channelId: string,
+    loop: OpenLoop,
+    input: TransitionOpenLoop,
+  ) {
+    if (!preview)
+      return request(
+        `/channels/${channelId}/open-loops/${loop.id}`,
+        openLoopResponseSchema,
+        'PATCH',
+        input,
+      );
+    requirePreviewConnection(channelId);
+    const saved = demoLoops.find(
+      (item) => item.channelId === channelId && item.id === loop.id,
+    );
+    if (
+      !saved ||
+      saved.version !== input.expectedVersion ||
+      !canTransitionOpenLoop(saved.status, input.status)
+    )
+      throw new Error('This open loop changed. Refresh before trying again.');
+    if (
+      ['fulfilled', 'cancelled'].includes(input.status) &&
+      !input.reason?.trim()
+    )
+      throw new Error('Explain the completion or cancellation.');
+    const now = new Date().toISOString();
+    const updated = {
+      ...saved,
+      status: input.status,
+      version: saved.version + 1,
+      updatedAt: now,
+    };
+    setDemoLoops((current) =>
+      current.map((item) => (item.id === loop.id ? updated : item)),
+    );
+    setDemoHistory((current) => ({
+      ...current,
+      [loop.id]: [
+        ...(current[loop.id] || []),
+        {
+          version: updated.version,
+          fromStatus: saved.status,
+          toStatus: input.status,
+          reason: input.reason || null,
+          actorTwitchUserId: session.user.twitchUserId,
+          occurredAt: now,
+        },
+      ],
+    }));
+    return updated;
+  }
+  async function loadLoopHistory(
+    channelId: string,
+    loopId: string,
+    signal?: AbortSignal,
+  ) {
+    if (preview)
+      return demoLoops.some(
+        (loop) => loop.channelId === channelId && loop.id === loopId,
+      )
+        ? demoHistory[loopId] || []
+        : [];
+    return request(
+      `/channels/${channelId}/open-loops/${loopId}/history`,
+      z.array(openLoopHistorySchema),
+      'GET',
+      undefined,
+      signal,
+    );
+  }
+  async function loadBrief(channelId: string, signal?: AbortSignal) {
+    if (preview) return previewBrief(channelId, demoLoops);
+    return request(
+      `/channels/${channelId}/brief`,
+      streamBriefSchema,
+      'GET',
+      undefined,
+      signal,
+    );
+  }
   return (
     <WorkspaceContext.Provider
       value={{
@@ -196,6 +426,12 @@ export function WorkspaceProvider({
         grant,
         remove,
         logout,
+        loadLoops,
+        loadLoop,
+        captureLoop,
+        transitionLoop,
+        loadLoopHistory,
+        loadBrief,
         href,
       }}
     >

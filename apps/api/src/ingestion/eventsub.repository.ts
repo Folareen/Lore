@@ -21,6 +21,7 @@ import {
   subscriptionSchema,
 } from './eventsub.schemas';
 import type { z } from 'zod';
+import { OpenLoopsRepository } from '../open-loops/open-loops.repository';
 type Subscription = z.infer<typeof subscriptionSchema>;
 type Transaction = Parameters<
   Parameters<InfrastructureService['db']['transaction']>[0]
@@ -31,6 +32,8 @@ export class EventsubRepository {
   constructor(
     @Inject(InfrastructureService)
     private readonly infrastructure: InfrastructureService,
+    @Inject(OpenLoopsRepository)
+    private readonly openLoops: OpenLoopsRepository,
   ) {}
   async withReconciliation(operation: () => Promise<void>) {
     await this.infrastructure.db.transaction(async (tx) => {
@@ -142,7 +145,9 @@ export class EventsubRepository {
           ? { captureRequested: false }
           : {}),
       })
-      .where(eq(channels.id, channelId));
+      .where(
+        and(eq(channels.id, channelId), eq(channels.captureRequested, true)),
+      );
   }
   async saveSubscription(
     channelId: string,
@@ -419,7 +424,7 @@ export class EventsubRepository {
                   eq(sourceEvents.id, id),
                 ),
               );
-          else
+          else {
             await tx
               .insert(chatMessages)
               .values({
@@ -433,6 +438,13 @@ export class EventsubRepository {
                 expiresAt: event.expiresAt,
               })
               .onConflictDoNothing();
+            await this.openLoops.captureCommand(
+              tx,
+              channel.id,
+              event.id,
+              message,
+            );
+          }
         }
       }
       await tx

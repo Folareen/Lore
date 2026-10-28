@@ -6,6 +6,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { ChannelsModule } from './channels/channels.module';
 import { IngestionModule } from './ingestion/ingestion.module';
+import { OpenLoopsModule } from './open-loops/open-loops.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { HealthController } from './health.controller';
@@ -16,6 +17,7 @@ const redis = new URL(env.REDIS_URL);
     AuthModule,
     ChannelsModule,
     IngestionModule,
+    OpenLoopsModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     BullModule.forRoot({
       prefix: env.QUEUE_PREFIX,

@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import {
   BookOpen,
   ChevronRight,
@@ -9,6 +10,8 @@ import {
   Users,
   UserRound,
   ArrowUpRight,
+  Bookmark,
+  ListChecks,
 } from 'lucide-react';
 import type { Channel, Session } from '@lore/shared';
 import { Brand } from '../../components/brand';
@@ -17,6 +20,8 @@ import { ThemeToggle } from '../../components/theme-control';
 import { WorkspaceProvider, useWorkspace } from './workspace-context';
 const navigation = [
   { view: 'overview', title: 'Overview', icon: Home },
+  { view: 'streamer', title: 'Open loops', icon: Bookmark },
+  { view: 'brief', title: 'Next-stream brief', icon: ListChecks },
   { view: 'settings', title: 'Channel settings', icon: Settings2 },
   { view: 'team', title: 'Your team', icon: Users },
   { view: 'account', title: 'Account', icon: UserRound },
@@ -31,8 +36,9 @@ function Shell({
   const { session, channels, selected, preview, selectChannel, href } =
     useWorkspace();
   const path = usePathname();
+  const searchParams = useSearchParams();
   const current = preview
-    ? view || 'overview'
+    ? searchParams.get('view') || view || 'overview'
     : path.split('/')[2] || 'overview';
   const title =
     navigation.find((item) => item.view === current)?.title || 'Overview';
@@ -130,7 +136,9 @@ export function AppShell({
       initialChannels={channels}
       preview={preview}
     >
-      <Shell view={view}>{children}</Shell>
+      <Suspense fallback={<p role="status">Loading your workspace…</p>}>
+        <Shell view={view}>{children}</Shell>
+      </Suspense>
     </WorkspaceProvider>
   );
 }

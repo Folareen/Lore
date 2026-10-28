@@ -15,6 +15,7 @@ import {
 import { useWorkspace } from './workspace-context';
 import { Avatar } from '../../components/avatar';
 import { TwitchMark } from '../../components/brand';
+import { QuickCapture } from '../open-loops/quick-capture';
 export function Overview() {
   const { session, channels, selected, preview, selectChannel, connect, href } =
     useWorkspace();
@@ -185,6 +186,18 @@ export function Overview() {
           </div>
         </section>
       </div>
+      {selected && (
+        <div className="overview-capture">
+          <QuickCapture
+            key={selected.id}
+            channelId={selected.id}
+            disabled={!selected.connected}
+          />
+          <Link href={href('streamer')} className="button secondary">
+            See your open loops
+          </Link>
+        </div>
+      )}
       <section className="workspace-note">
         <Image
           src="/illustrations/memory-party.png"
@@ -195,9 +208,9 @@ export function Overview() {
         <div>
           <h2>The best bits are still ahead.</h2>
           <p>
-            Your channel and team are the foundation. Promise tracking,
-            moderator handoffs, and approved community stories are coming next.
-            We’ll keep them connected, from capture to screen.
+            Keep your promises close and bring the open ones into your next
+            stream. Moderator handoffs and approved community stories are coming
+            in later chapters.
           </p>
         </div>
       </section>
