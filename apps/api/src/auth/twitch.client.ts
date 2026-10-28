@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { z } from 'zod';
 import { env } from '../config';
+import { captureScopes } from '@lore/shared';
 export const tokenPairSchema = z.object({
   access_token: z.string().min(1),
   refresh_token: z.string().min(1),
@@ -47,14 +48,14 @@ export class TwitchClient {
       key: env.AUTH_ENCRYPTION_KEY,
     };
   }
-  authorizationUrl(state: string) {
+  authorizationUrl(state: string, capture = false) {
     const { clientId } = this.configured();
     const url = new URL('https://id.twitch.tv/oauth2/authorize');
     url.search = new URLSearchParams({
       client_id: clientId,
       redirect_uri: this.redirectUri(),
       response_type: 'code',
-      scope: '',
+      scope: capture ? captureScopes.join(' ') : '',
       state,
     }).toString();
     return url.toString();

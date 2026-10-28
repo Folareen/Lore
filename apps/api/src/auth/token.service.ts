@@ -85,7 +85,11 @@ export class TokenService
         await tx.delete(sessions).where(eq(sessions.userId, userId));
         const disconnected = await tx
           .update(channels)
-          .set({ disconnectedAt: new Date(), updatedAt: new Date() })
+          .set({
+            disconnectedAt: new Date(),
+            captureRequested: false,
+            updatedAt: new Date(),
+          })
           .where(eq(channels.ownerUserId, userId))
           .returning({ id: channels.id });
         if (disconnected.length)

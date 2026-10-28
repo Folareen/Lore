@@ -7,6 +7,6 @@ import { SessionGuard } from './session.guard';
 @Module({
   controllers: [AuthController],
   providers: [AuthService, TokenService, TwitchClient, SessionGuard],
-  exports: [AuthService, SessionGuard],
+  exports: [AuthService, SessionGuard, TwitchClient, TokenService],
 })
 export class AuthModule {}

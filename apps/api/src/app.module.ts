@@ -5,6 +5,7 @@ import { env } from './config';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { ChannelsModule } from './channels/channels.module';
+import { IngestionModule } from './ingestion/ingestion.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { HealthController } from './health.controller';
@@ -14,8 +15,10 @@ const redis = new URL(env.REDIS_URL);
     DatabaseModule,
     AuthModule,
     ChannelsModule,
+    IngestionModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     BullModule.forRoot({
+      prefix: env.QUEUE_PREFIX,
       connection: {
         host: redis.hostname,
         port: Number(redis.port || 6379),
@@ -33,10 +36,7 @@ const redis = new URL(env.REDIS_URL);
         backoff: { type: 'exponential', delay: 1000 },
       },
     }),
-    BullModule.registerQueue(
-      { name: queueNames.ingestion },
-      { name: queueNames.ai },
-    ),
+    BullModule.registerQueue({ name: queueNames.ai }),
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

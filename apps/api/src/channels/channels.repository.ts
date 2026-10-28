@@ -156,7 +156,11 @@ export class ChannelsRepository {
     return this.withOwner(channelId, userId, async (tx) => {
       await tx
         .update(channels)
-        .set({ disconnectedAt: new Date(), updatedAt: new Date() })
+        .set({
+          disconnectedAt: new Date(),
+          captureRequested: false,
+          updatedAt: new Date(),
+        })
         .where(eq(channels.id, channelId));
       // Reconnection requires the owner to explicitly grant access again.
       await tx.delete(memberships).where(eq(memberships.channelId, channelId));

@@ -15,6 +15,13 @@
       "when": 1793046393107,
       "tag": "0001_auth_management",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793222247271,
+      "tag": "0002_eventsub_ingestion",
+      "breakpoints": true
     }
   ]
 }
