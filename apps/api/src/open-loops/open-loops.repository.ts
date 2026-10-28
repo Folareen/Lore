@@ -252,7 +252,7 @@ export class OpenLoopsRepository {
       wording: string;
       ownerLabel?: string;
       dueContext?: string;
-      captureMethod: 'dashboard' | 'chat_command';
+      captureMethod: 'dashboard' | 'chat_command' | 'ai_review';
       captureKey: string;
       origin: 'manual_import' | 'live_twitch';
       excerpt: string;
@@ -291,6 +291,27 @@ export class OpenLoopsRepository {
       actorTwitchUserId: input.actorTwitchUserId,
     });
     return loop.id;
+  }
+  // Caller holds the channel lock and has checked current membership and source availability.
+  async confirmCandidate(
+    tx: Transaction,
+    input: {
+      channelId: string;
+      candidateId: string;
+      sourceEventId: string;
+      excerpt: string;
+      wording: string;
+      ownerLabel?: string;
+      dueContext?: string;
+      actorTwitchUserId: string;
+    },
+  ) {
+    return this.insert(tx, {
+      ...input,
+      captureMethod: 'ai_review',
+      captureKey: input.candidateId,
+      origin: 'live_twitch',
+    });
   }
   // Called only inside ingestion's channel-locked transaction after signature, consent and deletion checks.
   async captureCommand(

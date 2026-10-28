@@ -16,3 +16,4 @@ export type HealthResponse = z.infer<typeof healthResponseSchema>;
 export * from './management';
 export * from './ingestion';
 export * from './open-loops';
+export * from './ai';

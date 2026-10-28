@@ -31,6 +31,7 @@ import {
   previewOpenLoops,
 } from '../../lib/preview-open-loops';
 type Workspace = {
+  recordPreviewReview: (loop: OpenLoop) => void;
   session: Session;
   channels: Channel[];
   selected: Channel | undefined;
@@ -66,7 +67,14 @@ type Workspace = {
   ) => Promise<OpenLoopHistory[]>;
   loadBrief: (channelId: string, signal?: AbortSignal) => Promise<StreamBrief>;
   href: (
-    view: 'overview' | 'streamer' | 'brief' | 'settings' | 'team' | 'account',
+    view:
+      | 'overview'
+      | 'streamer'
+      | 'brief'
+      | 'candidates'
+      | 'settings'
+      | 'team'
+      | 'account',
   ) => string;
 };
 const WorkspaceContext = createContext<Workspace | null>(null);
@@ -432,6 +440,27 @@ export function WorkspaceProvider({
         transitionLoop,
         loadLoopHistory,
         loadBrief,
+        recordPreviewReview: (loop) => {
+          if (!preview) throw new Error('Demo workspace required');
+          requirePreviewConnection(loop.channelId);
+          setDemoLoops((current) => [
+            loop,
+            ...current.filter((item) => item.id !== loop.id),
+          ]);
+          setDemoHistory((current) => ({
+            ...current,
+            [loop.id]: [
+              {
+                version: 1,
+                fromStatus: null,
+                toStatus: 'confirmed',
+                reason: null,
+                actorTwitchUserId: session.user.twitchUserId,
+                occurredAt: loop.createdAt,
+              },
+            ],
+          }));
+        },
         href,
       }}
     >

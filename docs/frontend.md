@@ -16,3 +16,5 @@ Applies to `apps/web`: Next.js App Router, React, TypeScript, and Tailwind CSS. 
 - Test meaningful interactions and permission-dependent UI behavior as features are added. Verify mobile layout and keyboard navigation for changed screens.
 
 Read the installed Next.js guides referenced by `apps/web/AGENTS.md` when using framework APIs.
+
+Candidate review lives at `/app/candidates` (fixture preview: `/preview?view=candidates`). Show original chat, cited words, evidence gaps, uncertainties, model and origin before offering a review. Confirmation requires an editable promise form and explicit action; dismissal requires a reason. Keep unavailable-source and disconnected states read-only. Provider consent is owner-only and explains sending retained chat to Gemini; missing configuration and failed runs have actionable states. Confirmed candidates link to their saved promise and brief. Preview review state persists in the workspace shell and never calls private APIs or a model.

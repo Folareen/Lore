@@ -14,6 +14,7 @@ import {
   ListChecks,
 } from 'lucide-react';
 import type { Channel, Session } from '@lore/shared';
+import { CandidatesProvider } from '../candidates/candidates-context';
 import { Brand } from '../../components/brand';
 import { Avatar } from '../../components/avatar';
 import { ThemeToggle } from '../../components/theme-control';
@@ -21,6 +22,7 @@ import { WorkspaceProvider, useWorkspace } from './workspace-context';
 const navigation = [
   { view: 'overview', title: 'Overview', icon: Home },
   { view: 'streamer', title: 'Open loops', icon: Bookmark },
+  { view: 'candidates', title: 'Needs review', icon: BookOpen },
   { view: 'brief', title: 'Next-stream brief', icon: ListChecks },
   { view: 'settings', title: 'Channel settings', icon: Settings2 },
   { view: 'team', title: 'Your team', icon: Users },
@@ -136,9 +138,11 @@ export function AppShell({
       initialChannels={channels}
       preview={preview}
     >
-      <Suspense fallback={<p role="status">Loading your workspace…</p>}>
-        <Shell view={view}>{children}</Shell>
-      </Suspense>
+      <CandidatesProvider>
+        <Suspense fallback={<p role="status">Loading your workspace…</p>}>
+          <Shell view={view}>{children}</Shell>
+        </Suspense>
+      </CandidatesProvider>
     </WorkspaceProvider>
   );
 }

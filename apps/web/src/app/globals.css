@@ -2168,3 +2168,56 @@ svg {
     font-size: 21px;
   }
 }
+
+.candidate-card h2 {
+  font-size: 23px;
+}
+.candidate-card h3 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.candidate-source {
+  background: var(--raised);
+  padding: 20px;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.candidate-source blockquote {
+  margin: 0 0 16px;
+  white-space: pre-wrap;
+}
+.candidate-source p {
+  margin: 0;
+}
+.candidate-context {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.candidate-context ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.candidate-card p,
+.candidate-context li {
+  overflow-wrap: anywhere;
+}
+.extraction-runs {
+  padding-left: 20px;
+}
+.extraction-runs li {
+  margin-top: 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+@media (max-width: 640px) {
+  .candidate-context {
+    grid-template-columns: 1fr;
+  }
+  .extraction-runs li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

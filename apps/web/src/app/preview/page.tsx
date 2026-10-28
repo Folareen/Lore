@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CandidatesScreen } from '../../features/candidates/candidates';
 import { Overview } from '../../features/workspace/overview';
 import { ChannelSettings } from '../../features/workspace/settings';
 import { Team } from '../../features/workspace/team';
@@ -17,7 +18,15 @@ export default async function PreviewPage({
   const { view, loop } = await searchParams;
   const focused = z.uuid().safeParse(loop);
   const current = z
-    .enum(['overview', 'streamer', 'brief', 'settings', 'team', 'account'])
+    .enum([
+      'overview',
+      'streamer',
+      'brief',
+      'candidates',
+      'settings',
+      'team',
+      'account',
+    ])
     .catch('overview')
     .parse(view);
   const Screen = {
@@ -27,6 +36,7 @@ export default async function PreviewPage({
     account: Account,
     streamer: OpenLoopsScreen,
     brief: StreamBriefScreen,
+    candidates: CandidatesScreen,
   }[current];
   return (
     <>

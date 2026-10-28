@@ -30,7 +30,7 @@ export const openLoopResponseSchema = z.strictObject({
   status: openLoopStatusSchema,
   version: z.number().int().positive(),
   origin: recordOriginSchema,
-  captureMethod: z.enum(['dashboard', 'chat_command']),
+  captureMethod: z.enum(['dashboard', 'chat_command', 'ai_review']),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   source: z.strictObject({

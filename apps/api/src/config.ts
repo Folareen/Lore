@@ -69,8 +69,26 @@ export const env = z
         .optional(),
     ),
     TWITCH_TEST_BASE_URL: z.url().optional(),
+    GEMINI_API_KEY: optionalSecret,
+    GEMINI_MODEL: z
+      .string()
+      .regex(/^[a-zA-Z0-9._-]+$/)
+      .default('gemini-3.8-flash'),
+    AI_DAILY_CALL_LIMIT: z.coerce.number().int().min(1).max(500).default(50),
+    AI_TEST_BASE_URL: z.url().optional(),
   })
   .superRefine((value, ctx) => {
+    if (
+      value.AI_TEST_BASE_URL &&
+      (value.NODE_ENV !== 'test' ||
+        new URL(value.AI_TEST_BASE_URL).hostname !== '127.0.0.1' ||
+        new URL(value.AI_TEST_BASE_URL).protocol !== 'http:')
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'AI test override is restricted to HTTP loopback in test mode',
+      });
+    }
     const configured = [
       value.TWITCH_CLIENT_ID,
       value.TWITCH_CLIENT_SECRET,

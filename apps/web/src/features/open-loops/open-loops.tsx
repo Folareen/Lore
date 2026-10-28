@@ -193,7 +193,7 @@ function LoopsPanel({
           <h2>Nothing in this chapter yet.</h2>
           <p>
             {filter === 'candidate'
-              ? 'AI candidate extraction isn’t enabled yet. Human captures are confirmed immediately.'
+              ? 'AI suggestions live in Needs review until a person confirms them.'
               : 'Capture a commitment above, or choose another status.'}
           </p>
         </div>
@@ -303,9 +303,11 @@ function OpenLoopCard({
               ? 'Live Twitch'
               : 'Manual import'}{' '}
           ·{' '}
-          {loop.captureMethod === 'chat_command'
-            ? 'Chat command'
-            : 'Dashboard capture'}
+          {loop.captureMethod === 'ai_review'
+            ? 'AI-reviewed capture'
+            : loop.captureMethod === 'chat_command'
+              ? 'Chat command'
+              : 'Dashboard capture'}
         </small>
       </div>
       <h2 className="promise-wording">{loop.wording}</h2>
