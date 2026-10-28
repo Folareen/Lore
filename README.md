@@ -4,7 +4,7 @@ Every stream has a story. Lore remembers it.
 
 A submission for the **Codex x TwitchCon Hackathon**.
 
-pnpm monorepo for the Lore Twitch community memory product. Includes Twitch sign-in, channel settings, team management, opt-in EventSub ingestion, promise capture, and a next-stream brief with a light/dark frontend. AI extraction, moderator workflows and public community memory follow in later features.
+pnpm monorepo for the Lore Twitch community memory product. Includes Twitch sign-in, channel settings, team management, opt-in EventSub ingestion, promise capture, and a next-stream brief with a light/dark frontend. Gemini candidate extraction and human review are included; moderator workflows and public community memory follow in later features.
 
 ## Local setup
 
@@ -71,7 +71,7 @@ Integration tests use mocked Twitch responses and real PostgreSQL/Redis. Set `TE
 2. Generate `AUTH_ENCRYPTION_KEY` with `openssl rand -base64 32` if it is not already set. Keep it stable; changing it makes existing stored tokens unreadable. Generate a **separate** `TWITCH_EVENTSUB_SECRET` with `openssl rand -hex 32`. Paste command outputs into `.env`, never chat or Git.
 3. Expose your local frontend through a trusted HTTPS tunnel, or use your deployed HTTPS origin. Twitch requires a publicly reachable callback on port 443. Set `TWITCH_EVENTSUB_CALLBACK_URL=https://YOUR_PUBLIC_HOST/api/webhooks/twitch`. For live browser sign-in through that same host, set `APP_ORIGIN=https://YOUR_PUBLIC_HOST` and register its exact OAuth callback in Twitch too. Keep `API_INTERNAL_URL` pointed at the local API. If ports 3000/4000 are occupied, use matching frontend/API ports and settings; the public callback still uses HTTPS port 443. The tunnel must preserve request bodies and allow unauthenticated POSTs to the webhook route.
 4. Run `pnpm db:migrate`, restart the applications, sign in **as the channel broadcaster**, and connect your own channel. In **Channel settings → Live capture → Manage live capture**, choose **Authorize chat capture on Twitch**. Lore requests `user:read:chat`, `user:bot`, and `channel:bot` for this account. The broadcaster is also the subscription's reading identity; no separate bot account or pasted access token is needed. Ordinary sign-in still requests no chat scopes. After OAuth returns, open settings again and choose **Start capture**.
-5. Wait for all six event connections to become ready, then send a test chat message on that channel. The panel shows the last delivery and pending/failed counts without exposing chat. Test a message deletion and stop capture when finished. There is no historical chat import or AI/promise extraction in this milestone. Live OAuth, actual account permissions and delivery through your tunnel must be checked with your registered app; automated tests use a mocked Twitch provider.
+5. Wait for all six event connections to become ready, then send a test chat message on that channel. The panel shows the last delivery and pending/failed counts without exposing chat. Test a message deletion and stop capture when finished. There is no historical chat import. Explicit `!promise` commands capture promises; optional Gemini extraction creates unconfirmed candidates. Live OAuth, actual account permissions and delivery through your tunnel must be checked with your registered app; automated tests use a mocked Twitch provider.
 
 Do not change the webhook secret while subscriptions using it are active: stop capture, allow reconciliation to remove the subscriptions, change the secret, restart, then start capture again. When a tunnel hostname changes, update both callback settings and Twitch's OAuth redirect. Twitch app tokens are obtained and renewed by the backend; you do not need to generate them yourself.
 
@@ -80,6 +80,16 @@ References: [app registration](https://dev.twitch.tv/docs/authentication/registe
 If services fail, start Docker Desktop and check `pnpm db:logs`. Changing PostgreSQL initialization credentials does not change an existing database volume. `pnpm db:down` preserves data; adding `--volumes` to Compose shutdown deletes it.
 
 See the [documentation index](docs/README.md) for coding conventions and the product specification.
+
+## Gemini candidate review
+
+1. Create a key in [Google AI Studio](https://aistudio.google.com/api-keys). Set `GEMINI_API_KEY` in the root `.env`, then restart the API. Keep it server-only and outside Git. `GEMINI_MODEL` defaults to `gemini-3.8-flash`; choose a structured-output model available to your project. See [Gemini key setup](https://ai.google.dev/gemini-api/docs/api-key).
+   Run `pnpm ai:check` for one small synthetic provider request with evidence validation; it needs no Twitch account and prints no key or chat. This uses your Gemini quota.
+2. Open **Needs review** (`/app/candidates`). The channel owner explicitly enables sending that channel’s retained captured chat to Gemini. This includes existing retained chat. Capture itself still needs Twitch setup above; no Twitch credentials are needed for the fixture preview.
+3. Enabled extraction checks for new chat every 15 seconds, batches up to 20 messages, and creates at most one automatic run per minute per channel. **Analyze new chat** starts an immediate run. The per-channel `AI_DAILY_CALL_LIMIT` defaults to 50 provider attempts per UTC day, including retries.
+4. Read the source, evidence gaps and uncertainties. **Review as promise** lets a team member edit wording before explicitly confirming; **Dismiss suggestion** requires a reason. Only confirmed promises enter the next-stream brief. Pending drafts expire with raw chat; confirmation separately keeps the original message as team-only evidence.
+
+Try the credential-free flow at `/preview?view=candidates`, confirm a sample suggestion, then open the brief. Fixtures never call Gemini. Missing keys, invalid output, exhausted retries and daily limits appear in the real review screen. Live extraction requires your locally configured key and provider quota; automated tests use a mock provider. Disabling extraction prevents further queued calls and discards in-flight results; an already-sent request cannot be recalled. Disconnecting a channel also turns extraction off.
 
 ## Contributing
 

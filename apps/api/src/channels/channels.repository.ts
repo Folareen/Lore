@@ -159,6 +159,8 @@ export class ChannelsRepository {
         .set({
           disconnectedAt: new Date(),
           captureRequested: false,
+          aiExtractionEnabled: false,
+          aiGeneration: sql`${channels.aiGeneration} + 1`,
           updatedAt: new Date(),
         })
         .where(eq(channels.id, channelId));

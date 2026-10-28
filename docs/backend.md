@@ -68,7 +68,7 @@ Integration tests use isolated PostgreSQL databases/queue prefixes and a mocked 
 
 ## Promises and next-stream brief
 
-Owners and active approved moderators/team members can read and capture promises. Dashboard captures and verified broadcaster/moderator `!promise <wording>` chat commands create **confirmed** open loops as explicit human actions. A broadcaster badge must match the broadcaster's user ID; ordinary chat, viewer/VIP/subscriber badges, malformed commands and foreign shared-chat sources never confirm promises. A Twitch command does not grant its sender access to Lore. AI candidates and chat sending are not enabled.
+Owners and active approved moderators/team members can read and capture promises. Dashboard captures and verified broadcaster/moderator `!promise <wording>` chat commands create **confirmed** open loops as explicit human actions. A broadcaster badge must match the broadcaster's user ID; ordinary chat, viewer/VIP/subscriber badges, malformed commands and foreign shared-chat sources never confirm promises. A Twitch command does not grant its sender access to Lore. Ordinary-chat AI candidates require separate owner consent and human review below. Chat sending is not enabled.
 
 | Method     | Route under `/api/channels/:id` | Behavior                                                   |
 | ---------- | ------------------------------- | ---------------------------------------------------------- |
@@ -82,3 +82,21 @@ POST accepts `{ wording, requestId, ownerLabel?, dueContext? }`; `requestId` is 
 The brief includes up to 20 confirmed, in-progress and postponed records, the full active count, source excerpts and promise IDs. In-progress comes first, then confirmed, then postponed; a due label takes priority within each group, followed by oldest creation time. It is a reproducible rundown of saved records, without AI generation, scheduling or inferred stream context. Fulfilled/cancelled records and unconfirmed candidates are excluded. The frontend links to individual promises even outside the first list page.
 
 Capture copies the exact relevant wording into `evidence` with team visibility and confirmed retention. Retained excerpts live with the confirmed record, separately from ordinary chat; neither raw retention purges nor message deletions silently erase that human-kept proof. The durable source delivery reference intentionally survives receipt deletion, and availability uses a channel-scoped join. API responses mark a removed/expired original as unavailable; dashboard sources use `null` availability. `open_loop_history` records the Twitch actor, version, statuses, time and reason without copying raw chat into general logs. No promise or excerpt is public without a separate publication feature. Further evidence deletion and production retention policy belong to the corresponding privacy/deployment work.
+
+## AI candidates
+
+`AiProvider` isolates application extraction from Gemini transport. Structured output passes the shared Zod contract and exact source-ID/quote checks; unknown citations, duplicate source/kind pairs, false human-approval flags, extra authority fields, blocked/truncated output and malformed JSON fail closed. Delimited chat is untrusted data beneath separate system instructions. No tools or automatic moderation actions are exposed to the model. OpenAI case reasoning and embeddings await their corresponding features; there is no placeholder adapter or vector dimension yet.
+
+| Method | Route under `/api/channels/:id`    | Behavior                                                              |
+| ------ | ---------------------------------- | --------------------------------------------------------------------- |
+| GET    | `/ai`                              | Scoped configuration availability, UTC usage and ten recent runs      |
+| POST   | `/ai/settings`                     | Owner consent `{ enabled }`; changes audited                          |
+| POST   | `/ai/extractions`                  | Active team member requests retained new chat analysis; `{}`          |
+| POST   | `/ai/extractions/:runId/retry`     | Explicit retry of a failed run; `{}`                                  |
+| GET    | `/candidates`                      | 50 per page, `status` (default pending), channel-scoped UUID `cursor` |
+| POST   | `/candidates/:candidateId/confirm` | `{ wording, expectedVersion, requestId, ownerLabel?, dueContext? }`   |
+| POST   | `/candidates/:candidateId/dismiss` | `{ expectedVersion, reason }`                                         |
+
+All mutations use the usual session, Origin and CSRF checks. Channel locks serialize consent, membership, disconnect and review. Runs claim source messages once; AI queue jobs contain only run ID and retry revision. Durable recovery runs every 15 seconds, with three exponential-backoff attempts and explicit retries after exhaustion. Provider calls run outside database locks, recheck consent/generation and available channel-scoped sources before and after the call, and reserve the daily attempt budget atomically before sending. Changing consent discards old-generation work, and disconnect/account authorization revocation disables extraction. Requests are bounded to 20 messages of at most 2,000 characters, 45 seconds and 128 KB of response. No raw chat, key or provider response is persisted in queue errors/logs.
+
+Drafts are separate from `open_loops` and evidence, private to active channel members, and scrubbed with source deletion/expiry or shorter current retention. Read and confirm paths independently check source availability. Confirmation transactionally creates `ai_review` evidence, a confirmed promise, its human history entry and the candidate decision. Same-actor/request/wording retries return the saved promise; stale or conflicting reviews return 409. Dismissal records actor, time and required reason. Drafts and source receipts expire; confirmed evidence remains under the confirmed-record lifecycle described above. The brief remains a deterministic list of human-confirmed records.

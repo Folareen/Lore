@@ -1,8 +1,15 @@
 import { sql } from 'drizzle-orm';
-import type { OpenLoopStatus } from '@lore/shared';
+import type {
+  AiError,
+  CandidateDraft,
+  Candidate,
+  ExtractionRun,
+  OpenLoopStatus,
+} from '@lore/shared';
 import {
   check,
   boolean,
+  date,
   foreignKey,
   index,
   integer,
@@ -50,6 +57,10 @@ export const channels = pgTable(
     }).notNull(),
     chatRetentionDays: integer('chat_retention_days').default(7).notNull(),
     captureRequested: boolean('capture_requested').default(false).notNull(),
+    aiExtractionEnabled: boolean('ai_extraction_enabled')
+      .default(false)
+      .notNull(),
+    aiGeneration: integer('ai_generation').default(0).notNull(),
     captureStartedAt: timestamp('capture_started_at', { withTimezone: true }),
     captureError: text('capture_error', {
       enum: ['authorization_required', 'provider_unavailable'],
@@ -328,7 +339,7 @@ export const openLoops = pgTable(
       enum: ['live_twitch', 'manual_import', 'demo_fixture'],
     }).notNull(),
     captureMethod: text('capture_method', {
-      enum: ['dashboard', 'chat_command'],
+      enum: ['dashboard', 'chat_command', 'ai_review'],
     }).notNull(),
     captureKey: text('capture_key').notNull(),
     evidenceId: uuid('evidence_id').notNull(),
@@ -365,7 +376,7 @@ export const openLoops = pgTable(
     check('open_loops_version_positive', sql`${table.version} > 0`),
     check(
       'open_loops_capture_origin',
-      sql`(${table.captureMethod} = 'chat_command' AND ${table.origin} = 'live_twitch') OR (${table.captureMethod} = 'dashboard' AND ${table.origin} IN ('manual_import', 'demo_fixture'))`,
+      sql`(${table.captureMethod} IN ('chat_command', 'ai_review') AND ${table.origin} = 'live_twitch') OR (${table.captureMethod} = 'dashboard' AND ${table.origin} IN ('manual_import', 'demo_fixture'))`,
     ),
   ],
 );
@@ -389,5 +400,131 @@ export const openLoopHistory = pgTable(
       columns: [table.channelId, table.openLoopId],
       foreignColumns: [openLoops.channelId, openLoops.id],
     }).onDelete('cascade'),
+  ],
+);
+
+export const aiRuns = pgTable(
+  'ai_runs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    generation: integer('generation').notNull(),
+    revision: integer('revision').default(0).notNull(),
+    status: text('status')
+      .$type<ExtractionRun['status']>()
+      .default('queued')
+      .notNull(),
+    attempts: integer('attempts').default(0).notNull(),
+    error: text('error').$type<AiError>(),
+    requestedByUserId: uuid('requested_by_user_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique('ai_runs_channel_id_unique').on(table.channelId, table.id),
+    index('ai_runs_pending_idx').on(table.status, table.updatedAt),
+    index('ai_runs_channel_time_idx').on(table.channelId, table.createdAt),
+  ],
+);
+
+export const aiRunSources = pgTable(
+  'ai_run_sources',
+  {
+    channelId: uuid('channel_id').notNull(),
+    runId: uuid('run_id').notNull(),
+    sourceEventId: text('source_event_id').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.channelId, table.sourceEventId] }),
+    foreignKey({
+      name: 'ai_run_sources_run_fk',
+      columns: [table.channelId, table.runId],
+      foreignColumns: [aiRuns.channelId, aiRuns.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'ai_run_sources_event_fk',
+      columns: [table.channelId, table.sourceEventId],
+      foreignColumns: [sourceEvents.channelId, sourceEvents.id],
+    }).onDelete('cascade'),
+  ],
+);
+
+export const aiDailyUsage = pgTable(
+  'ai_daily_usage',
+  {
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    day: date('day').notNull(),
+    calls: integer('calls').default(0).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.channelId, table.day] }),
+    check('ai_daily_usage_positive', sql`${table.calls} >= 0`),
+  ],
+);
+
+export const aiCandidates = pgTable(
+  'ai_candidates',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id').notNull(),
+    runId: uuid('run_id').notNull(),
+    sourceEventId: text('source_event_id').notNull(),
+    kind: text('kind').$type<CandidateDraft['task_type']>().notNull(),
+    draft: jsonb('draft').$type<CandidateDraft>(),
+    status: text('status')
+      .$type<Candidate['status']>()
+      .default('pending')
+      .notNull(),
+    version: integer('version').default(1).notNull(),
+    model: text('model').notNull(),
+    reviewRequestId: uuid('review_request_id'),
+    reviewedByTwitchUserId: text('reviewed_by_twitch_user_id'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    reviewReason: text('review_reason'),
+    confirmedOpenLoopId: uuid('confirmed_open_loop_id'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique('ai_candidates_source_kind_unique').on(
+      table.channelId,
+      table.sourceEventId,
+      table.kind,
+    ),
+    index('ai_candidates_channel_status_idx').on(
+      table.channelId,
+      table.status,
+      table.id,
+    ),
+    foreignKey({
+      name: 'ai_candidates_run_fk',
+      columns: [table.channelId, table.runId],
+      foreignColumns: [aiRuns.channelId, aiRuns.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'ai_candidates_source_fk',
+      columns: [table.channelId, table.sourceEventId],
+      foreignColumns: [sourceEvents.channelId, sourceEvents.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'ai_candidates_loop_fk',
+      columns: [table.channelId, table.confirmedOpenLoopId],
+      foreignColumns: [openLoops.channelId, openLoops.id],
+    }),
+    check(
+      'ai_candidates_state_valid',
+      sql`${table.status} IN ('pending', 'confirmed', 'dismissed', 'expired') AND ${table.version} > 0`,
+    ),
+    check(
+      'ai_candidates_confirmation',
+      sql`(${table.status} = 'confirmed') = (${table.confirmedOpenLoopId} IS NOT NULL)`,
+    ),
   ],
 );

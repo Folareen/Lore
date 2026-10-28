@@ -88,6 +88,8 @@ export class TokenService
           .set({
             disconnectedAt: new Date(),
             captureRequested: false,
+            aiExtractionEnabled: false,
+            aiGeneration: sql`${channels.aiGeneration} + 1`,
             updatedAt: new Date(),
           })
           .where(eq(channels.ownerUserId, userId))

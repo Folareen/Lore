@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
-import { queueNames } from '@lore/shared';
+import { AiModule } from './ai/ai.module';
 import { env } from './config';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
@@ -18,6 +18,7 @@ const redis = new URL(env.REDIS_URL);
     ChannelsModule,
     IngestionModule,
     OpenLoopsModule,
+    AiModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     BullModule.forRoot({
       prefix: env.QUEUE_PREFIX,
@@ -38,7 +39,6 @@ const redis = new URL(env.REDIS_URL);
         backoff: { type: 'exponential', delay: 1000 },
       },
     }),
-    BullModule.registerQueue({ name: queueNames.ai }),
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -1,3 +1,4 @@
+import { expireCandidates } from '../ai/candidate-retention';
 import {
   ConflictException,
   Inject,
@@ -361,7 +362,9 @@ export class EventsubRepository {
               ),
         ),
       );
+    await expireCandidates(tx, channelId);
   }
+
   async pending() {
     return this.infrastructure.db
       .select({ id: sourceEvents.id })
@@ -463,6 +466,7 @@ export class EventsubRepository {
     await this.infrastructure.db.execute(
       sql`DELETE FROM chat_messages m USING channels c WHERE m.channel_id = c.id AND (m.expires_at <= now() OR m.occurred_at + c.chat_retention_days * interval '1 day' <= now())`,
     );
+    await expireCandidates(this.infrastructure.db);
     // Keep payload-free delivery IDs for 30 days to suppress late duplicate retries.
     await this.infrastructure.db.execute(
       sql`DELETE FROM source_events WHERE created_at < now() - interval '30 days' AND payload IS NULL`,
