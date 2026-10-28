@@ -31,6 +31,7 @@ const { replace, push } = vi.hoisted(() => ({
 }));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/app/settings',
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ replace, push, refresh: vi.fn() }),
 }));
 vi.mock('next/image', () => ({

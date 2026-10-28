@@ -12,6 +12,8 @@ All work follows this sequence:
 6. Open a pull request targeting the default branch. Use a Conventional Commit title and describe the change and validation results.
 7. Merge through the pull request after review and required checks pass.
 
+Wait for that PR to merge before starting the next feature or creating its branch. Do not stack feature PRs. After the user confirms the merge, fetch and update the default branch, then branch from it.
+
 Never commit work directly on the default branch, push directly to it, or force-push it. Keep subsequent updates on the pull request branch. Do not merge a pull request unless the user authorizes it.
 
 These are repository contribution instructions. GitHub branch protection or rulesets must be configured separately to enforce them on the server.

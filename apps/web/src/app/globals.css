@@ -2052,3 +2052,119 @@ svg {
 .connection-identity {
   flex-wrap: wrap;
 }
+
+.overview-capture {
+  margin-top: 24px;
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+.overview-capture > .panel {
+  width: 100%;
+}
+.promise-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.promise-guide {
+  display: flex;
+  align-items: start;
+  gap: 16px;
+}
+.promise-guide > svg {
+  flex-shrink: 0;
+  color: var(--purple-ink);
+}
+.promise-guide p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.promise-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.promise-toolbar .field {
+  margin: 0;
+  min-width: 180px;
+}
+.promise-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+}
+.promise-wording,
+.brief-list h2 {
+  font-size: 24px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.promise-card {
+  scroll-margin-top: 24px;
+}
+.promise-source {
+  background: var(--raised);
+  padding: 18px;
+  border-radius: 8px;
+  margin-top: 20px;
+  overflow-wrap: anywhere;
+}
+.promise-source summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.promise-source blockquote {
+  margin: 16px 0;
+  white-space: pre-wrap;
+}
+.promise-transition {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) 2fr;
+  gap: 16px;
+  margin-top: 24px;
+}
+.promise-transition > div:last-child {
+  grid-column: 1 / -1;
+}
+.promise-history {
+  padding-left: 22px;
+  display: grid;
+  gap: 16px;
+}
+.promise-history span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.promise-history p {
+  white-space: pre-wrap;
+}
+.brief-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 20px;
+}
+.brief-list small {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+@media (max-width: 640px) {
+  .promise-fields,
+  .promise-transition {
+    grid-template-columns: 1fr;
+  }
+  .promise-wording,
+  .brief-list h2 {
+    font-size: 21px;
+  }
+}

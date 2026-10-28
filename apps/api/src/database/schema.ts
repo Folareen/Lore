@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import type { OpenLoopStatus } from '@lore/shared';
 import {
   check,
   boolean,
@@ -279,5 +280,114 @@ export const auditEvents = pgTable(
   },
   (table) => [
     index('audit_channel_time_idx').on(table.channelId, table.occurredAt),
+  ],
+);
+
+export const evidence = pgTable(
+  'evidence',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    // Durable reference deliberately survives receipt deletion; availability is checked with a channel-scoped join.
+    sourceEventId: text('source_event_id'),
+    excerpt: text('excerpt').notNull(),
+    origin: text('origin', {
+      enum: ['live_twitch', 'manual_import', 'demo_fixture'],
+    }).notNull(),
+    visibility: text('visibility').default('team').notNull(),
+    retentionState: text('retention_state').default('confirmed').notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique('evidence_channel_id_unique').on(table.channelId, table.id),
+    check(
+      'evidence_team_confirmed',
+      sql`${table.visibility} = 'team' AND ${table.retentionState} = 'confirmed'`,
+    ),
+  ],
+);
+
+export const openLoops = pgTable(
+  'open_loops',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    wording: text('wording').notNull(),
+    ownerLabel: text('owner_label'),
+    dueContext: text('due_context'),
+    status: text('status')
+      .$type<OpenLoopStatus>()
+      .default('confirmed')
+      .notNull(),
+    version: integer('version').default(1).notNull(),
+    origin: text('origin', {
+      enum: ['live_twitch', 'manual_import', 'demo_fixture'],
+    }).notNull(),
+    captureMethod: text('capture_method', {
+      enum: ['dashboard', 'chat_command'],
+    }).notNull(),
+    captureKey: text('capture_key').notNull(),
+    evidenceId: uuid('evidence_id').notNull(),
+    lastReason: text('last_reason'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique('open_loops_channel_id_unique').on(table.channelId, table.id),
+    unique('open_loops_capture_unique').on(
+      table.channelId,
+      table.captureMethod,
+      table.captureKey,
+    ),
+    index('open_loops_channel_status_idx').on(table.channelId, table.status),
+    index('open_loops_channel_time_idx').on(
+      table.channelId,
+      table.createdAt,
+      table.id,
+    ),
+    foreignKey({
+      name: 'open_loops_channel_evidence_fk',
+      columns: [table.channelId, table.evidenceId],
+      foreignColumns: [evidence.channelId, evidence.id],
+    }),
+    check(
+      'open_loops_status_valid',
+      sql`${table.status} IN ('candidate', 'confirmed', 'in_progress', 'fulfilled', 'postponed', 'cancelled')`,
+    ),
+    check(
+      'open_loops_terminal_reason',
+      sql`${table.status} NOT IN ('fulfilled', 'cancelled') OR length(trim(${table.lastReason})) > 0 AND ${table.lastReason} IS NOT NULL`,
+    ),
+    check('open_loops_version_positive', sql`${table.version} > 0`),
+    check(
+      'open_loops_capture_origin',
+      sql`(${table.captureMethod} = 'chat_command' AND ${table.origin} = 'live_twitch') OR (${table.captureMethod} = 'dashboard' AND ${table.origin} IN ('manual_import', 'demo_fixture'))`,
+    ),
+  ],
+);
+
+export const openLoopHistory = pgTable(
+  'open_loop_history',
+  {
+    channelId: uuid('channel_id').notNull(),
+    openLoopId: uuid('open_loop_id').notNull(),
+    version: integer('version').notNull(),
+    fromStatus: text('from_status').$type<OpenLoopStatus>(),
+    toStatus: text('to_status').$type<OpenLoopStatus>().notNull(),
+    actorTwitchUserId: text('actor_twitch_user_id').notNull(),
+    reason: text('reason'),
+    occurredAt: createdAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.channelId, table.openLoopId, table.version] }),
+    foreignKey({
+      name: 'open_loop_history_channel_loop_fk',
+      columns: [table.channelId, table.openLoopId],
+      foreignColumns: [openLoops.channelId, openLoops.id],
+    }).onDelete('cascade'),
   ],
 );

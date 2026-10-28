@@ -13,6 +13,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Pool } from 'pg';
+import { z } from 'zod';
 import {
   captureScopes,
   channelResponseSchema,
@@ -20,6 +21,11 @@ import {
   queueNames,
   sessionResponseSchema,
   twitchEventTypes,
+  openLoopResponseSchema,
+  openLoopHistorySchema,
+  openLoopPageSchema,
+  streamBriefSchema,
+  type OpenLoop,
   type TwitchEventType,
 } from '@lore/shared';
 import { deliveryJobId } from '../src/ingestion/ingestion-job';
@@ -38,6 +44,7 @@ isolatedUrl.pathname = `/${database}`;
 const pool = new Pool({ connectionString: isolatedUrl.toString() });
 let mock: Server;
 let api: ChildProcess;
+let apiEnvironment: NodeJS.ProcessEnv;
 let origin: string;
 let output = '';
 let owner: Login;
@@ -89,6 +96,33 @@ async function eventually(check: () => Promise<boolean>, timeout = 20000) {
     await new Promise((done) => setTimeout(done, 100));
   }
   throw new Error(`Condition did not settle. API: ${output.slice(-2000)}`);
+}
+async function startApi() {
+  api = spawn(process.execPath, ['apps/api/dist/main.js'], {
+    env: apiEnvironment,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  api.stdout?.on('data', (chunk) => {
+    output += chunk.toString();
+  });
+  api.stderr?.on('data', (chunk) => {
+    output += chunk.toString();
+  });
+  await eventually(async () => {
+    if (api.exitCode !== null)
+      throw new Error(`API exited: ${output.slice(-2000)}`);
+    try {
+      return (await request('/health')).ok;
+    } catch {
+      return false;
+    }
+  }, 10000);
+}
+async function restartApi() {
+  const exited = once(api, 'exit');
+  api.kill('SIGTERM');
+  await exited;
+  await startApi();
 }
 async function deliver(
   type: TwitchEventType,
@@ -354,45 +388,22 @@ beforeAll(async () => {
         : {}),
     },
   });
-  api = spawn(process.execPath, ['apps/api/dist/main.js'], {
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      DATABASE_URL: isolatedUrl.toString(),
-      QUEUE_PREFIX: database,
-      REDIS_URL: proxyUrl.toString(),
-      TWITCH_EVENTSUB_SECRET: webhookSecret,
-      TWITCH_EVENTSUB_CALLBACK_URL: callbackUrl,
-      API_PORT: String(port),
-      APP_ORIGIN: origin,
-      TWITCH_CLIENT_ID: 'test-client',
-      TWITCH_CLIENT_SECRET: 'test-secret',
-      AUTH_ENCRYPTION_KEY: encryptionKey,
-      TWITCH_TEST_BASE_URL: `http://127.0.0.1:${mockPort}`,
-    },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  api.stdout?.on('data', (chunk) => {
-    output += chunk.toString();
-  });
-  api.stderr?.on('data', (chunk) => {
-    output += chunk.toString();
-  });
-  let ready = false;
-  for (let attempt = 0; attempt < 100; attempt++) {
-    try {
-      const response = await request('/health');
-      if (response.ok) {
-        ready = true;
-        break;
-      }
-    } catch {
-      /* Wait for the process to bind. */
-    }
-    if (api.exitCode !== null) break;
-    await new Promise((done) => setTimeout(done, 100));
-  }
-  if (!ready) throw new Error(`API did not start: ${output.slice(-4000)}`);
+  apiEnvironment = {
+    ...process.env,
+    NODE_ENV: 'test',
+    DATABASE_URL: isolatedUrl.toString(),
+    QUEUE_PREFIX: database,
+    REDIS_URL: proxyUrl.toString(),
+    TWITCH_EVENTSUB_SECRET: webhookSecret,
+    TWITCH_EVENTSUB_CALLBACK_URL: callbackUrl,
+    API_PORT: String(port),
+    APP_ORIGIN: origin,
+    TWITCH_CLIENT_ID: 'test-client',
+    TWITCH_CLIENT_SECRET: 'test-secret',
+    AUTH_ENCRYPTION_KEY: encryptionKey,
+    TWITCH_TEST_BASE_URL: `http://127.0.0.1:${mockPort}`,
+  };
+  await startApi();
   owner = await login('owner');
   member = await login('member');
   outsider = await login('outsider');
@@ -1131,6 +1142,529 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
       await (await request(`/channels/${channelId}/ingestion`, owner)).json(),
     );
     expect(status.failed).toBe(1);
+  });
+  describe('promise capture and next-stream brief', () => {
+    let manual: OpenLoop;
+    let commandLoop: OpenLoop;
+    const commandId = 'promise-command-moderator';
+    it('creates confirmed dashboard promises idempotently with scoped evidence and human attribution', async () => {
+      await restartApi();
+      const input = {
+        wording: 'Finish the mock island tour.',
+        ownerLabel: 'Owner',
+        dueContext: 'Next stream',
+        requestId: '10000000-0000-4000-8000-000000000001',
+      };
+      const created = await request(
+        `/channels/${channelId}/open-loops`,
+        owner,
+        'POST',
+        input,
+      );
+      expect(created.status).toBe(200);
+      manual = openLoopResponseSchema.parse(await created.json());
+      expect(manual).toMatchObject({
+        status: 'confirmed',
+        origin: 'manual_import',
+        captureMethod: 'dashboard',
+        version: 1,
+        source: { excerpt: input.wording, originalAvailable: null },
+      });
+      const duplicate = await request(
+        `/channels/${channelId}/open-loops`,
+        owner,
+        'POST',
+        input,
+      );
+      expect(openLoopResponseSchema.parse(await duplicate.json()).id).toBe(
+        manual.id,
+      );
+      expect(
+        (
+          await request(`/channels/${channelId}/open-loops`, owner, 'POST', {
+            ...input,
+            wording: 'Different intent.',
+          })
+        ).status,
+      ).toBe(409);
+      expect(
+        (
+          await pool.query(
+            'SELECT count(*)::int AS count FROM evidence WHERE channel_id = $1',
+            [channelId],
+          )
+        ).rows[0].count,
+      ).toBe(1);
+      const history = await (
+        await request(
+          `/channels/${channelId}/open-loops/${manual.id}/history`,
+          owner,
+        )
+      ).json();
+      expect(history).toMatchObject([
+        {
+          version: 1,
+          fromStatus: null,
+          toStatus: 'confirmed',
+          actorTwitchUserId: '100',
+        },
+      ]);
+    });
+    it('requires sessions, CSRF, connected membership and server-owned status/origin', async () => {
+      const path = `/channels/${channelId}/open-loops`;
+      const input = {
+        wording: 'Mock promise.',
+        requestId: '10000000-0000-4000-8000-000000000002',
+      };
+      expect((await request(path)).status).toBe(401);
+      expect(
+        (await request(path, owner, 'POST', input, { 'x-csrf-token': '' }))
+          .status,
+      ).toBe(403);
+      for (const who of [outsider, member]) {
+        expect((await request(path, who)).status).toBe(404);
+        expect((await request(path, who, 'POST', input)).status).toBe(404);
+        expect((await request(`${path}/${manual.id}`, who)).status).toBe(404);
+        expect(
+          (await request(`${path}/${manual.id}/history`, who)).status,
+        ).toBe(404);
+        expect(
+          (await request(`/channels/${channelId}/brief`, who)).status,
+        ).toBe(404);
+      }
+      for (const body of [
+        { ...input, status: 'confirmed' },
+        { ...input, origin: 'live_twitch' },
+        { ...input, channelId },
+        { ...input, wording: ' ' },
+      ])
+        expect((await request(path, owner, 'POST', body)).status).toBe(400);
+      await request(`/channels/${channelId}/members`, owner, 'POST', {
+        twitchUserId: '200',
+        role: 'team',
+      });
+      expect((await request(path, member)).status).toBe(200);
+      const ownOther = await pool.query(
+        "SELECT id FROM channels WHERE twitch_channel_id = '300'",
+      );
+      expect(
+        (
+          await request(
+            `/channels/${ownOther.rows[0].id}/open-loops/${manual.id}`,
+            outsider,
+          )
+        ).status,
+      ).toBe(404);
+      expect(
+        (
+          await request(
+            `/channels/${ownOther.rows[0].id}/open-loops/${manual.id}`,
+            outsider,
+            'PATCH',
+            { status: 'in_progress', expectedVersion: 1 },
+          )
+        ).status,
+      ).toBe(404);
+      expect(
+        (
+          await request(
+            `/channels/${ownOther.rows[0].id}/open-loops?cursor=${manual.id}`,
+            outsider,
+          )
+        ).status,
+      ).toBe(404);
+    });
+    it('enforces allowed transitions, terminal reasons and optimistic concurrency', async () => {
+      const path = `/channels/${channelId}/open-loops/${manual.id}`;
+      expect(
+        (
+          await request(path, member, 'PATCH', {
+            status: 'fulfilled',
+            expectedVersion: 1,
+          })
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(path, member, 'PATCH', {
+            status: 'candidate',
+            expectedVersion: 1,
+          })
+        ).status,
+      ).toBe(409);
+      const responses = await Promise.all([
+        request(path, member, 'PATCH', {
+          status: 'in_progress',
+          expectedVersion: 1,
+          reason: 'Working on it.',
+        }),
+        request(path, member, 'PATCH', {
+          status: 'postponed',
+          expectedVersion: 1,
+          reason: 'Needs more time.',
+        }),
+      ]);
+      expect(responses.map((response) => response.status).sort()).toEqual([
+        200, 409,
+      ]);
+      manual = openLoopResponseSchema.parse(
+        await (await request(path, owner)).json(),
+      );
+      expect(manual.version).toBe(2);
+      if (manual.status === 'postponed')
+        manual = openLoopResponseSchema.parse(
+          await (
+            await request(path, member, 'PATCH', {
+              status: 'confirmed',
+              expectedVersion: manual.version,
+            })
+          ).json(),
+        );
+      const fulfilled = await request(path, member, 'PATCH', {
+        status: 'fulfilled',
+        expectedVersion: manual.version,
+        reason: 'Completed during the test stream.',
+      });
+      expect(fulfilled.status).toBe(200);
+      manual = openLoopResponseSchema.parse(await fulfilled.json());
+      expect(
+        (
+          await request(path, member, 'PATCH', {
+            status: 'confirmed',
+            expectedVersion: manual.version,
+          })
+        ).status,
+      ).toBe(409);
+      const history = z
+        .array(openLoopHistorySchema)
+        .parse(await (await request(`${path}/history`, owner)).json());
+      expect(history.at(-1)).toMatchObject({
+        toStatus: 'fulfilled',
+        reason: 'Completed during the test stream.',
+        actorTwitchUserId: '200',
+      });
+      const retry = await request(
+        `/channels/${channelId}/open-loops`,
+        owner,
+        'POST',
+        {
+          wording: 'Finish the mock island tour.',
+          ownerLabel: 'Owner',
+          dueContext: 'Next stream',
+          requestId: '10000000-0000-4000-8000-000000000001',
+        },
+      );
+      expect(openLoopResponseSchema.parse(await retry.json()).status).toBe(
+        'fulfilled',
+      );
+    });
+    it('captures only explicit broadcaster/moderator commands and deduplicates by Twitch chat message across restarts', async () => {
+      for (const [id, badges, text, chatter] of [
+        ['viewer-command', [], '!promise not authorized', '300'],
+        [
+          'vip-command',
+          [{ set_id: 'vip', id: '1', info: '' }],
+          '!promise not authorized',
+          '300',
+        ],
+        [
+          'ordinary-moderator',
+          [{ set_id: 'moderator', id: '1', info: '' }],
+          'I might promise this later.',
+          '200',
+        ],
+      ] as const)
+        await deliver(
+          'channel.chat.message',
+          { ...chat(id, chatter), badges, message: { text } },
+          { id },
+        );
+      const event = {
+        ...chat(commandId),
+        message: { text: '!promise Share the mock emote sketches.' },
+      };
+      expect(
+        (
+          await deliver('channel.chat.message', event, {
+            id: 'promise-delivery-1',
+          })
+        ).status,
+      ).toBe(204);
+      await eventually(
+        async () =>
+          (
+            await pool.query(
+              "SELECT count(*)::int AS count FROM open_loops WHERE channel_id = $1 AND capture_method = 'chat_command'",
+              [channelId],
+            )
+          ).rows[0].count === 1,
+      );
+      await restartApi();
+      await deliver('channel.chat.message', event, {
+        id: 'promise-delivery-2',
+      });
+      await eventually(async () =>
+        Boolean(
+          (
+            await pool.query(
+              "SELECT processed_at FROM source_events WHERE id = 'promise-delivery-2'",
+            )
+          ).rows[0]?.processed_at,
+        ),
+      );
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS count FROM open_loops WHERE channel_id = $1 AND capture_method = 'chat_command'",
+            [channelId],
+          )
+        ).rows[0].count,
+      ).toBe(1);
+      const page = openLoopPageSchema.parse(
+        await (
+          await request(`/channels/${channelId}/open-loops`, owner)
+        ).json(),
+      );
+      commandLoop = page.items.find(
+        (loop) => loop.captureMethod === 'chat_command',
+      )!;
+      expect(commandLoop).toMatchObject({
+        wording: 'Share the mock emote sketches.',
+        status: 'confirmed',
+        origin: 'live_twitch',
+        source: { excerpt: event.message.text, originalAvailable: true },
+      });
+      const broadcaster = {
+        ...chat('broadcaster-promise', '100'),
+        badges: [{ set_id: 'broadcaster', id: '1', info: '' }],
+        message: { text: '!promise Finish the mock community vote.' },
+      };
+      await deliver('channel.chat.message', broadcaster, {
+        id: 'broadcaster-promise',
+      });
+      await eventually(
+        async () =>
+          (
+            await pool.query(
+              "SELECT count(*)::int AS count FROM open_loops WHERE channel_id = $1 AND capture_method = 'chat_command'",
+              [channelId],
+            )
+          ).rows[0].count === 2,
+      );
+    });
+    it('never turns a removed or out-of-order deleted message into a promise', async () => {
+      await deliver('channel.chat.message_delete', {
+        broadcaster_user_id: '100',
+        target_user_id: '200',
+        message_id: 'promise-deleted-first',
+      });
+      await deliver(
+        'channel.chat.message',
+        {
+          ...chat('promise-deleted-first'),
+          message: { text: '!promise Never retain this deleted fixture.' },
+        },
+        { id: 'promise-deleted-first' },
+      );
+      await eventually(async () =>
+        Boolean(
+          (
+            await pool.query(
+              "SELECT processed_at FROM source_events WHERE id = 'promise-deleted-first'",
+            )
+          ).rows[0]?.processed_at,
+        ),
+      );
+      expect(
+        (
+          await pool.query(
+            "SELECT count(*)::int AS count FROM open_loops WHERE capture_key = 'promise-deleted-first'",
+          )
+        ).rows[0].count,
+      ).toBe(0);
+    });
+    it('retains confirmed evidence through chat deletion, purge and source receipt removal', async () => {
+      await deliver('channel.chat.message_delete', {
+        broadcaster_user_id: '100',
+        target_user_id: '200',
+        message_id: commandId,
+      });
+      let loop = openLoopResponseSchema.parse(
+        await (
+          await request(
+            `/channels/${channelId}/open-loops/${commandLoop.id}`,
+            member,
+          )
+        ).json(),
+      );
+      expect(loop.source).toEqual({
+        excerpt: '!promise Share the mock emote sketches.',
+        originalAvailable: false,
+      });
+      await pool.query(
+        "DELETE FROM source_events WHERE id = 'promise-delivery-1'",
+      );
+      const purge = await queue.add(
+        'retention',
+        {},
+        { jobId: 'promise-evidence-retention', removeOnComplete: false },
+      );
+      await eventually(async () => (await purge.getState()) === 'completed');
+      loop = openLoopResponseSchema.parse(
+        await (
+          await request(
+            `/channels/${channelId}/open-loops/${commandLoop.id}`,
+            member,
+          )
+        ).json(),
+      );
+      expect(loop.source).toEqual({
+        excerpt: '!promise Share the mock emote sketches.',
+        originalAvailable: false,
+      });
+      expect(
+        (
+          await pool.query(
+            'SELECT count(*)::int AS count FROM evidence WHERE channel_id = $1',
+            [channelId],
+          )
+        ).rows[0].count,
+      ).toBe(3);
+    });
+    it('builds a scoped brief with current active records, source references and no invented context', async () => {
+      const updated = await request(
+        `/channels/${channelId}/open-loops/${commandLoop.id}`,
+        member,
+        'PATCH',
+        { status: 'in_progress', expectedVersion: 1 },
+      );
+      expect(updated.status).toBe(200);
+      const brief = streamBriefSchema.parse(
+        await (await request(`/channels/${channelId}/brief`, member)).json(),
+      );
+      expect(brief.method).toBe('saved_open_loops');
+      expect(brief.activeCount).toBe(2);
+      expect(brief.items[0].id).toBe(commandLoop.id);
+      expect(brief.items.some((loop) => loop.id === manual.id)).toBe(false);
+      expect(
+        brief.items.every(
+          (loop) => loop.channelId === channelId && loop.source.excerpt,
+        ),
+      ).toBe(true);
+      const other = (
+        await pool.query(
+          "SELECT id FROM channels WHERE twitch_channel_id = '300'",
+        )
+      ).rows[0].id;
+      expect(
+        streamBriefSchema.parse(
+          await (await request(`/channels/${other}/brief`, outsider)).json(),
+        ).items,
+      ).toEqual([]);
+    });
+    it('supports chronological pagination and status filters without crossing channels', async () => {
+      const proof = (
+        await pool.query('SELECT evidence_id FROM open_loops WHERE id = $1', [
+          manual.id,
+        ])
+      ).rows[0].evidence_id;
+      await pool.query(
+        `INSERT INTO open_loops (channel_id, wording, status, origin, capture_method, capture_key, evidence_id, created_at) SELECT $1, 'Pagination fixture ' || n, 'confirmed', 'manual_import', 'dashboard', 'page-' || n, $2, now() - n * interval '1 minute' FROM generate_series(1, 52) n`,
+        [channelId, proof],
+      );
+      const first = openLoopPageSchema.parse(
+        await (
+          await request(
+            `/channels/${channelId}/open-loops?status=confirmed`,
+            owner,
+          )
+        ).json(),
+      );
+      expect(first.items).toHaveLength(50);
+      expect(first.nextCursor).not.toBeNull();
+      const next = openLoopPageSchema.parse(
+        await (
+          await request(
+            `/channels/${channelId}/open-loops?status=confirmed&cursor=${first.nextCursor}`,
+            owner,
+          )
+        ).json(),
+      );
+      expect(next.items).toHaveLength(3);
+      expect(next.nextCursor).toBeNull();
+      expect(
+        next.items.every(
+          (loop) => !first.items.some((saved) => saved.id === loop.id),
+        ),
+      ).toBe(true);
+      const brief = streamBriefSchema.parse(
+        await (await request(`/channels/${channelId}/brief`, owner)).json(),
+      );
+      expect(brief.items).toHaveLength(20);
+      expect(brief.activeCount).toBe(54);
+      await pool.query(
+        "DELETE FROM open_loops WHERE channel_id = $1 AND capture_key LIKE 'page-%'",
+        [channelId],
+      );
+    });
+    it('removes member access immediately and keeps disconnected owner views read-only', async () => {
+      await request(
+        `/channels/${channelId}/members/${member.id}`,
+        owner,
+        'DELETE',
+      );
+      expect(
+        (await request(`/channels/${channelId}/brief`, member)).status,
+      ).toBe(404);
+      expect(
+        (
+          await request(
+            `/channels/${channelId}/open-loops/${commandLoop.id}`,
+            member,
+            'PATCH',
+            {
+              status: 'fulfilled',
+              expectedVersion: 2,
+              reason: 'Not permitted.',
+            },
+          )
+        ).status,
+      ).toBe(404);
+      await request(`/channels/${channelId}/disconnect`, owner, 'POST');
+      expect(
+        (await request(`/channels/${channelId}/open-loops`, owner)).status,
+      ).toBe(200);
+      expect(
+        (
+          await request(
+            `/channels/${channelId}/open-loops/${commandLoop.id}`,
+            owner,
+            'PATCH',
+            {
+              status: 'fulfilled',
+              expectedVersion: 2,
+              reason: 'Disconnected.',
+            },
+          )
+        ).status,
+      ).toBe(409);
+      await request('/channels/connect', owner, 'POST', {});
+      await request(`/channels/${channelId}/ingestion/start`, owner, 'POST');
+      await restartApi();
+      await eventually(async () => {
+        const live = await pool.query(
+          "SELECT id FROM twitch_subscriptions WHERE channel_id = $1 AND status = 'enabled'",
+          [channelId],
+        );
+        return (
+          live.rows.length === 6 &&
+          remoteSubscriptions.size === 6 &&
+          live.rows.every(
+            (row) => remoteSubscriptions.get(row.id)?.status === 'enabled',
+          )
+        );
+      });
+    });
   });
   it('stops processing on revocation, owner stop and channel disconnect', async () => {
     const sub = [...remoteSubscriptions.values()].find(

@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { AppShell } from '../../features/workspace/app-shell';
 import { Overview } from '../../features/workspace/overview';
 import { ChannelSettings } from '../../features/workspace/settings';
 import { Team } from '../../features/workspace/team';
 import { Account } from '../../features/workspace/account';
-import { previewChannels, previewSession } from '../../lib/preview-data';
+import { OpenLoopsScreen } from '../../features/open-loops/open-loops';
+import { StreamBriefScreen } from '../../features/open-loops/stream-brief';
 export const metadata = {
   title: 'Workspace preview',
   robots: { index: false, follow: false },
@@ -12,11 +12,12 @@ export const metadata = {
 export default async function PreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; loop?: string }>;
 }) {
-  const { view } = await searchParams;
+  const { view, loop } = await searchParams;
+  const focused = z.uuid().safeParse(loop);
   const current = z
-    .enum(['overview', 'settings', 'team', 'account'])
+    .enum(['overview', 'streamer', 'brief', 'settings', 'team', 'account'])
     .catch('overview')
     .parse(view);
   const Screen = {
@@ -24,15 +25,16 @@ export default async function PreviewPage({
     settings: ChannelSettings,
     team: Team,
     account: Account,
+    streamer: OpenLoopsScreen,
+    brief: StreamBriefScreen,
   }[current];
   return (
-    <AppShell
-      session={previewSession}
-      channels={previewChannels}
-      preview
-      view={current}
-    >
-      <Screen />
-    </AppShell>
+    <>
+      {current === 'streamer' ? (
+        <OpenLoopsScreen focusId={focused.success ? focused.data : undefined} />
+      ) : (
+        <Screen />
+      )}
+    </>
   );
 }
