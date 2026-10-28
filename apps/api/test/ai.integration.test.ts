@@ -300,7 +300,16 @@ afterAll(async () => {
   await ingestion.close();
   if (mock) await new Promise<void>((resolve) => mock.close(() => resolve()));
   await pool.end();
-  await admin.query(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
+  // Pool shutdown can resolve before PostgreSQL observes the final socket close.
+  // Wait for that close rather than terminating an ending client with DROP ... FORCE.
+  await eventually(async () => {
+    const { rows } = await admin.query(
+      'SELECT count(*)::int AS connections FROM pg_stat_activity WHERE datname=$1',
+      [database],
+    );
+    return rows[0].connections === 0;
+  });
+  await admin.query(`DROP DATABASE IF EXISTS ${database}`);
   await admin.end();
 });
 describe('AI extraction and human candidate review', () => {
