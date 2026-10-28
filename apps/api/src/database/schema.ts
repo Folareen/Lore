@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   check,
+  boolean,
   foreignKey,
   index,
   integer,
@@ -47,6 +48,11 @@ export const channels = pgTable(
       enum: ['live_twitch', 'manual_import', 'demo_fixture'],
     }).notNull(),
     chatRetentionDays: integer('chat_retention_days').default(7).notNull(),
+    captureRequested: boolean('capture_requested').default(false).notNull(),
+    captureStartedAt: timestamp('capture_started_at', { withTimezone: true }),
+    captureError: text('capture_error', {
+      enum: ['authorization_required', 'provider_unavailable'],
+    }),
     connectedAt: timestamp('connected_at', { withTimezone: true }),
     disconnectedAt: timestamp('disconnected_at', { withTimezone: true }),
     createdAt: createdAt(),
@@ -160,9 +166,95 @@ export const oauthStates = pgTable(
   {
     stateHash: text('state_hash').primaryKey(),
     browserHash: text('browser_hash').notNull(),
+    expectedUserId: uuid('expected_user_id').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   },
   (table) => [index('oauth_states_expiry_idx').on(table.expiresAt)],
+);
+
+export const twitchSubscriptions = pgTable(
+  'twitch_subscriptions',
+  {
+    id: text('id').primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    status: text('status').notNull(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [index('twitch_subscriptions_channel_idx').on(table.channelId)],
+);
+
+export const sourceEvents = pgTable(
+  'source_events',
+  {
+    id: text('id').primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    subscriptionId: text('subscription_id').notNull(),
+    type: text('type').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    receivedAt: createdAt(),
+    payload: jsonb('payload').$type<Record<string, unknown>>(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+    failedAt: timestamp('failed_at', { withTimezone: true }),
+    origin: text('origin').default('live_twitch').notNull(),
+    visibility: text('visibility').default('private').notNull(),
+  },
+  (table) => [
+    index('source_events_pending_idx').on(
+      table.processedAt,
+      table.failedAt,
+      table.receivedAt,
+    ),
+    index('source_events_channel_time_idx').on(
+      table.channelId,
+      table.occurredAt,
+    ),
+    index('source_events_tombstone_idx')
+      .on(table.channelId, table.type, table.occurredAt)
+      .where(
+        sql`${table.type} IN ('channel.chat.message_delete', 'channel.chat.clear', 'channel.chat.clear_user_messages')`,
+      ),
+    index('source_events_expiry_idx').on(table.expiresAt),
+    unique('source_events_channel_id_unique').on(table.channelId, table.id),
+    check(
+      'source_events_origin_private',
+      sql`${table.origin} = 'live_twitch' AND ${table.visibility} = 'private'`,
+    ),
+  ],
+);
+
+export const chatMessages = pgTable(
+  'chat_messages',
+  {
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    messageId: text('message_id').notNull(),
+    sourceEventId: text('source_event_id').notNull(),
+    chatterId: text('chatter_id').notNull(),
+    text: text('text').notNull(),
+    badges: jsonb('badges')
+      .$type<{ set_id: string; id: string; info: string }[]>()
+      .notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.channelId, table.messageId] }),
+    index('chat_messages_expiry_idx').on(table.expiresAt),
+    foreignKey({
+      name: 'chat_messages_channel_source_fk',
+      columns: [table.channelId, table.sourceEventId],
+      foreignColumns: [sourceEvents.channelId, sourceEvents.id],
+    }).onDelete('cascade'),
+  ],
 );
 
 export const auditEvents = pgTable(

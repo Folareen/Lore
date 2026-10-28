@@ -6,6 +6,7 @@ import type { Channel } from '@lore/shared';
 import { useWorkspace } from './workspace-context';
 import { Avatar } from '../../components/avatar';
 import { ConfirmDialog } from '../../components/confirm-dialog';
+import { LiveCapture } from './live-capture';
 export function ChannelSettings() {
   const { selected, href } = useWorkspace();
   if (!selected)
@@ -111,6 +112,10 @@ function SettingsPanel({ channel }: { channel: Channel }) {
             them.
           </p>
         )}
+        <LiveCapture
+          key={`${channel.id}-${channel.connected}`}
+          channel={channel}
+        />
         <section className="panel">
           <div className="panel-title">
             <h2>Twitch connection</h2>
@@ -137,7 +142,7 @@ function SettingsPanel({ channel }: { channel: Channel }) {
           <p className="panel-description">
             Choose how long ordinary captured chat can stay. The default is
             seven days; excerpts intentionally kept as evidence follow their own
-            retention policy when capture is available.
+            retention policy when evidence saving is available.
           </p>
           <form onSubmit={save}>
             <div className="field">

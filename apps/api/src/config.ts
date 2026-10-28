@@ -19,6 +19,10 @@ export const env = z
         'Expected a Redis URL',
       ),
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+    QUEUE_PREFIX: z
+      .string()
+      .regex(/^[a-zA-Z0-9_-]+$/)
+      .default('lore'),
     APP_ORIGIN: z
       .url()
       .default('http://localhost:3000')
@@ -30,6 +34,33 @@ export const env = z
       }, 'APP_ORIGIN must be an HTTP(S) origin with no path or trailing slash'),
     TWITCH_CLIENT_ID: optionalSecret,
     TWITCH_CLIENT_SECRET: optionalSecret,
+    TWITCH_EVENTSUB_SECRET: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z
+        .string()
+        .min(10)
+        .max(100)
+        .regex(/^[\x21-\x7e]+$/)
+        .optional(),
+    ),
+    TWITCH_EVENTSUB_CALLBACK_URL: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z
+        .url()
+        .refine((value) => {
+          const url = new URL(value);
+          return (
+            url.protocol === 'https:' &&
+            !url.username &&
+            !url.password &&
+            !url.search &&
+            !url.hash &&
+            (!url.port || url.port === '443') &&
+            url.pathname === '/api/webhooks/twitch'
+          );
+        }, 'Use a public HTTPS URL on port 443 ending in /api/webhooks/twitch')
+        .optional(),
+    ),
     AUTH_ENCRYPTION_KEY: z.preprocess(
       (value) => (value === '' ? undefined : value),
       z
@@ -45,6 +76,17 @@ export const env = z
       value.TWITCH_CLIENT_SECRET,
       value.AUTH_ENCRYPTION_KEY,
     ];
+    if (
+      Boolean(value.TWITCH_EVENTSUB_SECRET) !==
+        Boolean(value.TWITCH_EVENTSUB_CALLBACK_URL) ||
+      (value.TWITCH_EVENTSUB_SECRET && !configured.every(Boolean))
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'EventSub requires both its secret and callback URL, plus all Twitch auth credentials',
+      });
+    }
     if (configured.some(Boolean) && !configured.every(Boolean)) {
       ctx.addIssue({
         code: 'custom',

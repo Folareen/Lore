@@ -25,7 +25,7 @@ export class AuthService {
     @Inject(TwitchClient) private readonly twitch: TwitchClient,
     @Inject(TokenService) private readonly tokens: TokenService,
   ) {}
-  async beginLogin() {
+  async beginLogin(expectedUserId?: string) {
     this.twitch.configured();
     const state = randomToken();
     const browser = randomToken();
@@ -38,9 +38,13 @@ export class AuthService {
     await this.infrastructure.db.insert(oauthStates).values({
       stateHash: hashToken(state),
       browserHash: hashToken(browser),
+      expectedUserId,
       expiresAt: new Date(Date.now() + oauthMaxAge),
     });
-    return { browser, url: this.twitch.authorizationUrl(state) };
+    return {
+      browser,
+      url: this.twitch.authorizationUrl(state, Boolean(expectedUserId)),
+    };
   }
   async completeLogin(
     state: string,
@@ -68,6 +72,16 @@ export class AuthService {
     const profile = await this.twitch.profile(tokens.access_token);
     if (identity.user_id !== profile.id)
       throw new UnauthorizedException('Twitch identity mismatch');
+    if (accepted.expectedUserId) {
+      const [expected] = await this.infrastructure.db
+        .select()
+        .from(users)
+        .where(eq(users.id, accepted.expectedUserId));
+      if (!expected || expected.twitchUserId !== profile.id)
+        throw new UnauthorizedException(
+          'Authorize capture with the signed-in Twitch account',
+        );
+    }
     const session = randomToken();
     await this.infrastructure.db.transaction(async (tx) => {
       const [user] = await tx
