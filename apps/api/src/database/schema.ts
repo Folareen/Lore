@@ -1072,3 +1072,12 @@ export const overlayTokens = pgTable(
     check('overlay_version_check', sql`${t.version}>=0`),
   ],
 );
+
+// A curated, anonymous demo snapshot is kept separate from live records and credentials.
+export const demoDatasets = pgTable('demo_datasets', {
+  slug: text('slug').primaryKey(),
+  payload: jsonb('payload')
+    .$type<import('@lore/shared').DemoDataset>()
+    .notNull(),
+  updatedAt: updatedAt(),
+});

@@ -1,4 +1,5 @@
 'use client';
+import { useDemo } from '../demo/demo-seed-context';
 import { createContext, useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
@@ -34,7 +35,9 @@ export function CandidatesProvider({
 }) {
   const { preview, session, selected, recordPreviewReview } = useWorkspace();
   const router = useRouter();
-  const [fixtures, setFixtures] = useState(previewCandidates);
+  const [fixtures, setFixtures] = useState<Candidate[]>(
+    useDemo()?.data.candidates ?? previewCandidates,
+  );
   async function request<T>(
     path: string,
     schema: z.ZodType<T>,

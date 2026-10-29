@@ -2546,3 +2546,60 @@ body:has(.obs-root) > .skip-link {
 .overlay-entry-choices span {
   overflow-wrap: anywhere;
 }
+
+.demo-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--purple-soft);
+  border-radius: 10px;
+  max-width: 900px;
+  margin-bottom: 28px;
+}
+.demo-toolbar nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--purple-ink);
+}
+.demo-journey {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 24px;
+}
+.demo-journey li {
+  padding: 28px;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.demo-journey h2 {
+  font-size: 25px;
+  margin: 10px 0;
+}
+.demo-journey p {
+  color: var(--muted);
+  margin-bottom: 20px;
+  max-width: 620px;
+}
+.demo-guide {
+  padding-bottom: 24px;
+}
+.demo-unavailable {
+  max-width: 760px;
+  margin: 10vh auto;
+}
+@media (max-width: 600px) {
+  .demo-journey li {
+    padding: 22px;
+  }
+  .demo-unavailable {
+    margin: 24px 18px;
+  }
+}

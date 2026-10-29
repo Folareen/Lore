@@ -1,3 +1,5 @@
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { seedDemo } from '../src/database/seed-demo';
 import { createServer, type Server } from 'node:http';
 import { once } from 'node:events';
 import { spawn, type ChildProcess } from 'node:child_process';
@@ -7,6 +9,8 @@ import { Pool } from 'pg';
 import { Queue } from 'bullmq';
 import { beforeAll, afterAll, expect, it } from 'vitest';
 import {
+  demoDatasetSchema,
+  demoSeed,
   overlaySettingsSchema,
   overlayTokenSchema,
   overlayDisplaySchema,
@@ -441,6 +445,70 @@ afterAll(async () => {
   );
   await admin.query(`DROP DATABASE IF EXISTS ${database}`);
   await admin.end();
+});
+it('serves only the explicitly seeded demo snapshot without sign-in and seeds it idempotently', async () => {
+  const load = () => fetch(`${origin}/api/demo`);
+  expect((await load()).status).toBe(503);
+  const before = await pool.query(
+    'SELECT id,display_name FROM channels ORDER BY id',
+  );
+  await seedDemo(drizzle(pool));
+  await seedDemo(drizzle(pool));
+  const response = await load();
+  expect(response.status).toBe(200);
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(response.headers.get('set-cookie')).toBeNull();
+  const data = demoDatasetSchema.parse(await response.json());
+  expect(data).toEqual(demoSeed);
+  expect(
+    (await pool.query('SELECT count(*)::int AS n FROM demo_datasets')).rows[0]
+      .n,
+  ).toBe(1);
+  expect(
+    (await pool.query('SELECT id,display_name FROM channels ORDER BY id')).rows,
+  ).toEqual(before.rows);
+  expect(JSON.stringify(data)).not.toContain(channelId);
+  expect(JSON.stringify(data)).not.toContain(owner.token);
+  expect(JSON.stringify(data)).not.toContain(key);
+  expect(data.cases.every((c) => c.origin === 'demo_fixture')).toBe(true);
+  expect(data.moderation.handoffs).toHaveLength(1);
+  expect(
+    (
+      await fetch(`${origin}/api/demo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      })
+    ).status,
+  ).toBe(404);
+  expect(
+    (
+      await fetch(`${origin}/api/channels`, {
+        headers: { Cookie: 'lore_session=preview-only' },
+      })
+    ).status,
+  ).toBe(401);
+  expect(
+    (
+      await request(
+        '/publications',
+        'GET',
+        undefined,
+        owner,
+        data.channels[0].id,
+      )
+    ).status,
+  ).toBe(404);
+});
+it('fails closed for an invalid demo snapshot and does not fall back to live data', async () => {
+  await pool.query('UPDATE demo_datasets SET payload=$1 WHERE slug=$2', [
+    JSON.stringify({ label: 'PRIVATE_DATA_SENTINEL' }),
+    'lore-demo',
+  ]);
+  const response = await fetch(`${origin}/api/demo`);
+  expect(response.status).toBe(503);
+  expect(await response.text()).not.toContain('PRIVATE_DATA_SENTINEL');
+  await seedDemo(drizzle(pool));
 });
 let entry: ManagedPublication, summary: ManagedPublication;
 it('requires channel access and CSRF for drafts and human owner/moderator approval for publication', async () => {
