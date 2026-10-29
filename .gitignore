@@ -8,3 +8,7 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 *.log
+
+.next-e2e/
+playwright-report/
+test-results/

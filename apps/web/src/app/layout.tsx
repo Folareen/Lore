@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import '@fontsource-variable/dm-sans';
 import '@fontsource-variable/space-grotesk';
 import './globals.css';
@@ -11,13 +12,14 @@ export const metadata: Metadata = {
   description:
     'A shared memory for your Twitch community. Keep the promises, context, and stories worth carrying into the next stream.',
 };
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <Providers>
+        <Providers nonce={nonce}>
           <a className="skip-link" href="#main-content">
             Skip to content
           </a>

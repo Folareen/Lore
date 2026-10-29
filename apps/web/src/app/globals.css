@@ -2603,3 +2603,21 @@ body:has(.obs-root) > .skip-link {
     margin: 24px 18px;
   }
 }
+
+@media (max-width: 850px) {
+  .sidebar {
+    min-width: 0;
+  }
+  .sidebar > .brand {
+    flex-shrink: 0;
+  }
+  .sidebar nav {
+    min-width: 0;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding: 4px;
+  }
+  .sidebar nav a {
+    flex-shrink: 0;
+  }
+}

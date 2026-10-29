@@ -11,7 +11,12 @@ export const env = z
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
-    DATABASE_URL: z.url(),
+    DATABASE_URL: z
+      .url()
+      .refine(
+        (url) => ['postgres:', 'postgresql:'].includes(new URL(url).protocol),
+        'Expected a PostgreSQL URL',
+      ),
     REDIS_URL: z
       .url()
       .refine(
@@ -168,7 +173,8 @@ export const env = z
     if (
       value.TWITCH_TEST_BASE_URL &&
       (value.NODE_ENV !== 'test' ||
-        new URL(value.TWITCH_TEST_BASE_URL).hostname !== '127.0.0.1')
+        new URL(value.TWITCH_TEST_BASE_URL).hostname !== '127.0.0.1' ||
+        new URL(value.TWITCH_TEST_BASE_URL).protocol !== 'http:')
     ) {
       ctx.addIssue({
         code: 'custom',

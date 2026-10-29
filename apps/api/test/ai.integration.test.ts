@@ -487,9 +487,17 @@ describe('AI extraction and human candidate review', () => {
       "UPDATE chat_messages SET occurred_at=now()-interval '2 days' WHERE source_event_id=$1",
       [id],
     );
-    await pool.query('UPDATE channels SET chat_retention_days=1 WHERE id=$1', [
-      channelId,
-    ]);
+    expect(
+      (await request('/settings', 'PATCH', { chatRetentionDays: 1 })).status,
+    ).toBe(200);
+    expect(
+      (
+        await pool.query(
+          'SELECT a.expires_at<=s.expires_at AS capped FROM ai_candidates a JOIN source_events s ON s.id=a.source_event_id WHERE a.id=$1',
+          [candidate.id],
+        )
+      ).rows[0].capped,
+    ).toBe(true);
     expect(
       (
         await request(`/candidates/${candidate.id}/confirm`, 'POST', {

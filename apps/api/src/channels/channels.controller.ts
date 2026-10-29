@@ -64,6 +64,20 @@ export class ChannelsController {
       parse(updateChannelSchema, body),
     );
   }
+  @Get(':id/retention') retention(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.channels.retention(id, req.auth.user.id);
+  }
+  @Post(':id/retention/purge') @HttpCode(200) purge(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() body: unknown,
+  ) {
+    parse(z.strictObject({}), body);
+    return this.channels.retention(id, req.auth.user.id, true);
+  }
   @Post(':id/disconnect')
   @HttpCode(204)
   disconnect(

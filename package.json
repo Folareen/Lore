@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "pnpm --filter @lore/shared build && pnpm -r --parallel dev",
     "build": "pnpm --filter @lore/shared build && pnpm --filter @lore/api build && pnpm --filter @lore/web build",
-    "typecheck": "pnpm --filter @lore/shared build && pnpm -r typecheck",
+    "typecheck": "pnpm --filter @lore/shared build && pnpm -r typecheck && tsc -p tsconfig.e2e.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
@@ -24,16 +24,23 @@
     "db:seed": "pnpm --filter @lore/shared build && pnpm --filter @lore/api db:seed",
     "test:integration": "pnpm --filter @lore/shared build && pnpm --filter @lore/api build && vitest run --config vitest.integration.config.ts",
     "ai:check": "pnpm --filter @lore/shared build && pnpm --filter @lore/api ai:check",
-    "cases:check": "pnpm --filter @lore/shared build && pnpm --filter @lore/api cases:check"
+    "cases:check": "pnpm --filter @lore/shared build && pnpm --filter @lore/api cases:check",
+    "test:e2e": "pnpm --filter @lore/shared build && pnpm --filter @lore/api build && LORE_E2E_BUILD=1 API_INTERNAL_URL=http://127.0.0.1:4321 APP_ORIGIN=http://127.0.0.1:4322 pnpm --filter @lore/web exec next build --webpack && playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^22.0.0",
     "eslint": "^10.0.0",
-    "typescript-eslint": "^8.0.0",
+    "jsdom": "^26.0.0",
     "prettier": "^3.0.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.0",
-    "@types/node": "^22.0.0",
-    "jsdom": "^26.0.0"
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.2.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "multer@<2.5.0": "^2.5.0"
+    }
   }
 }

@@ -64,6 +64,9 @@ export const channels = pgTable(
       enum: ['live_twitch', 'manual_import', 'demo_fixture'],
     }).notNull(),
     chatRetentionDays: integer('chat_retention_days').default(7).notNull(),
+    lastRetentionPurgeAt: timestamp('last_retention_purge_at', {
+      withTimezone: true,
+    }),
     captureRequested: boolean('capture_requested').default(false).notNull(),
     aiExtractionEnabled: boolean('ai_extraction_enabled')
       .default(false)

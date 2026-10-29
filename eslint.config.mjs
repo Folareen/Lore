@@ -5,6 +5,9 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/.next/**',
+      '**/.next-e2e/**',
+      '**/test-results/**',
+      '**/playwright-report/**',
       '**/node_modules/**',
       '**/next-env.d.ts',
       '**/drizzle/**',
