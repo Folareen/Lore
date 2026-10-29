@@ -11,6 +11,7 @@ import { useCases } from './cases-context';
 import { CaseForm } from './case-form';
 import { CaseEvidencePanel } from './case-evidence';
 import { CasePrecedents } from './case-precedents';
+import { CaseWorkflowPanel } from '../moderation/moderator-desk';
 export function CaseDetailScreen({
   id,
   channelId,
@@ -221,6 +222,7 @@ function CaseFile({ id }: { id: string }) {
           ))}
         </ol>
       </section>
+      <CaseWorkflowPanel record={record} />
     </div>
   );
 }

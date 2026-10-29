@@ -12,6 +12,10 @@ import {
   caseAiRunSchema,
   casePageSchema,
   caseAiSettingsSchema,
+  moderationDeskSchema,
+  repairActionSchema,
+  consistencyFlagSchema,
+  ruleChangeSchema,
   queueNames,
   type CaseDetail,
 } from '@lore/shared';
@@ -127,7 +131,7 @@ async function get(record: CaseDetail) {
     ).json(),
   );
 }
-async function decide(record: CaseDetail) {
+async function decide(record: CaseDetail, user = owner) {
   const response = await request(
     `/cases/${record.id}/decision`,
     'POST',
@@ -138,7 +142,7 @@ async function decide(record: CaseDetail) {
       rationale: 'The reminder was unclear; a moderator shortened the timeout.',
       followUp: 'Explain the rule.',
     },
-    owner,
+    user,
     record.channelId,
   );
   expect(response.status).toBe(200);
@@ -848,4 +852,657 @@ it('enforces the shared daily budget before any new model call', async () => {
   const result = await waitRun(await retrieve(), 'failed');
   expect(result.error).toBe('daily_limit');
   expect(calls).toBe(before);
+});
+
+async function desk(channel: string = channelId, user = owner, query = '') {
+  const response = await request(
+    `/moderation${query}`,
+    'GET',
+    undefined,
+    user,
+    channel,
+  );
+  expect(response.status).toBe(200);
+  return moderationDeskSchema.parse(await response.json());
+}
+let repairId: string, repairCase: CaseDetail, completionEvidence: string;
+let reviewId: string, otherDecision: CaseDetail;
+it('keeps moderator workflows private and validates assignments, references and CSRF', async () => {
+  for (const user of [team, outsider]) {
+    expect((await request('/moderation', 'GET', undefined, user)).status).toBe(
+      404,
+    );
+    expect(
+      (await request('/handoffs', 'POST', { requestId: randomUUID() }, user))
+        .status,
+    ).toBe(404);
+    expect((await request('/consistency/scan', 'POST', {}, user)).status).toBe(
+      404,
+    );
+    expect(
+      (
+        await request(
+          '/moderation/rule-changes',
+          'POST',
+          {
+            requestId: randomUUID(),
+            title: 'Spoilers',
+            previousVersion: '1',
+            version: '2',
+            ruleText: 'Ask first.',
+            changeSummary: 'Human-approved clarification.',
+          },
+          user,
+        )
+      ).status,
+    ).toBe(404);
+  }
+  expect(
+    (
+      await request(
+        '/handoffs',
+        'POST',
+        { requestId: randomUUID() },
+        owner,
+        channelId,
+        false,
+      )
+    ).status,
+  ).toBe(403);
+  expect(
+    (await request('/moderation', 'GET', undefined, moderator)).status,
+  ).toBe(200);
+  const choices = (await desk()).assignees.map((p) => p.id);
+  expect(choices.sort()).toEqual([owner.id, moderator.id].sort());
+  repairCase = await create('Follow through on an agreed resolution');
+  const input = {
+    requestId: randomUUID(),
+    caseId: repairCase.id,
+    title: 'Explain the rule',
+    kind: 'repair',
+    agreement: 'Moderator agreed to explain the rule before re-entry.',
+    assigneeId: moderator.id,
+    dueAt: null,
+  };
+  expect((await request('/repairs', 'POST', input)).status).toBe(409);
+  repairCase = caseDetailSchema.parse(
+    await (
+      await request(`/cases/${repairCase.id}/evidence`, 'POST', {
+        expectedVersion: repairCase.version,
+        requestId: randomUUID(),
+        label: 'Human agreement',
+        excerpt: 'The moderator and viewer agreed on a reminder.',
+        occurredAt: null,
+      })
+    ).json(),
+  );
+  completionEvidence = repairCase.evidence[0].id;
+  repairCase = await decide(repairCase);
+  for (const assigneeId of [team.id, outsider.id])
+    expect(
+      (
+        await request('/repairs', 'POST', {
+          ...input,
+          requestId: randomUUID(),
+          assigneeId,
+        })
+      ).status,
+    ).toBe(404);
+  const foreign = await decide(
+    await create('Foreign private resolution', outsider, foreignChannel),
+    outsider,
+  );
+  expect(
+    (
+      await request('/repairs', 'POST', {
+        ...input,
+        requestId: randomUUID(),
+        caseId: foreign.id,
+      })
+    ).status,
+  ).toBe(404);
+  const first = await request('/repairs', 'POST', input, moderator);
+  expect(first.status).toBe(200);
+  repairId = repairActionSchema.parse(await first.json()).id;
+  expect(
+    repairActionSchema.parse(
+      await (await request('/repairs', 'POST', input, moderator)).json(),
+    ).id,
+  ).toBe(repairId);
+  expect(
+    (
+      await request(
+        '/repairs',
+        'POST',
+        { ...input, title: 'Different agreement' },
+        moderator,
+      )
+    ).status,
+  ).toBe(409);
+  expect((await request(`/moderation?caseId=${foreign.id}`)).status).toBe(404);
+});
+it('records concurrent action progress once and requires valid same-case completion proof', async () => {
+  const input = {
+    expectedVersion: 1,
+    status: 'in_progress',
+    assigneeId: owner.id,
+    note: 'The owner will follow up after the stream.',
+    evidenceId: null,
+  };
+  const responses = await Promise.all([
+    request(`/repairs/${repairId}`, 'PATCH', input),
+    request(`/repairs/${repairId}`, 'PATCH', input, moderator),
+  ]);
+  expect(responses.map((r) => r.status).sort()).toEqual([200, 409]);
+  expect(
+    (
+      await request(`/repairs/${repairId}`, 'PATCH', {
+        ...input,
+        expectedVersion: 2,
+        note: '',
+      })
+    ).status,
+  ).toBe(400);
+  const foreignProof = randomUUID();
+  expect(
+    (
+      await request(`/repairs/${repairId}`, 'PATCH', {
+        ...input,
+        expectedVersion: 2,
+        status: 'completed',
+        evidenceId: foreignProof,
+      })
+    ).status,
+  ).toBe(404);
+  expect((await get(repairCase)).version).toBe(repairCase.version);
+  const history = (await desk()).activity.filter(
+    (a) => a.targetId === repairId,
+  );
+  expect(history).toHaveLength(2);
+  expect(history[0].assigneeId).toBe(owner.id);
+});
+it('creates scoped, duplicate-safe consistency concerns only for identical documented rules with different outcomes', async () => {
+  async function decision(
+    title: string,
+    outcome: string,
+    version = 'consistent-1',
+    channel = channelId,
+    user = owner,
+  ) {
+    const created = await request(
+      '/cases',
+      'POST',
+      {
+        ...fields(title),
+        ruleTitle: 'Synthetic consistency rule',
+        ruleVersion: version,
+        ruleText: 'One reminder before escalation.',
+        requestId: randomUUID(),
+      },
+      user,
+      channel,
+    );
+    const record = caseDetailSchema.parse(await created.json());
+    const result = await request(
+      `/cases/${record.id}/decision`,
+      'POST',
+      {
+        expectedVersion: record.version,
+        requestId: randomUUID(),
+        outcome,
+        rationale: 'A human reviewed severity, context and evidence.',
+        followUp: '',
+      },
+      user,
+      channel,
+    );
+    return caseDetailSchema.parse(await result.json());
+  }
+  otherDecision = await decision('Comparable case A', 'uphold');
+  const comparable = await decision('Comparable case B', 'modify');
+  const differentRule = await decision(
+    'Different version is not an automatic match',
+    'overturn',
+    'consistent-2',
+  );
+  await decision(
+    'Foreign comparison must never leak',
+    'overturn',
+    'consistent-1',
+    foreignChannel,
+    outsider,
+  );
+  expect((await request('/consistency/scan', 'POST', {})).status).toBe(200);
+  const all = (await desk()).flags.filter(
+    (f) =>
+      [otherDecision.id, comparable.id].includes(f.caseId) &&
+      [otherDecision.id, comparable.id].includes(f.comparedCaseId ?? ''),
+  );
+  expect(all).toHaveLength(1);
+  reviewId = all[0].id;
+  expect(all[0].origin).toBe('documented_outcome_comparison');
+  expect(all[0].status).toBe('open');
+  expect(all[0].concern).toContain('different outcomes can be justified');
+  const before = (
+    await pool.query('SELECT count(*)::int AS n FROM consistency_flags')
+  ).rows[0].n;
+  expect((await request('/consistency/scan', 'POST', {})).status).toBe(200);
+  expect(
+    (await pool.query('SELECT count(*)::int AS n FROM consistency_flags'))
+      .rows[0].n,
+  ).toBe(before);
+  expect(
+    (await desk()).flags.some(
+      (f) =>
+        f.caseId === differentRule.id || f.comparedCaseId === differentRule.id,
+    ),
+  ).toBe(false);
+  const foreign = (
+    await pool.query('SELECT id FROM cases WHERE channel_id=$1 LIMIT 1', [
+      foreignChannel,
+    ])
+  ).rows[0].id;
+  expect(
+    (
+      await request('/consistency', 'POST', {
+        requestId: randomUUID(),
+        caseId: otherDecision.id,
+        comparedCaseId: foreign,
+        concern: 'Check this comparison.',
+      })
+    ).status,
+  ).toBe(404);
+});
+it('requires an explicit review rationale, retains annotations and never changes the source decision', async () => {
+  const initial = await get(otherDecision);
+  const note = {
+    expectedVersion: 1,
+    status: 'open',
+    note: 'Need the warning context before judging the difference.',
+    severityContext: 'Severity may differ.',
+    evidenceContext: 'One case lacks surrounding chat.',
+  };
+  const first = await request(
+    `/consistency/${reviewId}`,
+    'PATCH',
+    note,
+    moderator,
+  );
+  expect(first.status).toBe(200);
+  expect(consistencyFlagSchema.parse(await first.json()).status).toBe('open');
+  expect(
+    (await request(`/consistency/${reviewId}`, 'PATCH', note)).status,
+  ).toBe(409);
+  expect(
+    (
+      await request(`/consistency/${reviewId}`, 'PATCH', {
+        ...note,
+        expectedVersion: 2,
+        status: 'dismissed',
+        note: '',
+      })
+    ).status,
+  ).toBe(400);
+  const final = await request(`/consistency/${reviewId}`, 'PATCH', {
+    ...note,
+    expectedVersion: 2,
+    status: 'dismissed',
+    note: 'Different severity explains the outcome.',
+  });
+  expect(final.status).toBe(200);
+  expect(
+    (
+      await request(`/consistency/${reviewId}`, 'PATCH', {
+        ...note,
+        expectedVersion: 3,
+      })
+    ).status,
+  ).toBe(409);
+  const saved = await get(otherDecision);
+  expect([saved.outcome, saved.rationale, saved.version]).toEqual([
+    initial.outcome,
+    initial.rationale,
+    initial.version,
+  ]);
+  const history = (await desk()).activity.filter(
+    (a) => a.targetId === reviewId,
+  );
+  expect(
+    history.some((a) => a.note?.includes('One case lacks surrounding chat.')),
+  ).toBe(true);
+  const input = {
+    requestId: randomUUID(),
+    caseId: repairCase.id,
+    comparedCaseId: null,
+    concern:
+      'Check whether the follow-up rationale explains the re-entry condition.',
+  };
+  const flag = consistencyFlagSchema.parse(
+    await (await request('/consistency', 'POST', input)).json(),
+  );
+  expect(
+    consistencyFlagSchema.parse(
+      await (await request('/consistency', 'POST', input)).json(),
+    ).id,
+  ).toBe(flag.id);
+});
+it('generates source-linked handoffs, records rule changes and carries unresolved responsibility into the next shift', async () => {
+  const open = await create('Carry this unresolved case');
+  const change = {
+    requestId: randomUUID(),
+    title: 'No spoilers',
+    previousVersion: '2',
+    version: '3',
+    ruleText: 'Ask before sharing a location; give an explicit reminder.',
+    changeSummary:
+      'Clarify what counts as a spoiler after moderator discussion.',
+  };
+  const changed = await request(
+    '/moderation/rule-changes',
+    'POST',
+    change,
+    moderator,
+  );
+  expect(changed.status).toBe(200);
+  const rule = ruleChangeSchema.parse(await changed.json());
+  expect(
+    ruleChangeSchema.parse(
+      await (
+        await request('/moderation/rule-changes', 'POST', change, moderator)
+      ).json(),
+    ).id,
+  ).toBe(rule.id);
+  expect(
+    (
+      await request('/moderation/rule-changes', 'POST', {
+        ...change,
+        version: '2',
+        requestId: randomUUID(),
+      })
+    ).status,
+  ).toBe(409);
+  const requestId = randomUUID();
+  const generated = await Promise.all([
+    request('/handoffs', 'POST', { requestId }),
+    request('/handoffs', 'POST', { requestId }),
+  ]);
+  const ids = await Promise.all(
+    generated.map(async (r) => {
+      expect(r.status).toBe(200);
+      return z.object({ id: z.uuid() }).parse(await r.json()).id;
+    }),
+  );
+  expect(ids[0]).toBe(ids[1]);
+  let bundle = (await desk()).handoffs.find((h) => h.id === ids[0])!;
+  expect(bundle.ruleChanges.some((r) => r.id === rule.id)).toBe(true);
+  expect(bundle.recentDecisions.some((r) => r.id === repairCase.id)).toBe(true);
+  expect(
+    bundle.items.some((i) => i.sourceType === 'case' && i.sourceId === open.id),
+  ).toBe(true);
+  expect(
+    bundle.items.some(
+      (i) => i.sourceType === 'repair' && i.sourceId === repairId,
+    ),
+  ).toBe(true);
+  expect(bundle.items.some((i) => i.sourceType === 'flag')).toBe(true);
+  const task = bundle.items.find(
+    (i) => i.sourceType === 'repair' && i.sourceId === repairId,
+  )!;
+  const taskInput = {
+    expectedVersion: 1,
+    status: 'acknowledged',
+    assigneeId: moderator.id,
+    note: 'Next moderator will explain the rule after the stream.',
+  };
+  expect(
+    (
+      await request(
+        `/handoffs/${bundle.id}/items/${task.id}`,
+        'PATCH',
+        taskInput,
+        moderator,
+      )
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await request(
+        `/handoffs/${bundle.id}/items/${task.id}`,
+        'PATCH',
+        taskInput,
+      )
+    ).status,
+  ).toBe(409);
+  expect(
+    (
+      await request(`/handoffs/${bundle.id}/items/${task.id}`, 'PATCH', {
+        ...taskInput,
+        expectedVersion: 2,
+        status: 'pending',
+      })
+    ).status,
+  ).toBe(409);
+  expect(
+    (await request('/handoffs', 'POST', { requestId: randomUUID() })).status,
+  ).toBe(200);
+  const next = (await desk()).handoffs[0];
+  expect(next.id).not.toBe(bundle.id);
+  expect(next.ruleChanges).toHaveLength(0);
+  const carried = next.items.find(
+    (i) => i.sourceType === 'repair' && i.sourceId === repairId,
+  )!;
+  expect([carried.status, carried.assigneeId, carried.note]).toEqual([
+    'pending',
+    moderator.id,
+    taskInput.note,
+  ]);
+  expect(
+    (
+      await request(`/handoffs/${next.id}/items/${carried.id}`, 'PATCH', {
+        ...taskInput,
+        status: 'resolved',
+        expectedVersion: 1,
+      })
+    ).status,
+  ).toBe(200);
+  expect((await desk()).repairs.find((r) => r.id === repairId)?.status).toBe(
+    'in_progress',
+  );
+  expect((await get(open)).status).toBe('open');
+  expect(
+    (
+      await request(`/repairs/${repairId}`, 'PATCH', {
+        expectedVersion: 2,
+        status: 'in_progress',
+        assigneeId: owner.id,
+        note: 'Owner takes responsibility after the shift.',
+        evidenceId: null,
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (await request('/handoffs', 'POST', { requestId: randomUUID() })).status,
+  ).toBe(200);
+  const reassigned = (await desk()).handoffs[0];
+  const reassignedTask = reassigned.items.find(
+    (i) => i.sourceType === 'repair' && i.sourceId === repairId,
+  )!;
+  expect(reassignedTask.assigneeId).toBe(owner.id);
+  expect(
+    (
+      await request(
+        `/handoffs/${reassigned.id}/items/${reassignedTask.id}`,
+        'PATCH',
+        {
+          expectedVersion: 1,
+          status: 'pending',
+          assigneeId: null,
+          note: 'Leave this shift task unassigned for triage.',
+        },
+      )
+    ).status,
+  ).toBe(200);
+  expect(
+    (await request('/handoffs', 'POST', { requestId: randomUUID() })).status,
+  ).toBe(200);
+  expect(
+    (await desk()).handoffs[0].items.find((i) => i.sourceId === repairId)
+      ?.assigneeId,
+  ).toBeNull();
+  const completed = await request(
+    `/repairs/${repairId}`,
+    'PATCH',
+    {
+      expectedVersion: 3,
+      status: 'completed',
+      assigneeId: moderator.id,
+      note: 'Explained the current spoiler rule and confirmed understanding.',
+      evidenceId: completionEvidence,
+    },
+    moderator,
+  );
+  expect(completed.status).toBe(200);
+  expect(repairActionSchema.parse(await completed.json()).evidenceId).toBe(
+    completionEvidence,
+  );
+  expect(
+    (
+      await request(`/repairs/${repairId}`, 'PATCH', {
+        expectedVersion: 4,
+        status: 'pending',
+        assigneeId: null,
+        note: 'Reopen',
+        evidenceId: null,
+      })
+    ).status,
+  ).toBe(409);
+  bundle = (await desk()).handoffs.find((h) => h.id === bundle.id)!;
+  expect(bundle.items.some((i) => i.sourceId === repairId)).toBe(true);
+  expect(
+    (await request('/handoffs', 'POST', { requestId: randomUUID() })).status,
+  ).toBe(200);
+  expect(
+    (await desk()).handoffs[0].items.some((i) => i.sourceId === repairId),
+  ).toBe(false);
+});
+it('paginates channel-scoped reviews and history without accepting foreign cursors', async () => {
+  // Creation is covered above; seed volume directly to test paging without 105 unrelated HTTP mutations.
+  await pool.query(
+    `INSERT INTO consistency_flags(channel_id,case_id,case_version,request_id,input_fingerprint,origin,concern)
+    SELECT $1,$2,$3,gen_random_uuid(),'synthetic-pagination','human','Synthetic review '||i FROM generate_series(1,105) i`,
+    [channelId, repairCase.id, repairCase.version],
+  );
+  await pool.query(
+    `INSERT INTO moderation_activity(channel_id,case_id,target_type,target_id,action,actor_twitch_user_id,note)
+    SELECT channel_id,case_id,'flag',id,'flag_created',$2,'Synthetic history fixture' FROM consistency_flags WHERE channel_id=$1 AND input_fingerprint='synthetic-pagination'`,
+    [channelId, owner.twitch],
+  );
+  const first = await desk();
+  expect(first.flags).toHaveLength(50);
+  expect(first.nextCursors.flags).not.toBeNull();
+  const next = await desk(
+    channelId,
+    owner,
+    `?flagCursor=${first.nextCursors.flags}`,
+  );
+  expect(next.flags.length).toBeGreaterThan(0);
+  expect(next.flags.some((f) => first.flags.some((p) => p.id === f.id))).toBe(
+    false,
+  );
+  expect(first.nextCursors.activity).not.toBeNull();
+  const olderHistory = await desk(
+    channelId,
+    owner,
+    `?activityCursor=${first.nextCursors.activity}`,
+  );
+  expect(olderHistory.activity.length).toBeGreaterThan(0);
+  expect(
+    olderHistory.activity.some((a) =>
+      first.activity.some((p) => p.id === a.id),
+    ),
+  ).toBe(false);
+  expect(
+    (await request('/handoffs', 'POST', { requestId: randomUUID() })).status,
+  ).toBe(200);
+  const bounded = (await desk()).handoffs[0];
+  expect(bounded.truncated).toBe(true);
+  expect(bounded.items.filter((i) => i.sourceType === 'flag')).toHaveLength(
+    100,
+  );
+  const foreign = await request(
+    '/consistency',
+    'POST',
+    {
+      requestId: randomUUID(),
+      caseId: (await create('Foreign concern', outsider, foreignChannel)).id,
+      comparedCaseId: null,
+      concern: 'Private foreign record.',
+    },
+    outsider,
+    foreignChannel,
+  );
+  const foreignId = consistencyFlagSchema.parse(await foreign.json()).id;
+  expect((await request(`/moderation?flagCursor=${foreignId}`)).status).toBe(
+    404,
+  );
+  expect(
+    (await request(`/moderation?activityCursor=${randomUUID()}`)).status,
+  ).toBe(404);
+});
+it('rechecks current role and disconnected-channel state on workflow reads and writes', async () => {
+  const latest = (await desk()).handoffs[0];
+  const task = latest.items.find((i) => i.status === 'pending')!;
+  expect(
+    (
+      await request(`/handoffs/${latest.id}/items/${task.id}`, 'PATCH', {
+        expectedVersion: task.version,
+        status: 'pending',
+        assigneeId: moderator.id,
+        note: 'Assigned before the role change.',
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await request('/members', 'POST', {
+        twitchUserId: moderator.twitch,
+        role: 'team',
+      })
+    ).status,
+  ).toBe(200);
+  expect(
+    (await request('/moderation', 'GET', undefined, moderator)).status,
+  ).toBe(404);
+  expect(
+    (
+      await request(
+        `/consistency/${reviewId}`,
+        'PATCH',
+        {
+          expectedVersion: 3,
+          status: 'open',
+          note: 'Try after revocation',
+          severityContext: '',
+          evidenceContext: '',
+        },
+        moderator,
+      )
+    ).status,
+  ).toBe(404);
+  expect(
+    (await request('/handoffs', 'POST', { requestId: randomUUID() }, moderator))
+      .status,
+  ).toBe(404);
+  expect(
+    (await request('/handoffs', 'POST', { requestId: randomUUID() })).status,
+  ).toBe(200);
+  expect(
+    (await desk()).handoffs[0].items.some((i) => i.assigneeId === moderator.id),
+  ).toBe(false);
+  expect((await request('/disconnect', 'POST', {})).status).toBe(204);
+  expect((await request('/moderation')).status).toBe(200);
+  expect(
+    (await request('/handoffs', 'POST', { requestId: randomUUID() })).status,
+  ).toBe(409);
+  expect((await request('/consistency/scan', 'POST', {})).status).toBe(409);
 });

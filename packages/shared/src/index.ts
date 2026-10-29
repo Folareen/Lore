@@ -19,3 +19,4 @@ export * from './ingestion';
 export * from './open-loops';
 export * from './ai';
 export * from './cases';
+export * from './moderation';
