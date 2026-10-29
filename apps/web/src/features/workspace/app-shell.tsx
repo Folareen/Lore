@@ -14,6 +14,7 @@ import {
   ListChecks,
 } from 'lucide-react';
 import type { Channel, Session } from '@lore/shared';
+import { CasesProvider } from '../cases/cases-context';
 import { CandidatesProvider } from '../candidates/candidates-context';
 import { Brand } from '../../components/brand';
 import { Avatar } from '../../components/avatar';
@@ -22,6 +23,7 @@ import { WorkspaceProvider, useWorkspace } from './workspace-context';
 const navigation = [
   { view: 'overview', title: 'Overview', icon: Home },
   { view: 'streamer', title: 'Open loops', icon: Bookmark },
+  { view: 'moderation', title: 'Moderation cases', icon: BookOpen },
   { view: 'candidates', title: 'Needs review', icon: BookOpen },
   { view: 'brief', title: 'Next-stream brief', icon: ListChecks },
   { view: 'settings', title: 'Channel settings', icon: Settings2 },
@@ -39,9 +41,10 @@ function Shell({
     useWorkspace();
   const path = usePathname();
   const searchParams = useSearchParams();
-  const current = preview
+  const route = preview
     ? searchParams.get('view') || view || 'overview'
     : path.split('/')[2] || 'overview';
+  const current = ['case', 'cases'].includes(route) ? 'moderation' : route;
   const title =
     navigation.find((item) => item.view === current)?.title || 'Overview';
   return (
@@ -50,16 +53,23 @@ function Shell({
         <Brand />
         <p className="sidebar-label">YOUR COMMUNITY SPACE</p>
         <nav aria-label="Workspace navigation">
-          {navigation.map(({ view: item, title: label, icon: Icon }) => (
-            <Link
-              key={item}
-              href={href(item)}
-              aria-current={current === item ? 'page' : undefined}
-            >
-              <Icon size={19} />
-              <span>{label}</span>
-            </Link>
-          ))}
+          {navigation
+            .filter(
+              (item) =>
+                item.view !== 'moderation' ||
+                selected?.role === 'owner' ||
+                selected?.role === 'moderator',
+            )
+            .map(({ view: item, title: label, icon: Icon }) => (
+              <Link
+                key={item}
+                href={href(item)}
+                aria-current={current === item ? 'page' : undefined}
+              >
+                <Icon size={19} />
+                <span>{label}</span>
+              </Link>
+            ))}
         </nav>
         <div className="sidebar-note">
           <BookOpen size={23} />
@@ -138,11 +148,13 @@ export function AppShell({
       initialChannels={channels}
       preview={preview}
     >
-      <CandidatesProvider>
-        <Suspense fallback={<p role="status">Loading your workspace…</p>}>
-          <Shell view={view}>{children}</Shell>
-        </Suspense>
-      </CandidatesProvider>
+      <CasesProvider>
+        <CandidatesProvider>
+          <Suspense fallback={<p role="status">Loading your workspace…</p>}>
+            <Shell view={view}>{children}</Shell>
+          </Suspense>
+        </CandidatesProvider>
+      </CasesProvider>
     </WorkspaceProvider>
   );
 }

@@ -5,6 +5,8 @@ import type {
   Candidate,
   ExtractionRun,
   OpenLoopStatus,
+  CaseStatus,
+  CaseRecommendation,
 } from '@lore/shared';
 import {
   check,
@@ -21,6 +23,7 @@ import {
   timestamp,
   unique,
   uuid,
+  vector,
 } from 'drizzle-orm/pg-core';
 
 export const membershipRole = pgEnum('membership_role', ['moderator', 'team']);
@@ -61,6 +64,8 @@ export const channels = pgTable(
       .default(false)
       .notNull(),
     aiGeneration: integer('ai_generation').default(0).notNull(),
+    caseAiEnabled: boolean('case_ai_enabled').default(false).notNull(),
+    caseAiGeneration: integer('case_ai_generation').default(0).notNull(),
     captureStartedAt: timestamp('capture_started_at', { withTimezone: true }),
     captureError: text('capture_error', {
       enum: ['authorization_required', 'provider_unavailable'],
@@ -315,7 +320,7 @@ export const evidence = pgTable(
     unique('evidence_channel_id_unique').on(table.channelId, table.id),
     check(
       'evidence_team_confirmed',
-      sql`${table.visibility} = 'team' AND ${table.retentionState} = 'confirmed'`,
+      sql`${table.visibility} IN ('team', 'private_moderation') AND ${table.retentionState} = 'confirmed'`,
     ),
   ],
 );
@@ -526,5 +531,167 @@ export const aiCandidates = pgTable(
       'ai_candidates_confirmation',
       sql`(${table.status} = 'confirmed') = (${table.confirmedOpenLoopId} IS NOT NULL)`,
     ),
+  ],
+);
+
+export const cases = pgTable(
+  'cases',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    requestId: uuid('request_id').notNull(),
+    requestFingerprint: text('request_fingerprint').notNull(),
+    createdByTwitchUserId: text('created_by_twitch_user_id').notNull(),
+    title: text('title').notNull(),
+    subjectReference: text('subject_reference').notNull(),
+    incident: text('incident').notNull(),
+    appeal: text('appeal').notNull(),
+    incidentAt: timestamp('incident_at', { withTimezone: true }),
+    ruleTitle: text('rule_title').notNull(),
+    ruleVersion: text('rule_version').notNull(),
+    ruleText: text('rule_text').notNull(),
+    status: text('status').$type<CaseStatus>().default('open').notNull(),
+    version: integer('version').default(1).notNull(),
+    origin: text('origin').default('manual_import').notNull(),
+    outcome: text('outcome').$type<
+      'uphold' | 'overturn' | 'modify' | 'no_action'
+    >(),
+    rationale: text('rationale'),
+    followUp: text('follow_up'),
+    aiRunId: uuid('ai_run_id'),
+    aiDisposition: text('ai_disposition').$type<
+      'accepted' | 'modified' | 'rejected'
+    >(),
+    decisionRequestId: uuid('decision_request_id'),
+    decidedByTwitchUserId: text('decided_by_twitch_user_id'),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    embedding: vector('embedding', { dimensions: 768 }),
+    embeddingVersion: integer('embedding_version'),
+    embeddingModel: text('embedding_model'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique('cases_channel_id_unique').on(t.channelId, t.id),
+    unique('cases_request_unique').on(t.channelId, t.requestId),
+    index('cases_channel_time_idx').on(t.channelId, t.createdAt, t.id),
+    check(
+      'cases_state_valid',
+      sql`${t.status} IN ('open','reviewing','decided') AND ${t.version} > 0`,
+    ),
+    check(
+      'cases_decision_valid',
+      sql`(${t.status}='decided') = (${t.outcome} IS NOT NULL AND ${t.rationale} IS NOT NULL AND ${t.decidedByTwitchUserId} IS NOT NULL AND ${t.decidedAt} IS NOT NULL)`,
+    ),
+    check(
+      'cases_origin_valid',
+      sql`${t.origin} IN ('manual_import','live_twitch','demo_fixture')`,
+    ),
+  ],
+);
+export const caseEvidence = pgTable(
+  'case_evidence',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id').notNull(),
+    caseId: uuid('case_id').notNull(),
+    evidenceId: uuid('evidence_id').notNull(),
+    requestId: uuid('request_id').notNull(),
+    inputFingerprint: text('input_fingerprint').notNull(),
+    label: text('label').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }),
+    removedAt: timestamp('removed_at', { withTimezone: true }),
+    storageKey: text('storage_key'),
+    fileName: text('file_name'),
+    contentType: text('content_type'),
+    byteLength: integer('byte_length'),
+    checksum: text('checksum'),
+    fileState: text('file_state').$type<'pending' | 'ready' | 'removed'>(),
+    uploadExpiresAt: timestamp('upload_expires_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('case_evidence_request_unique').on(t.channelId, t.requestId),
+    foreignKey({
+      name: 'case_evidence_case_fk',
+      columns: [t.channelId, t.caseId],
+      foreignColumns: [cases.channelId, cases.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'case_evidence_proof_fk',
+      columns: [t.channelId, t.evidenceId],
+      foreignColumns: [evidence.channelId, evidence.id],
+    }).onDelete('cascade'),
+    index('case_evidence_cleanup_idx').on(t.fileState, t.uploadExpiresAt),
+  ],
+);
+export const caseHistory = pgTable(
+  'case_history',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id').notNull(),
+    caseId: uuid('case_id').notNull(),
+    version: integer('version').notNull(),
+    action: text('action')
+      .$type<
+        | 'created'
+        | 'updated'
+        | 'evidence_added'
+        | 'evidence_removed'
+        | 'decided'
+      >()
+      .notNull(),
+    actorTwitchUserId: text('actor_twitch_user_id').notNull(),
+    reason: text('reason'),
+    occurredAt: createdAt(),
+  },
+  (t) => [
+    unique('case_history_version_unique').on(t.caseId, t.version),
+    foreignKey({
+      name: 'case_history_case_fk',
+      columns: [t.channelId, t.caseId],
+      foreignColumns: [cases.channelId, cases.id],
+    }).onDelete('cascade'),
+  ],
+);
+export const caseAiRuns = pgTable(
+  'case_ai_runs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id').notNull(),
+    caseId: uuid('case_id').notNull(),
+    requestedByUserId: uuid('requested_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    caseVersion: integer('case_version').notNull(),
+    generation: integer('generation').notNull(),
+    kind: text('kind').$type<'index' | 'retrieve'>().notNull(),
+    revision: integer('revision').default(0).notNull(),
+    status: text('status')
+      .$type<ExtractionRun['status']>()
+      .default('queued')
+      .notNull(),
+    attempts: integer('attempts').default(0).notNull(),
+    error: text('error').$type<AiError>(),
+    matches: jsonb('matches')
+      .$type<{ caseId: string; version: number; similarity: number }[]>()
+      .default([])
+      .notNull(),
+    recommendation: jsonb('recommendation').$type<CaseRecommendation>(),
+    indexedCount: integer('indexed_count').default(0).notNull(),
+    eligibleCount: integer('eligible_count').default(0).notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    foreignKey({
+      name: 'case_ai_run_case_fk',
+      columns: [t.channelId, t.caseId],
+      foreignColumns: [cases.channelId, cases.id],
+    }).onDelete('cascade'),
+    index('case_ai_run_pending_idx').on(t.status, t.createdAt),
+    index('case_ai_run_case_idx').on(t.channelId, t.caseId, t.createdAt),
   ],
 );

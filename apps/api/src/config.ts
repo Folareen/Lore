@@ -70,6 +70,23 @@ export const env = z
     ),
     TWITCH_TEST_BASE_URL: z.url().optional(),
     GEMINI_API_KEY: optionalSecret,
+    OPENAI_API_KEY: optionalSecret,
+    OPENAI_MODEL: z
+      .string()
+      .regex(/^[a-zA-Z0-9._-]+$/)
+      .default('gpt-5.4-mini'),
+    OPENAI_TEST_BASE_URL: z.url().optional(),
+    R2_ACCOUNT_ID: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z
+        .string()
+        .regex(/^[a-f0-9]{32}$/)
+        .optional(),
+    ),
+    R2_BUCKET: optionalSecret,
+    R2_ACCESS_KEY_ID: optionalSecret,
+    R2_SECRET_ACCESS_KEY: optionalSecret,
+    R2_TEST_ENDPOINT: z.url().optional(),
     GEMINI_MODEL: z
       .string()
       .regex(/^[a-zA-Z0-9._-]+$/)
@@ -89,6 +106,32 @@ export const env = z
         message: 'AI test override is restricted to HTTP loopback in test mode',
       });
     }
+    for (const endpoint of [
+      value.OPENAI_TEST_BASE_URL,
+      value.R2_TEST_ENDPOINT,
+    ]) {
+      if (
+        endpoint &&
+        (value.NODE_ENV !== 'test' ||
+          new URL(endpoint).hostname !== '127.0.0.1' ||
+          new URL(endpoint).protocol !== 'http:')
+      )
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Test endpoints require HTTP loopback in test mode',
+        });
+    }
+    const r2 = [
+      value.R2_ACCOUNT_ID,
+      value.R2_BUCKET,
+      value.R2_ACCESS_KEY_ID,
+      value.R2_SECRET_ACCESS_KEY,
+    ];
+    if (r2.some(Boolean) && !r2.every(Boolean))
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Configure all four R2 variables together',
+      });
     const configured = [
       value.TWITCH_CLIENT_ID,
       value.TWITCH_CLIENT_SECRET,

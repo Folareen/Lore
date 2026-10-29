@@ -17,6 +17,8 @@ export async function apiRequest<T>(
     signal?: AbortSignal;
   } = {},
 ): Promise<T> {
+  const multipart =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {
@@ -25,13 +27,17 @@ export async function apiRequest<T>(
       cache: 'no-store',
       signal: options.signal,
       headers: {
-        ...(options.body !== undefined
+        ...(options.body !== undefined && !multipart
           ? { 'Content-Type': 'application/json' }
           : {}),
         ...(options.csrfToken ? { 'X-CSRF-Token': options.csrfToken } : {}),
       },
       ...(options.body !== undefined
-        ? { body: JSON.stringify(options.body) }
+        ? {
+            body: multipart
+              ? (options.body as FormData)
+              : JSON.stringify(options.body),
+          }
         : {}),
     });
   } catch (error) {
