@@ -15,11 +15,13 @@ import { Job, Queue } from 'bullmq';
 import { ingestionJobSchema, queueNames } from '@lore/shared';
 import { EventsubRepository } from './eventsub.repository';
 import { deliveryJobId } from './ingestion-job';
+import { CatchupRecovery } from './catchup.worker';
 @Processor(queueNames.ingestion, { concurrency: 4 })
 export class IngestionWorker extends WorkerHost {
   private readonly logger = new Logger(IngestionWorker.name);
   constructor(
     @Inject(EventsubRepository) private readonly repository: EventsubRepository,
+    @Inject(CatchupRecovery) private readonly catchup: CatchupRecovery,
   ) {
     super();
   }
@@ -30,7 +32,8 @@ export class IngestionWorker extends WorkerHost {
     }
     if (job.name !== 'eventsub') throw new Error('Unknown ingestion job');
     const payload = ingestionJobSchema.parse(job.data);
-    await this.repository.process(payload.deliveryId);
+    const queued = await this.repository.process(payload.deliveryId);
+    if (queued) void this.catchup.recover();
   }
   @OnWorkerEvent('failed')
   async failed(job: Job | undefined) {

@@ -417,7 +417,11 @@ afterAll(async () => {
     await queue.close();
   }
   const redisUrl = new URL(process.env.REDIS_URL || 'redis://127.0.0.1:56379');
-  for (const name of [queueNames.ingestion, queueNames.ai]) {
+  for (const name of [
+    queueNames.ingestion,
+    queueNames.ai,
+    queueNames.catchup,
+  ]) {
     const q = new Queue(name, {
       prefix: database,
       connection: { host: redisUrl.hostname, port: Number(redisUrl.port) },

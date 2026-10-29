@@ -225,6 +225,11 @@ function SettingsPanel({ channel }: { channel: Channel }) {
             Everyone on this channel’s team will lose access. Your records stay,
             but you’ll need to grant team roles again after reconnecting.
           </p>
+          <p>
+            Public pages are hidden while disconnected. Reconnecting restores
+            previously published entries. Withdraw or delete entries in
+            Community publishing to revoke their publication.
+          </p>
         </ConfirmDialog>
       )}
     </>

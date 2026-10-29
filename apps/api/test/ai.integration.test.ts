@@ -292,12 +292,18 @@ afterAll(async () => {
   }
   // Ingestion's retention scheduler uses the same isolated prefix.
   const redisUrl = new URL(process.env.REDIS_URL || 'redis://127.0.0.1:56379');
-  const ingestion = new Queue(queueNames.ingestion, {
-    prefix: database,
-    connection: { host: redisUrl.hostname, port: Number(redisUrl.port) },
-  });
-  await ingestion.obliterate({ force: true });
-  await ingestion.close();
+  for (const name of [
+    queueNames.ingestion,
+    queueNames.caseAi,
+    queueNames.catchup,
+  ]) {
+    const cleanup = new Queue(name, {
+      prefix: database,
+      connection: { host: redisUrl.hostname, port: Number(redisUrl.port) },
+    });
+    await cleanup.obliterate({ force: true });
+    await cleanup.close();
+  }
   if (mock) await new Promise<void>((resolve) => mock.close(() => resolve()));
   await pool.end();
   // Pool shutdown can resolve before PostgreSQL observes the final socket close.

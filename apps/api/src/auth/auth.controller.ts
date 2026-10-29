@@ -62,6 +62,17 @@ export class AuthController {
     });
     response.redirect(login.url);
   }
+  @Get('twitch/chat')
+  @UseGuards(SessionGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async chat(@Req() request: AuthenticatedRequest, @Res() response: Response) {
+    const login = await this.auth.beginLogin(request.auth.user.id, true);
+    response.cookie('lore_oauth', login.browser, {
+      ...stateOptions,
+      maxAge: oauthMaxAge,
+    });
+    response.redirect(login.url);
+  }
   @Get('twitch/callback')
   async callback(
     @Query() query: unknown,

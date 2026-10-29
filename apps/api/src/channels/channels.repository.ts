@@ -161,6 +161,8 @@ export class ChannelsRepository {
           captureRequested: false,
           aiExtractionEnabled: false,
           caseAiEnabled: false,
+          catchupEnabled: false,
+          catchupGeneration: sql`${channels.catchupGeneration}+1`,
           caseAiGeneration: sql`${channels.caseAiGeneration} + 1`,
           aiGeneration: sql`${channels.aiGeneration} + 1`,
           updatedAt: new Date(),

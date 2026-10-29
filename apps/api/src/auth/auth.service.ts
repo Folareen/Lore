@@ -25,7 +25,7 @@ export class AuthService {
     @Inject(TwitchClient) private readonly twitch: TwitchClient,
     @Inject(TokenService) private readonly tokens: TokenService,
   ) {}
-  async beginLogin(expectedUserId?: string) {
+  async beginLogin(expectedUserId?: string, chat = false) {
     this.twitch.configured();
     const state = randomToken();
     const browser = randomToken();
@@ -43,7 +43,7 @@ export class AuthService {
     });
     return {
       browser,
-      url: this.twitch.authorizationUrl(state, Boolean(expectedUserId)),
+      url: this.twitch.authorizationUrl(state, Boolean(expectedUserId), chat),
     };
   }
   async completeLogin(
