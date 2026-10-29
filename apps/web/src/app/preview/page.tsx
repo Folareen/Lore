@@ -1,3 +1,5 @@
+import { PublicationsScreen } from '../../features/publications/publications';
+import { CommunityPreview } from '../../features/publications/community-preview';
 import { z } from 'zod';
 import { ModerationScreen } from '../../features/cases/moderation';
 import { ModeratorDeskScreen } from '../../features/moderation/moderator-desk';
@@ -33,6 +35,8 @@ export default async function PreviewPage({
       'candidates',
       'moderation',
       'workflows',
+      'publications',
+      'community',
       'case',
       'settings',
       'team',
@@ -62,6 +66,8 @@ export default async function PreviewPage({
     candidates: CandidatesScreen,
     moderation: ModerationScreen,
     workflows: ModeratorDeskScreen,
+    publications: PublicationsScreen,
+    community: CommunityPreview,
     case: ModerationScreen,
   }[current];
   return (

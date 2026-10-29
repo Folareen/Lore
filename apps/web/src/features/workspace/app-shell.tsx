@@ -14,6 +14,7 @@ import {
   ListChecks,
 } from 'lucide-react';
 import type { Channel, Session } from '@lore/shared';
+import { PublicationsProvider } from '../publications/publications-context';
 import { CasesProvider } from '../cases/cases-context';
 import { ModerationProvider } from '../moderation/moderation-context';
 import { CandidatesProvider } from '../candidates/candidates-context';
@@ -24,6 +25,7 @@ import { WorkspaceProvider, useWorkspace } from './workspace-context';
 const navigation = [
   { view: 'overview', title: 'Overview', icon: Home },
   { view: 'streamer', title: 'Open loops', icon: Bookmark },
+  { view: 'publications', title: 'Community publishing', icon: BookOpen },
   { view: 'moderation', title: 'Moderation cases', icon: BookOpen },
   { view: 'candidates', title: 'Needs review', icon: BookOpen },
   { view: 'brief', title: 'Next-stream brief', icon: ListChecks },
@@ -47,7 +49,9 @@ function Shell({
     : path.split('/')[2] || 'overview';
   const current = ['case', 'cases', 'workflows'].includes(route)
     ? 'moderation'
-    : route;
+    : route === 'community'
+      ? 'publications'
+      : route;
   const title =
     navigation.find((item) => item.view === current)?.title || 'Overview';
   return (
@@ -151,15 +155,17 @@ export function AppShell({
       initialChannels={channels}
       preview={preview}
     >
-      <CasesProvider>
-        <ModerationProvider>
-          <CandidatesProvider>
-            <Suspense fallback={<p role="status">Loading your workspace…</p>}>
-              <Shell view={view}>{children}</Shell>
-            </Suspense>
-          </CandidatesProvider>
-        </ModerationProvider>
-      </CasesProvider>
+      <PublicationsProvider>
+        <CasesProvider>
+          <ModerationProvider>
+            <CandidatesProvider>
+              <Suspense fallback={<p role="status">Loading your workspace…</p>}>
+                <Shell view={view}>{children}</Shell>
+              </Suspense>
+            </CandidatesProvider>
+          </ModerationProvider>
+        </CasesProvider>
+      </PublicationsProvider>
     </WorkspaceProvider>
   );
 }

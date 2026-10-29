@@ -37,7 +37,7 @@ export class EventsubClient {
       throw new ServiceUnavailableException('Twitch EventSub is unavailable');
     }
   }
-  private async appToken() {
+  async appToken() {
     if (this.token && this.token.expiresAt > Date.now())
       return this.token.value;
     const { clientId, clientSecret } = this.twitch.configured();
@@ -100,6 +100,37 @@ export class EventsubClient {
       });
     }
     throw new ServiceUnavailableException('Twitch app authorization failed');
+  }
+  async sendChat(
+    token: string,
+    broadcasterId: string,
+    message: string,
+  ): Promise<'sent' | 'dropped' | 'failed'> {
+    const response = await this.fetch('/helix/chat/messages', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Client-Id': this.twitch.configured().clientId,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        broadcaster_id: broadcasterId,
+        sender_id: broadcasterId,
+        message,
+        for_source_only: true,
+      }),
+    });
+    if (response.status === 401) this.token = undefined;
+    if (!response.ok) return 'failed';
+    const result = z
+      .object({
+        data: z
+          .array(z.object({ is_sent: z.boolean(), message_id: z.string() }))
+          .length(1),
+      })
+      .safeParse(await response.json());
+    if (!result.success) throw new Error('Invalid chat send receipt');
+    return result.data.data[0].is_sent ? 'sent' : 'dropped';
   }
   async list() {
     const subscriptions: RemoteSubscription[] = [];

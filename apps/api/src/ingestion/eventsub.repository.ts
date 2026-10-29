@@ -1,3 +1,4 @@
+import { PublicationsRepository } from '../publications/publications.repository';
 import { expireCandidates } from '../ai/candidate-retention';
 import {
   ConflictException,
@@ -31,6 +32,8 @@ type Transaction = Parameters<
 @Injectable()
 export class EventsubRepository {
   constructor(
+    @Inject(PublicationsRepository)
+    private readonly publications: PublicationsRepository,
     @Inject(InfrastructureService)
     private readonly infrastructure: InfrastructureService,
     @Inject(OpenLoopsRepository)
@@ -82,6 +85,12 @@ export class EventsubRepository {
         .update(channels)
         .set({
           captureRequested: requested,
+          ...(!requested
+            ? {
+                catchupEnabled: false,
+                catchupGeneration: channel.catchupGeneration + 1,
+              }
+            : {}),
           captureStartedAt:
             requested && !channel.captureRequested
               ? new Date()
@@ -143,7 +152,11 @@ export class EventsubRepository {
       .set({
         captureError: error,
         ...(error === 'authorization_required'
-          ? { captureRequested: false }
+          ? {
+              captureRequested: false,
+              catchupEnabled: false,
+              catchupGeneration: sql`${channels.catchupGeneration}+1`,
+            }
           : {}),
       })
       .where(
@@ -247,6 +260,8 @@ export class EventsubRepository {
           .update(channels)
           .set({
             captureRequested: false,
+            catchupEnabled: false,
+            catchupGeneration: sql`${channels.catchupGeneration}+1`,
             captureError:
               sub.status === 'authorization_revoked'
                 ? 'authorization_required'
@@ -382,7 +397,7 @@ export class EventsubRepository {
       .where(and(eq(sourceEvents.id, id), isNull(sourceEvents.processedAt)));
   }
   async process(id: string) {
-    await this.infrastructure.db.transaction(async (tx) => {
+    return this.infrastructure.db.transaction(async (tx) => {
       const [locator] = await tx
         .select({ channelId: sourceEvents.channelId })
         .from(sourceEvents)
@@ -400,7 +415,8 @@ export class EventsubRepository {
           and(eq(sourceEvents.channelId, channel.id), eq(sourceEvents.id, id)),
         )
         .for('update');
-      if (!event || event.processedAt) return;
+      if (!event || event.processedAt) return false;
+      let catchupQueued = false;
       if (
         event.payload &&
         channel.captureRequested &&
@@ -441,6 +457,14 @@ export class EventsubRepository {
                 expiresAt: event.expiresAt,
               })
               .onConflictDoNothing();
+            catchupQueued = Boolean(
+              await this.publications.recordCommand(
+                tx,
+                channel,
+                message,
+                event.occurredAt,
+              ),
+            );
             await this.openLoops.captureCommand(
               tx,
               channel.id,
@@ -456,6 +480,7 @@ export class EventsubRepository {
         .where(
           and(eq(sourceEvents.channelId, channel.id), eq(sourceEvents.id, id)),
         );
+      return catchupQueued;
     });
   }
   async purge() {

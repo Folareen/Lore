@@ -74,6 +74,8 @@ type Workspace = {
       | 'candidates'
       | 'moderation'
       | 'workflows'
+      | 'publications'
+      | 'community'
       | 'settings'
       | 'team'
       | 'account',
@@ -107,7 +109,11 @@ export function WorkspaceProvider({
   const href: Workspace['href'] = (view) =>
     preview
       ? `/preview${view === 'overview' ? '' : `?view=${view}`}`
-      : `/app${view === 'overview' ? '' : `/${view === 'workflows' ? 'moderation/workflows' : view}`}`;
+      : view === 'community'
+        ? selected
+          ? `/c/${selected.slug}`
+          : '/app/publications'
+        : `/app${view === 'overview' ? '' : `/${view === 'workflows' ? 'moderation/workflows' : view}`}`;
   async function request<T>(
     path: string,
     schema: z.ZodType<T>,

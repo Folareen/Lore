@@ -11,6 +11,7 @@ import type {
   ConsistencyFlag,
   Handoff,
   HandoffItem,
+  ManagedPublication,
 } from '@lore/shared';
 import {
   check,
@@ -70,6 +71,10 @@ export const channels = pgTable(
     aiGeneration: integer('ai_generation').default(0).notNull(),
     caseAiEnabled: boolean('case_ai_enabled').default(false).notNull(),
     caseAiGeneration: integer('case_ai_generation').default(0).notNull(),
+    catchupEnabled: boolean('catchup_enabled').default(false).notNull(),
+    catchupGeneration: integer('catchup_generation').default(0).notNull(),
+    catchupEnabledAt: timestamp('catchup_enabled_at', { withTimezone: true }),
+    lastCatchupAt: timestamp('last_catchup_at', { withTimezone: true }),
     captureStartedAt: timestamp('capture_started_at', { withTimezone: true }),
     captureError: text('capture_error', {
       enum: ['authorization_required', 'provider_unavailable'],
@@ -921,5 +926,118 @@ export const ruleChanges = pgTable(
   (t) => [
     unique('rule_change_request_unique').on(t.channelId, t.requestId),
     index('rule_change_channel_time_idx').on(t.channelId, t.createdAt),
+  ],
+);
+
+export const publicEntries = pgTable(
+  'public_entries',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    requestId: uuid('request_id').notNull(),
+    inputFingerprint: text('input_fingerprint').notNull(),
+    kind: text('kind').$type<ManagedPublication['kind']>().notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    chatSummary: text('chat_summary').notNull(),
+    promiseId: uuid('promise_id'),
+    status: text('status')
+      .$type<ManagedPublication['status']>()
+      .default('draft')
+      .notNull(),
+    version: integer('version').default(1).notNull(),
+    approvedByTwitchUserId: text('approved_by_twitch_user_id'),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique('public_entry_channel_id_unique').on(t.channelId, t.id),
+    unique('public_entry_request_unique').on(t.channelId, t.requestId),
+    foreignKey({
+      columns: [t.channelId, t.promiseId],
+      foreignColumns: [openLoops.channelId, openLoops.id],
+    }),
+    check(
+      'public_entry_state_valid',
+      sql`${t.version}>0 AND ${t.status} IN ('draft','published','unpublished','deleted') AND ${t.kind} IN ('milestone','reference','story','commitment','summary')`,
+    ),
+    check(
+      'public_entry_approval_required',
+      sql`${t.status}!='published' OR (${t.approvedByTwitchUserId} IS NOT NULL AND ${t.publishedAt} IS NOT NULL)`,
+    ),
+    index('public_entry_channel_time_idx').on(t.channelId, t.publishedAt, t.id),
+  ],
+);
+export const publicEntrySources = pgTable(
+  'public_entry_sources',
+  {
+    channelId: uuid('channel_id').notNull(),
+    entryId: uuid('entry_id').notNull(),
+    sourceId: uuid('source_id').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.entryId, t.sourceId] }),
+    foreignKey({
+      columns: [t.channelId, t.entryId],
+      foreignColumns: [publicEntries.channelId, publicEntries.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [t.channelId, t.sourceId],
+      foreignColumns: [publicEntries.channelId, publicEntries.id],
+    }).onDelete('cascade'),
+    check('public_entry_no_self_source', sql`${t.entryId}!=${t.sourceId}`),
+  ],
+);
+export const publicationHistory = pgTable(
+  'publication_history',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id').notNull(),
+    entryId: uuid('entry_id').notNull(),
+    version: integer('version').notNull(),
+    action: text('action').notNull(),
+    actorTwitchUserId: text('actor_twitch_user_id').notNull(),
+    reason: text('reason'),
+    occurredAt: createdAt(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.channelId, t.entryId],
+      foreignColumns: [publicEntries.channelId, publicEntries.id],
+    }).onDelete('cascade'),
+    unique('publication_history_version_unique').on(t.entryId, t.version),
+  ],
+);
+export const catchupReplies = pgTable(
+  'catchup_replies',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    messageId: text('message_id').notNull(),
+    generation: integer('generation').notNull(),
+    status: text('status')
+      .$type<
+        | 'queued'
+        | 'attempted'
+        | 'sent'
+        | 'dropped'
+        | 'failed'
+        | 'cancelled'
+        | 'uncertain'
+      >()
+      .default('queued')
+      .notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    unique('catchup_message_unique').on(t.channelId, t.messageId),
+    index('catchup_pending_idx').on(t.status, t.createdAt),
   ],
 );

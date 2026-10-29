@@ -419,6 +419,20 @@ afterAll(async () => {
     await queue.obliterate({ force: true });
     await queue.close();
   }
+  const cleanupRedis = new URL(
+    process.env.REDIS_URL || 'redis://127.0.0.1:56379',
+  );
+  for (const name of [queueNames.ai, queueNames.caseAi, queueNames.catchup]) {
+    const cleanup = new Queue(name, {
+      prefix: database,
+      connection: {
+        host: cleanupRedis.hostname,
+        port: Number(cleanupRedis.port),
+      },
+    });
+    await cleanup.obliterate({ force: true });
+    await cleanup.close();
+  }
   for (const socket of redisSockets) socket.destroy();
   if (redisProxy)
     await new Promise<void>((done) => redisProxy.close(() => done()));
@@ -903,6 +917,20 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
   });
   it('acknowledges durable deliveries while Redis is unavailable and recovers them afterwards', async () => {
     redisUnavailable = true;
+    const cleanupRedis = new URL(
+      process.env.REDIS_URL || 'redis://127.0.0.1:56379',
+    );
+    for (const name of [queueNames.ai, queueNames.caseAi, queueNames.catchup]) {
+      const cleanup = new Queue(name, {
+        prefix: database,
+        connection: {
+          host: cleanupRedis.hostname,
+          port: Number(cleanupRedis.port),
+        },
+      });
+      await cleanup.obliterate({ force: true });
+      await cleanup.close();
+    }
     for (const socket of redisSockets) socket.destroy();
     try {
       const start = Date.now();

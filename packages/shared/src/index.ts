@@ -4,6 +4,7 @@ export const queueNames = {
   ingestion: 'lore-ingestion',
   ai: 'lore-ai',
   caseAi: 'lore-case-ai',
+  catchup: 'lore-catchup',
 } as const;
 export const healthResponseSchema = z.object({
   status: z.enum(['ok', 'degraded']),
@@ -20,3 +21,4 @@ export * from './open-loops';
 export * from './ai';
 export * from './cases';
 export * from './moderation';
+export * from './publications';
