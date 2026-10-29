@@ -296,7 +296,15 @@ export const auditEvents = pgTable(
     action: text('action').notNull(),
     targetId: uuid('target_id').notNull(),
     details: jsonb('details')
-      .$type<{ role?: 'moderator' | 'team'; chatRetentionDays?: number }>()
+      .$type<{
+        role?: 'moderator' | 'team';
+        chatRetentionDays?: number;
+        overlay?: {
+          entryIds: string[];
+          enabled: boolean;
+          mode: 'recap' | 'open_loops';
+        };
+      }>()
       .notNull()
       .default({}),
     occurredAt: timestamp('occurred_at', { withTimezone: true })
@@ -1039,5 +1047,28 @@ export const catchupReplies = pgTable(
   (t) => [
     unique('catchup_message_unique').on(t.channelId, t.messageId),
     index('catchup_pending_idx').on(t.status, t.createdAt),
+  ],
+);
+
+export const overlayTokens = pgTable(
+  'overlay_tokens',
+  {
+    channelId: uuid('channel_id')
+      .primaryKey()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash'),
+    version: integer('version').default(0).notNull(),
+    enabled: boolean('enabled').default(false).notNull(),
+    mode: text('mode', { enum: ['recap', 'open_loops'] })
+      .default('recap')
+      .notNull(),
+    entryIds: jsonb('entry_ids').$type<string[]>().default([]).notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (t) => [
+    check('overlay_mode_check', sql`${t.mode} IN ('recap','open_loops')`),
+    check('overlay_version_check', sql`${t.version}>=0`),
   ],
 );

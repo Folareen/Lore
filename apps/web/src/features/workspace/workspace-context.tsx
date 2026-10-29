@@ -74,6 +74,7 @@ type Workspace = {
       | 'candidates'
       | 'moderation'
       | 'workflows'
+      | 'overlay'
       | 'publications'
       | 'community'
       | 'settings'

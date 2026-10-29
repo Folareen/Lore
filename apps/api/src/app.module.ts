@@ -1,3 +1,4 @@
+import { OverlayModule } from './overlay/overlay.module';
 import { CasesModule } from './cases/cases.module';
 import { PublicationsModule } from './publications/publications.module';
 import { Module } from '@nestjs/common';
@@ -23,6 +24,7 @@ const redis = new URL(env.REDIS_URL);
     AiModule,
     CasesModule,
     PublicationsModule,
+    OverlayModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     BullModule.forRoot({
       prefix: env.QUEUE_PREFIX,

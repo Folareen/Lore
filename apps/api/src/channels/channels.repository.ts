@@ -1,3 +1,4 @@
+import { overlayTokens } from '../database/schema';
 import {
   ConflictException,
   ForbiddenException,
@@ -168,6 +169,16 @@ export class ChannelsRepository {
           updatedAt: new Date(),
         })
         .where(eq(channels.id, channelId));
+      await tx
+        .update(overlayTokens)
+        .set({
+          tokenHash: null,
+          enabled: false,
+          version: sql`${overlayTokens.version}+1`,
+          revokedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(overlayTokens.channelId, channelId));
       // Reconnection requires the owner to explicitly grant access again.
       await tx.delete(memberships).where(eq(memberships.channelId, channelId));
       await this.audit(

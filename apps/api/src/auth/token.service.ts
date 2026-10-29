@@ -1,3 +1,4 @@
+import { overlayTokens } from '../database/schema';
 import {
   Inject,
   Injectable,
@@ -98,6 +99,19 @@ export class TokenService
           })
           .where(eq(channels.ownerUserId, userId))
           .returning({ id: channels.id });
+        if (disconnected.length)
+          await tx
+            .update(overlayTokens)
+            .set({
+              tokenHash: null,
+              enabled: false,
+              version: sql`${overlayTokens.version}+1`,
+              revokedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(
+              sql`${overlayTokens.channelId} in (select ${channels.id} from ${channels} where ${channels.ownerUserId} = ${userId})`,
+            );
         if (disconnected.length)
           await tx.insert(auditEvents).values(
             disconnected.map((channel) => ({

@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { OverlayProvider } from '../overlay/overlay-context';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import {
@@ -25,6 +26,7 @@ import { WorkspaceProvider, useWorkspace } from './workspace-context';
 const navigation = [
   { view: 'overview', title: 'Overview', icon: Home },
   { view: 'streamer', title: 'Open loops', icon: Bookmark },
+  { view: 'overlay', title: 'Stream overlay', icon: ListChecks },
   { view: 'publications', title: 'Community publishing', icon: BookOpen },
   { view: 'moderation', title: 'Moderation cases', icon: BookOpen },
   { view: 'candidates', title: 'Needs review', icon: BookOpen },
@@ -63,7 +65,7 @@ function Shell({
           {navigation
             .filter(
               (item) =>
-                item.view !== 'moderation' ||
+                !['moderation', 'overlay'].includes(item.view) ||
                 selected?.role === 'owner' ||
                 selected?.role === 'moderator',
             )
@@ -156,15 +158,19 @@ export function AppShell({
       preview={preview}
     >
       <PublicationsProvider>
-        <CasesProvider>
-          <ModerationProvider>
-            <CandidatesProvider>
-              <Suspense fallback={<p role="status">Loading your workspace…</p>}>
-                <Shell view={view}>{children}</Shell>
-              </Suspense>
-            </CandidatesProvider>
-          </ModerationProvider>
-        </CasesProvider>
+        <OverlayProvider>
+          <CasesProvider>
+            <ModerationProvider>
+              <CandidatesProvider>
+                <Suspense
+                  fallback={<p role="status">Loading your workspace…</p>}
+                >
+                  <Shell view={view}>{children}</Shell>
+                </Suspense>
+              </CandidatesProvider>
+            </ModerationProvider>
+          </CasesProvider>
+        </OverlayProvider>
       </PublicationsProvider>
     </WorkspaceProvider>
   );
