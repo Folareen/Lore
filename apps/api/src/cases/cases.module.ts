@@ -8,15 +8,18 @@ import { CasesController } from './cases.controller';
 import { CaseFileStorage, CaseFilesService } from './case-files.service';
 import { CaseAiRepository } from './case-ai.repository';
 import { CaseAiRecovery, CaseAiWorker } from './case-ai.worker';
+import { ModerationController } from '../moderation/moderation.controller';
+import { ModerationRepository } from '../moderation/moderation.repository';
 @Module({
   imports: [
     AuthModule,
     AiModule,
     BullModule.registerQueue({ name: queueNames.caseAi }),
   ],
-  controllers: [CasesController],
+  controllers: [CasesController, ModerationController],
   providers: [
     CasesRepository,
+    ModerationRepository,
     CaseFileStorage,
     CaseFilesService,
     CaseAiRepository,

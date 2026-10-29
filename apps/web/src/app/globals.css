@@ -2263,3 +2263,29 @@ svg {
     flex-direction: column;
   }
 }
+.workflow-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.workflow-comparison {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 20px;
+}
+.workflow-summary {
+  cursor: pointer;
+  padding-block: 8px;
+}
+.workflow-summary .status {
+  margin-inline-start: 16px;
+}
+.workflow-summary + div {
+  margin-top: 24px;
+}
+
+.workflow-tab[aria-pressed='true'] {
+  background: var(--purple-soft);
+  color: var(--purple-ink);
+}

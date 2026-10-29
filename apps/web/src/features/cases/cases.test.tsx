@@ -11,6 +11,7 @@ import {
 import userEvent from '@testing-library/user-event';
 import { WorkspaceProvider } from '../workspace/workspace-context';
 import { CasesProvider } from './cases-context';
+import { ModerationProvider } from '../moderation/moderation-context';
 import { ModerationScreen } from './moderation';
 import { CaseDetailScreen } from './case-detail';
 import { previewChannels, previewSession } from '../../lib/preview-data';
@@ -38,7 +39,9 @@ function setup(
       initialChannels={[{ ...previewChannels[0], role, connected }]}
       preview={preview}
     >
-      <CasesProvider>{children}</CasesProvider>
+      <CasesProvider>
+        <ModerationProvider>{children}</ModerationProvider>
+      </CasesProvider>
     </WorkspaceProvider>,
   );
 }
@@ -198,20 +201,38 @@ it('keeps API version conflicts visible and never presents a decision as saved',
         JSON.stringify(
           String(input).endsWith('/decision')
             ? { message: 'This case changed. Refresh before trying again' }
-            : String(input).endsWith('/ai/settings')
+            : String(input).includes('/moderation?')
               ? {
-                  enabled: false,
-                  embeddingsConfigured: false,
-                  reasoningConfigured: false,
-                  storageConfigured: false,
-                  embeddingModel: 'test',
-                  reasoningModel: 'test',
-                  dailyUsed: 0,
-                  dailyLimit: 50,
+                  assignees: [],
+                  repairs: [],
+                  flags: [],
+                  handoffs: [],
+                  activity: [],
+                  nextCursors: {
+                    repairs: null,
+                    flags: null,
+                    handoffs: null,
+                    ruleChanges: null,
+                    activity: null,
+                  },
+                  activityTruncated: false,
+                  ruleChanges: [],
+                  ruleChangesTruncated: false,
                 }
-              : String(input).endsWith('/precedents')
-                ? null
-                : previewCases[0],
+              : String(input).endsWith('/ai/settings')
+                ? {
+                    enabled: false,
+                    embeddingsConfigured: false,
+                    reasoningConfigured: false,
+                    storageConfigured: false,
+                    embeddingModel: 'test',
+                    reasoningModel: 'test',
+                    dailyUsed: 0,
+                    dailyLimit: 50,
+                  }
+                : String(input).endsWith('/precedents')
+                  ? null
+                  : previewCases[0],
         ),
         {
           status: String(input).endsWith('/decision') ? 409 : 200,

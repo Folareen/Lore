@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { Channel, Session } from '@lore/shared';
 import { CasesProvider } from '../cases/cases-context';
+import { ModerationProvider } from '../moderation/moderation-context';
 import { CandidatesProvider } from '../candidates/candidates-context';
 import { Brand } from '../../components/brand';
 import { Avatar } from '../../components/avatar';
@@ -44,7 +45,9 @@ function Shell({
   const route = preview
     ? searchParams.get('view') || view || 'overview'
     : path.split('/')[2] || 'overview';
-  const current = ['case', 'cases'].includes(route) ? 'moderation' : route;
+  const current = ['case', 'cases', 'workflows'].includes(route)
+    ? 'moderation'
+    : route;
   const title =
     navigation.find((item) => item.view === current)?.title || 'Overview';
   return (
@@ -149,11 +152,13 @@ export function AppShell({
       preview={preview}
     >
       <CasesProvider>
-        <CandidatesProvider>
-          <Suspense fallback={<p role="status">Loading your workspace…</p>}>
-            <Shell view={view}>{children}</Shell>
-          </Suspense>
-        </CandidatesProvider>
+        <ModerationProvider>
+          <CandidatesProvider>
+            <Suspense fallback={<p role="status">Loading your workspace…</p>}>
+              <Shell view={view}>{children}</Shell>
+            </Suspense>
+          </CandidatesProvider>
+        </ModerationProvider>
       </CasesProvider>
     </WorkspaceProvider>
   );

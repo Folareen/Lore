@@ -13,7 +13,7 @@ import { useWorkspace } from '../workspace/workspace-context';
 import { useCases } from './cases-context';
 import { CaseForm } from './case-form';
 export function ModerationScreen() {
-  const { selected } = useWorkspace();
+  const { selected, href } = useWorkspace();
   return (
     <>
       <div className="page-heading">
@@ -34,7 +34,12 @@ export function ModerationScreen() {
           Cases are private to owners and approved moderators.
         </p>
       ) : (
-        <CasesList key={selected.id} />
+        <>
+          <Link className="button secondary" href={href('workflows')}>
+            Shift desk · reviews & repair actions
+          </Link>
+          <CasesList key={selected.id} />
+        </>
       )}
     </>
   );

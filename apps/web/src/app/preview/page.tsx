@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ModerationScreen } from '../../features/cases/moderation';
+import { ModeratorDeskScreen } from '../../features/moderation/moderator-desk';
 import { CaseDetailScreen } from '../../features/cases/case-detail';
 import { CandidatesScreen } from '../../features/candidates/candidates';
 import { Overview } from '../../features/workspace/overview';
@@ -31,6 +32,7 @@ export default async function PreviewPage({
       'brief',
       'candidates',
       'moderation',
+      'workflows',
       'case',
       'settings',
       'team',
@@ -59,6 +61,7 @@ export default async function PreviewPage({
     brief: StreamBriefScreen,
     candidates: CandidatesScreen,
     moderation: ModerationScreen,
+    workflows: ModeratorDeskScreen,
     case: ModerationScreen,
   }[current];
   return (

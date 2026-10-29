@@ -7,6 +7,10 @@ import type {
   OpenLoopStatus,
   CaseStatus,
   CaseRecommendation,
+  RepairAction,
+  ConsistencyFlag,
+  Handoff,
+  HandoffItem,
 } from '@lore/shared';
 import {
   check,
@@ -554,7 +558,10 @@ export const cases = pgTable(
     ruleText: text('rule_text').notNull(),
     status: text('status').$type<CaseStatus>().default('open').notNull(),
     version: integer('version').default(1).notNull(),
-    origin: text('origin').default('manual_import').notNull(),
+    origin: text('origin')
+      .$type<'live_twitch' | 'manual_import' | 'demo_fixture'>()
+      .default('manual_import')
+      .notNull(),
     outcome: text('outcome').$type<
       'uphold' | 'overturn' | 'modify' | 'no_action'
     >(),
@@ -614,6 +621,7 @@ export const caseEvidence = pgTable(
   },
   (t) => [
     unique('case_evidence_request_unique').on(t.channelId, t.requestId),
+    unique('case_evidence_channel_id_unique').on(t.channelId, t.id),
     foreignKey({
       name: 'case_evidence_case_fk',
       columns: [t.channelId, t.caseId],
@@ -693,5 +701,225 @@ export const caseAiRuns = pgTable(
     }).onDelete('cascade'),
     index('case_ai_run_pending_idx').on(t.status, t.createdAt),
     index('case_ai_run_case_idx').on(t.channelId, t.caseId, t.createdAt),
+  ],
+);
+
+export const repairActions = pgTable(
+  'repair_actions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id').notNull(),
+    caseId: uuid('case_id').notNull(),
+    requestId: uuid('request_id').notNull(),
+    inputFingerprint: text('input_fingerprint').notNull(),
+    title: text('title').notNull(),
+    kind: text('kind').$type<RepairAction['kind']>().notNull(),
+    agreement: text('agreement').notNull(),
+    assigneeId: uuid('assignee_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }),
+    dueAt: timestamp('due_at', { withTimezone: true }),
+    status: text('status')
+      .$type<RepairAction['status']>()
+      .default('pending')
+      .notNull(),
+    version: integer('version').default(1).notNull(),
+    completionNote: text('completion_note'),
+    evidenceId: uuid('evidence_id'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique('repair_channel_id_unique').on(t.channelId, t.id),
+    unique('repair_request_unique').on(t.channelId, t.requestId),
+    foreignKey({
+      columns: [t.channelId, t.caseId],
+      foreignColumns: [cases.channelId, cases.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [t.channelId, t.evidenceId],
+      foreignColumns: [caseEvidence.channelId, caseEvidence.id],
+    }),
+    check(
+      'repair_state_valid',
+      sql`${t.version}>0 AND ${t.status} IN ('pending','in_progress','completed','cancelled') AND ${t.kind} IN ('follow_up','repair','re_entry')`,
+    ),
+    check(
+      'repair_completion_valid',
+      sql`${t.status} NOT IN ('completed','cancelled') OR (${t.completionNote} IS NOT NULL AND length(trim(${t.completionNote}))>0)`,
+    ),
+    index('repair_channel_time_idx').on(t.channelId, t.createdAt),
+  ],
+);
+export const consistencyFlags = pgTable(
+  'consistency_flags',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id').notNull(),
+    caseId: uuid('case_id').notNull(),
+    comparedCaseId: uuid('compared_case_id'),
+    caseVersion: integer('case_version').notNull(),
+    comparedVersion: integer('compared_version'),
+    requestId: uuid('request_id').notNull(),
+    inputFingerprint: text('input_fingerprint').notNull(),
+    comparisonKey: text('comparison_key'),
+    version: integer('version').default(1).notNull(),
+    status: text('status')
+      .$type<ConsistencyFlag['status']>()
+      .default('open')
+      .notNull(),
+    origin: text('origin').$type<ConsistencyFlag['origin']>().notNull(),
+    concern: text('concern').notNull(),
+    reviewNote: text('review_note'),
+    severityContext: text('severity_context').default('').notNull(),
+    evidenceContext: text('evidence_context').default('').notNull(),
+    reviewedByTwitchUserId: text('reviewed_by_twitch_user_id'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique('flag_request_unique').on(t.channelId, t.requestId),
+    unique('flag_comparison_unique').on(t.channelId, t.comparisonKey),
+    foreignKey({
+      columns: [t.channelId, t.caseId],
+      foreignColumns: [cases.channelId, cases.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [t.channelId, t.comparedCaseId],
+      foreignColumns: [cases.channelId, cases.id],
+    }).onDelete('cascade'),
+    check(
+      'flag_state_valid',
+      sql`${t.version}>0 AND ${t.status} IN ('open','confirmed','dismissed') AND ${t.origin} IN ('human','documented_outcome_comparison')`,
+    ),
+    check(
+      'flag_review_valid',
+      sql`${t.status}='open' OR (${t.reviewNote} IS NOT NULL AND ${t.reviewedByTwitchUserId} IS NOT NULL AND ${t.reviewedAt} IS NOT NULL)`,
+    ),
+    index('flag_channel_time_idx').on(t.channelId, t.createdAt),
+  ],
+);
+export const handoffs = pgTable(
+  'handoffs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    requestId: uuid('request_id').notNull(),
+    inputFingerprint: text('input_fingerprint').notNull(),
+    periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+    periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+    summary: text('summary').notNull(),
+    createdByTwitchUserId: text('created_by_twitch_user_id').notNull(),
+    recentDecisions: jsonb('recent_decisions')
+      .$type<Handoff['recentDecisions']>()
+      .notNull(),
+    ruleContexts: jsonb('rule_contexts')
+      .$type<Handoff['ruleContexts']>()
+      .notNull(),
+    ruleChanges: jsonb('rule_changes')
+      .$type<Handoff['ruleChanges']>()
+      .notNull(),
+    truncated: boolean('truncated').default(false).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('handoff_channel_id_unique').on(t.channelId, t.id),
+    unique('handoff_request_unique').on(t.channelId, t.requestId),
+    check('handoff_period_valid', sql`${t.periodStart}<=${t.periodEnd}`),
+    index('handoff_channel_time_idx').on(t.channelId, t.createdAt),
+  ],
+);
+export const handoffItems = pgTable(
+  'handoff_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id').notNull(),
+    handoffId: uuid('handoff_id').notNull(),
+    caseId: uuid('case_id').notNull(),
+    sourceType: text('source_type')
+      .$type<HandoffItem['sourceType']>()
+      .notNull(),
+    sourceId: uuid('source_id').notNull(),
+    sourceVersion: integer('source_version').notNull(),
+    title: text('title').notNull(),
+    assigneeId: uuid('assignee_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }),
+    status: text('status')
+      .$type<HandoffItem['status']>()
+      .default('pending')
+      .notNull(),
+    version: integer('version').default(1).notNull(),
+    note: text('note'),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.channelId, t.handoffId],
+      foreignColumns: [handoffs.channelId, handoffs.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [t.channelId, t.caseId],
+      foreignColumns: [cases.channelId, cases.id],
+    }).onDelete('cascade'),
+    unique('handoff_source_unique').on(t.handoffId, t.sourceType, t.sourceId),
+    check(
+      'handoff_item_state_valid',
+      sql`${t.version}>0 AND ${t.sourceVersion}>0 AND ${t.sourceType} IN ('case','repair','flag') AND ${t.status} IN ('pending','acknowledged','resolved')`,
+    ),
+  ],
+);
+export const moderationActivity = pgTable(
+  'moderation_activity',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    caseId: uuid('case_id'),
+    targetType: text('target_type')
+      .$type<'repair' | 'flag' | 'handoff' | 'task' | 'rule'>()
+      .notNull(),
+    targetId: uuid('target_id').notNull(),
+    action: text('action').notNull(),
+    actorTwitchUserId: text('actor_twitch_user_id').notNull(),
+    note: text('note'),
+    assigneeId: uuid('assignee_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }),
+    occurredAt: createdAt(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.channelId, t.caseId],
+      foreignColumns: [cases.channelId, cases.id],
+    }).onDelete('cascade'),
+    index('moderation_activity_channel_time_idx').on(t.channelId, t.occurredAt),
+  ],
+);
+
+export const ruleChanges = pgTable(
+  'rule_changes',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    requestId: uuid('request_id').notNull(),
+    inputFingerprint: text('input_fingerprint').notNull(),
+    title: text('title').notNull(),
+    previousVersion: text('previous_version').notNull(),
+    version: text('version').notNull(),
+    ruleText: text('rule_text').notNull(),
+    changeSummary: text('change_summary').notNull(),
+    actorTwitchUserId: text('actor_twitch_user_id').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('rule_change_request_unique').on(t.channelId, t.requestId),
+    index('rule_change_channel_time_idx').on(t.channelId, t.createdAt),
   ],
 );
