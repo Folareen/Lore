@@ -865,6 +865,15 @@ export class PublicationsRepository {
   async recoverReplies() {
     await this.infrastructure.db
       .update(catchupReplies)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(
+        and(
+          eq(catchupReplies.status, 'queued'),
+          lt(catchupReplies.expiresAt, new Date()),
+        ),
+      );
+    await this.infrastructure.db
+      .update(catchupReplies)
       .set({ status: 'uncertain', updatedAt: new Date() })
       .where(
         and(

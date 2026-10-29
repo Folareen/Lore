@@ -6,6 +6,7 @@ import type { Channel } from '@lore/shared';
 import { useWorkspace } from './workspace-context';
 import { Avatar } from '../../components/avatar';
 import { ConfirmDialog } from '../../components/confirm-dialog';
+import { RetentionStatus } from './retention-status';
 import { LiveCapture } from './live-capture';
 export function ChannelSettings() {
   const { selected, href } = useWorkspace();
@@ -142,7 +143,8 @@ function SettingsPanel({ channel }: { channel: Channel }) {
           <p className="panel-description">
             Choose how long ordinary captured chat can stay. The default is
             seven days; excerpts intentionally kept as evidence follow their own
-            retention policy when evidence saving is available.
+            retention policy. Shortening this setting permanently caps existing
+            chat deadlines.
           </p>
           <form onSubmit={save}>
             <div className="field">
@@ -187,6 +189,7 @@ function SettingsPanel({ channel }: { channel: Channel }) {
             )}
           </form>
         </section>
+        <RetentionStatus channel={channel} />
         {owner && (
           <section className="panel danger-section">
             <div>

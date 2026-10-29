@@ -1,3 +1,7 @@
+import {
+  purgeChannel,
+  retentionSnapshot,
+} from '../retention/channel-retention';
 import { overlayTokens } from '../database/schema';
 import {
   ConflictException,
@@ -142,6 +146,7 @@ export class ChannelsRepository {
         })
         .where(eq(channels.id, channelId))
         .returning();
+      await purgeChannel(tx, channelId);
       await this.audit(
         tx,
         channelId,
@@ -151,6 +156,16 @@ export class ChannelsRepository {
         { chatRetentionDays: input.chatRetentionDays },
       );
       return this.response(channel, userId, 'owner');
+    });
+  }
+  async retention(channelId: string, userId: string, purge = false) {
+    return this.withOwner(channelId, userId, async (tx, channel) => {
+      if (purge) {
+        await purgeChannel(tx, channelId);
+        channel.lastRetentionPurgeAt = new Date();
+        await this.audit(tx, channelId, userId, 'retention.purged', channelId);
+      }
+      return retentionSnapshot(tx, channel);
     });
   }
   async disconnect(channelId: string, userId: string) {

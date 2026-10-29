@@ -29,6 +29,8 @@ const { replace, push } = vi.hoisted(() => ({
   replace: vi.fn(),
   push: vi.fn(),
 }));
+// Retention worker status has its own request/permission tests.
+vi.mock('./retention-status', () => ({ RetentionStatus: () => null }));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/app/settings',
   useSearchParams: () => new URLSearchParams(),

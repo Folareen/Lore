@@ -1,0 +1,1 @@
+ALTER TABLE "channels" ADD COLUMN "last_retention_purge_at" timestamp with time zone;

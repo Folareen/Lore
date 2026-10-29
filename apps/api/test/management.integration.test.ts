@@ -15,6 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Pool } from 'pg';
 import { z } from 'zod';
 import {
+  retentionStatusSchema,
   captureScopes,
   channelResponseSchema,
   ingestionStatusSchema,
@@ -1133,6 +1134,159 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
         )
       ).rows[0].payload,
     ).toBeNull();
+  });
+  it('makes shortened deadlines permanent, purges immediately and exposes owner-only cleanup status', async () => {
+    await request(`/channels/${channelId}/settings`, owner, 'PATCH', {
+      chatRetentionDays: 7,
+    });
+    await deliver('channel.chat.message', chat('permanent-expiry'), {
+      id: 'permanent-expiry',
+    });
+    await eventually(async () =>
+      Boolean(
+        (
+          await pool.query(
+            "SELECT processed_at FROM source_events WHERE id='permanent-expiry'",
+          )
+        ).rows[0]?.processed_at,
+      ),
+    );
+    await pool.query(
+      "UPDATE source_events SET occurred_at=now()-interval '2 days' WHERE id='permanent-expiry'",
+    );
+    await pool.query(
+      "UPDATE chat_messages SET occurred_at=now()-interval '2 days' WHERE message_id='permanent-expiry'",
+    );
+    expect(
+      (
+        await request(`/channels/${channelId}/settings`, owner, 'PATCH', {
+          chatRetentionDays: 1,
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await pool.query(
+          "SELECT payload FROM source_events WHERE id='permanent-expiry'",
+        )
+      ).rows[0].payload,
+    ).toBeNull();
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int AS n FROM chat_messages WHERE message_id='permanent-expiry'",
+        )
+      ).rows[0].n,
+    ).toBe(0);
+    await request(`/channels/${channelId}/settings`, owner, 'PATCH', {
+      chatRetentionDays: 7,
+    });
+    expect(
+      (
+        await pool.query(
+          "SELECT expires_at<now() AS expired FROM source_events WHERE id='permanent-expiry'",
+        )
+      ).rows[0].expired,
+    ).toBe(true);
+    expect(
+      (await request(`/channels/${channelId}/retention`, member)).status,
+    ).toBe(404);
+    expect(
+      (await request(`/channels/${channelId}/retention`, outsider)).status,
+    ).toBe(404);
+    expect(
+      (
+        await request(
+          `/channels/${channelId}/retention/purge`,
+          owner,
+          'POST',
+          {},
+          { 'x-csrf-token': '' },
+        )
+      ).status,
+    ).toBe(403);
+    const response = await request(
+      `/channels/${channelId}/retention/purge`,
+      owner,
+      'POST',
+      {},
+    );
+    expect(response.status).toBe(200);
+    const status = retentionStatusSchema.parse(await response.json());
+    expect(status.lastPurgedAt).not.toBeNull();
+    expect(status.expiredMessages).toBe(0);
+    expect(JSON.stringify(status)).not.toContain('permanent-expiry');
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int AS n FROM audit_events WHERE channel_id=$1 AND action='retention.purged'",
+          [channelId],
+        )
+      ).rows[0].n,
+    ).toBeGreaterThan(0);
+    await request(`/channels/${channelId}/settings`, owner, 'PATCH', {
+      chatRetentionDays: 1,
+    });
+  });
+  it('purges expired authentication material without waiting for another login', async () => {
+    const userId = (
+      await pool.query("SELECT id FROM users WHERE twitch_user_id='100'")
+    ).rows[0].id;
+    await pool.query(
+      "INSERT INTO sessions(token_hash,user_id,expires_at)VALUES($1,$2,now()-interval '1 hour')",
+      ['expired-session-receipt', userId],
+    );
+    await pool.query(
+      "INSERT INTO oauth_states(state_hash,browser_hash,expires_at)VALUES('expired-oauth-state','synthetic',now()-interval '1 hour'),('active-oauth-state','synthetic',now()+interval '1 hour')",
+    );
+    const job = await queue.add(
+      'retention',
+      {},
+      { jobId: 'authentication-retention-check' },
+    );
+    await eventually(async () => (await job.getState()) === 'completed');
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int AS n FROM sessions WHERE token_hash='expired-session-receipt'",
+        )
+      ).rows[0].n,
+    ).toBe(0);
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int AS n FROM oauth_states WHERE state_hash='expired-oauth-state'",
+        )
+      ).rows[0].n,
+    ).toBe(0);
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*)::int AS n FROM oauth_states WHERE state_hash='active-oauth-state'",
+        )
+      ).rows[0].n,
+    ).toBe(1);
+    expect((await request('/auth/session', owner)).status).toBe(200);
+  });
+  it('rejects malformed and oversized JSON without echoing request data', async () => {
+    for (const [body, expected] of [
+      ['PRIVATE_PARSE_SENTINEL {', 400],
+      [
+        JSON.stringify({ text: 'PRIVATE_SIZE_SENTINEL' + 'x'.repeat(110000) }),
+        413,
+      ],
+    ] as const) {
+      const response = await fetch(`${origin}/api/channels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+      expect(response.status).toBe(expected);
+      expect(await response.text()).not.toMatch(/PRIVATE_|xxxxx/);
+    }
+    const health = await request('/health');
+    expect(health.headers.get('x-powered-by')).toBeNull();
+    expect(health.headers.get('x-frame-options')).toBe('DENY');
   });
   it('bounds ingestion retries, validates persisted jobs and reports exhausted work', async () => {
     await pool.query(

@@ -1,8 +1,15 @@
 'use client';
 import { ThemeProvider } from 'next-themes';
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  nonce,
+}: {
+  children: React.ReactNode;
+  nonce?: string;
+}) {
   return (
     <ThemeProvider
+      nonce={nonce}
       attribute="data-theme"
       storageKey="lore-theme"
       defaultTheme="system"

@@ -49,3 +49,11 @@ export const membershipGrantResponseSchema = z.strictObject({
 export type Session = z.infer<typeof sessionResponseSchema>;
 export type Channel = z.infer<typeof channelResponseSchema>;
 export type Membership = z.infer<typeof membershipResponseSchema>;
+
+export const retentionStatusSchema = z.strictObject({
+  retentionDays: z.number().int().min(1).max(7),
+  capturedMessages: z.number().int().nonnegative(),
+  expiredMessages: z.number().int().nonnegative(),
+  lastPurgedAt: z.iso.datetime().nullable(),
+  intervalSeconds: z.literal(60),
+});

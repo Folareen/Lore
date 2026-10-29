@@ -990,6 +990,17 @@ async function overlayRead(token = overlayToken, slug = 'twitch-100') {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+it('cancels expired queued catch-up receipts even when delivery is paused', async () => {
+  await queue.pause();
+  const id = randomUUID();
+  await pool.query(
+    "INSERT INTO catchup_replies(id,channel_id,message_id,generation,expires_at)VALUES($1,$2,$3,0,now()-interval '1 minute')",
+    [id, channelId, randomUUID()],
+  );
+  await waitStatus(id, 'cancelled');
+  expect(await queue.getJob(`catchup-${id}`)).toBeUndefined();
+  await queue.resume();
+});
 it('limits overlay management to reviewers, token management to owners, and requires versioned CSRF-protected approval', async () => {
   expect((await request('/overlay', 'GET', undefined, team)).status).toBe(404);
   expect((await request('/overlay', 'GET', undefined, outsider)).status).toBe(

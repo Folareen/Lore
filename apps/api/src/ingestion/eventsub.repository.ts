@@ -1,5 +1,6 @@
-import { PublicationsRepository } from '../publications/publications.repository';
 import { expireCandidates } from '../ai/candidate-retention';
+import { purgeChannel } from '../retention/channel-retention';
+import { PublicationsRepository } from '../publications/publications.repository';
 import {
   ConflictException,
   Inject,
@@ -484,17 +485,25 @@ export class EventsubRepository {
     });
   }
   async purge() {
-    // Re-read current retention so shortening a channel setting applies to old rows too.
+    const rows = await this.infrastructure.db
+      .select({ id: channels.id })
+      .from(channels)
+      .orderBy(channels.id);
+    for (const row of rows)
+      await this.infrastructure.db.transaction(async (tx) => {
+        await tx
+          .select({ id: channels.id })
+          .from(channels)
+          .where(eq(channels.id, row.id))
+          .for('update');
+        await purgeChannel(tx, row.id);
+      });
+    // Expired authentication material should not wait for a future login to be removed.
     await this.infrastructure.db.execute(
-      sql`UPDATE source_events e SET payload = NULL WHERE e.payload IS NOT NULL AND (e.expires_at <= now() OR (e.type = 'channel.chat.message' AND EXISTS (SELECT 1 FROM channels c WHERE c.id = e.channel_id AND e.occurred_at + c.chat_retention_days * interval '1 day' <= now())))`,
+      sql`DELETE FROM oauth_states WHERE expires_at<=now()`,
     );
     await this.infrastructure.db.execute(
-      sql`DELETE FROM chat_messages m USING channels c WHERE m.channel_id = c.id AND (m.expires_at <= now() OR m.occurred_at + c.chat_retention_days * interval '1 day' <= now())`,
-    );
-    await expireCandidates(this.infrastructure.db);
-    // Keep payload-free delivery IDs for 30 days to suppress late duplicate retries.
-    await this.infrastructure.db.execute(
-      sql`DELETE FROM source_events WHERE created_at < now() - interval '30 days' AND payload IS NULL`,
+      sql`DELETE FROM sessions WHERE expires_at<=now()`,
     );
   }
 }

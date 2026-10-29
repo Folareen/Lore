@@ -3,9 +3,27 @@ import { loadEnvConfig } from '@next/env';
 import path from 'node:path';
 loadEnvConfig(path.resolve(process.cwd(), '../..'));
 const nextConfig: NextConfig = {
+  distDir: process.env.LORE_E2E_BUILD === '1' ? '.next-e2e' : '.next',
+  poweredByHeader: false,
   transpilePackages: ['@lore/shared'],
   async headers() {
     return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=()',
+          },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          ...(process.env.APP_ORIGIN?.startsWith('https://')
+            ? [{ key: 'Strict-Transport-Security', value: 'max-age=31536000' }]
+            : []),
+        ],
+      },
       {
         source: '/overlay/:path*',
         headers: [
