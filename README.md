@@ -4,7 +4,7 @@ Every stream has a story. Lore remembers it.
 
 A submission for the **Codex x TwitchCon Hackathon**.
 
-pnpm monorepo for the Lore Twitch community memory product. Includes Twitch sign-in, channel settings, team management, opt-in EventSub ingestion, promise capture, and a next-stream brief with a light/dark frontend. Gemini candidate extraction and human review are included; moderator workflows and public community memory follow in later features.
+pnpm monorepo for the Lore Twitch community memory product. Includes Twitch sign-in, channel settings, team management, opt-in EventSub ingestion, promise capture, and a next-stream brief with a light/dark frontend. Gemini candidate review, private moderation cases, R2 evidence and precedent retrieval are included; consistency reviews, handoffs and public community memory follow in later features.
 
 ## Local setup
 
@@ -94,3 +94,15 @@ Try the credential-free flow at `/preview?view=candidates`, confirm a sample sug
 ## Contributing
 
 Follow the [GitHub workflow](docs/github-workflow.md): create a branch, commit, push that branch, and open a pull request against the default branch.
+
+## Private cases, evidence and precedents
+
+Owners and approved moderators use **Moderation cases** (`/app/moderation`) to record incidents, appeals, the rule/version in effect, evidence and a final human decision. General team grants cannot read these private records. Try the fixture flow at `/preview?view=moderation`; fixtures never use provider keys or upload real files.
+
+For Cloudflare R2, create a **private bucket** (leave public access off). In **R2 → Manage R2 API Tokens**, create an **Object Read & Write** token limited to that bucket. Put its generated access key ID and secret access key, your account ID and bucket name in the root `.env` as `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ACCOUNT_ID` and `R2_BUCKET`. Use the S3 credentials, not the Cloudflare dashboard API-token value. Restart the API. Lore derives the standard account R2 S3 endpoint and region `auto`; uploads pass through the API, so browser upload CORS is unnecessary. Downloads use authorized 60-second, attachment-only signed links. PNG, JPEG, PDF and UTF-8 text files up to 5 MB are supported; file contents are not analyzed by AI. See [R2 credentials](https://developers.cloudflare.com/r2/api/tokens/) and [the S3 SDK setup](https://developers.cloudflare.com/r2/examples/aws/aws-sdk-js-v3/).
+
+For precedent retrieval, configure `GEMINI_API_KEY`. Add `OPENAI_API_KEY` for reviewable case recommendations (`OPENAI_MODEL=gpt-5.4-mini` by default). Create an API key in your [OpenAI project](https://platform.openai.com/api-keys) and keep it in `.env`, never in chat, Git or `NEXT_PUBLIC_` variables. The owner separately enables **private case AI** in a case file; chat-extraction consent does not enable it. This sends case text and retained text excerpts to Gemini/OpenAI, not uploaded file contents. Gemini Embedding 2 uses a fixed 768-dimensional database vector; changing that embedding model requires a migration/reindex. Requests share the channel’s daily AI call cap with chat extraction. Missing keys leave manual cases, evidence and human decisions usable.
+
+**Find potential precedents** indexes up to 20 prior decisions per explicit request and ranks eligible same-channel cases before OpenAI sees context. The UI reports partial indexing and failures; run retrieval again to process another batch or retry. Similarity is a retrieval signal, not a consistency verdict. Review sources, rule versions, gaps and uncertainties, then accept, modify or reject the suggestion and explicitly save your own decision. No Twitch moderation action is performed. Final decisions are read-only; create a new case for a later review.
+
+Run `pnpm cases:check` to check configured providers without Twitch login: one synthetic Gemini embedding, one synthetic OpenAI recommendation, and one tiny R2 object that is deleted afterward. Missing credentials are reported as skipped. Model checks use provider quota outside channel counters; no real case/chat data or credentials are printed.

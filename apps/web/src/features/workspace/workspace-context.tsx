@@ -72,6 +72,7 @@ type Workspace = {
       | 'streamer'
       | 'brief'
       | 'candidates'
+      | 'moderation'
       | 'settings'
       | 'team'
       | 'account',

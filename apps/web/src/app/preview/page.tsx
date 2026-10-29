@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { ModerationScreen } from '../../features/cases/moderation';
+import { CaseDetailScreen } from '../../features/cases/case-detail';
 import { CandidatesScreen } from '../../features/candidates/candidates';
 import { Overview } from '../../features/workspace/overview';
 import { ChannelSettings } from '../../features/workspace/settings';
@@ -13,9 +15,14 @@ export const metadata = {
 export default async function PreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; loop?: string }>;
+  searchParams: Promise<{
+    view?: string;
+    loop?: string;
+    case?: string;
+    channel?: string;
+  }>;
 }) {
-  const { view, loop } = await searchParams;
+  const { view, loop, case: caseId, channel } = await searchParams;
   const focused = z.uuid().safeParse(loop);
   const current = z
     .enum([
@@ -23,12 +30,26 @@ export default async function PreviewPage({
       'streamer',
       'brief',
       'candidates',
+      'moderation',
+      'case',
       'settings',
       'team',
       'account',
     ])
     .catch('overview')
     .parse(view);
+  if (current === 'case') {
+    const parsed = z.uuid().safeParse(caseId);
+    const scoped = z.uuid().safeParse(channel);
+    return parsed.success ? (
+      <CaseDetailScreen
+        id={parsed.data}
+        channelId={scoped.success ? scoped.data : undefined}
+      />
+    ) : (
+      <p>Case unavailable.</p>
+    );
+  }
   const Screen = {
     overview: Overview,
     settings: ChannelSettings,
@@ -37,6 +58,8 @@ export default async function PreviewPage({
     streamer: OpenLoopsScreen,
     brief: StreamBriefScreen,
     candidates: CandidatesScreen,
+    moderation: ModerationScreen,
+    case: ModerationScreen,
   }[current];
   return (
     <>

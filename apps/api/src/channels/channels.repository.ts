@@ -160,6 +160,8 @@ export class ChannelsRepository {
           disconnectedAt: new Date(),
           captureRequested: false,
           aiExtractionEnabled: false,
+          caseAiEnabled: false,
+          caseAiGeneration: sql`${channels.caseAiGeneration} + 1`,
           aiGeneration: sql`${channels.aiGeneration} + 1`,
           updatedAt: new Date(),
         })

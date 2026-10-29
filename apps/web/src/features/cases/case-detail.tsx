@@ -1,0 +1,226 @@
+'use client';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import {
+  caseOutcomeLabels,
+  updateCaseSchema,
+  type CaseDetail,
+} from '@lore/shared';
+import { useWorkspace } from '../workspace/workspace-context';
+import { useCases } from './cases-context';
+import { CaseForm } from './case-form';
+import { CaseEvidencePanel } from './case-evidence';
+import { CasePrecedents } from './case-precedents';
+export function CaseDetailScreen({
+  id,
+  channelId,
+}: {
+  id: string;
+  channelId?: string;
+}) {
+  const { selected, channels, selectChannel, href } = useWorkspace();
+  useEffect(() => {
+    if (
+      channelId &&
+      selected?.id !== channelId &&
+      channels.some((c) => c.id === channelId)
+    )
+      selectChannel(channelId);
+  }, [channelId, selected?.id]);
+  if (channelId && !channels.some((c) => c.id === channelId))
+    return <p className="notice error">Channel unavailable.</p>;
+  if (!selected || (channelId && selected.id !== channelId))
+    return <p role="status">Selecting channel…</p>;
+  if (!['owner', 'moderator'].includes(selected.role))
+    return (
+      <p className="notice">
+        Cases are private to owners and approved moderators.
+      </p>
+    );
+  return (
+    <>
+      <Link className="text-link" href={href('moderation')}>
+        Back to cases
+      </Link>
+      <CaseFile key={`${selected.id}-${id}`} id={id} />
+    </>
+  );
+}
+function CaseFile({ id }: { id: string }) {
+  const { selected } = useWorkspace();
+  const { get, update } = useCases();
+  const [record, setRecord] = useState<CaseDetail | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [revision, setRevision] = useState(0);
+  const [editing, setEditing] = useState(false);
+  const channelId = selected!.id;
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    void get(channelId, id, controller.signal)
+      .then((record) => {
+        if (!controller.signal.aborted) setRecord(record);
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted)
+          setError(
+            error instanceof Error
+              ? error.message
+              : 'Could not load this case.',
+          );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [channelId, id, revision]);
+  if (loading && !record) return <p role="status">Loading case…</p>;
+  if (error)
+    return (
+      <div className="panel">
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+        <button
+          className="button secondary"
+          onClick={() => setRevision((r) => r + 1)}
+        >
+          Refresh case
+        </button>
+      </div>
+    );
+  if (!record) return null;
+  const editable = selected!.connected && record.status !== 'decided';
+  return (
+    <div className="content-stack">
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">
+            PRIVATE MODERATION ·{' '}
+            {record.origin === 'demo_fixture'
+              ? 'DEMO FIXTURE'
+              : 'MANUAL IMPORT'}
+          </p>
+          <h1>{record.title}</h1>
+          <p>
+            {record.subjectReference} ·{' '}
+            <span className="status purple">{record.status}</span>
+          </p>
+        </div>
+        <button
+          className="button secondary"
+          onClick={() => setRevision((r) => r + 1)}
+        >
+          Refresh case
+        </button>
+      </div>
+      {!selected?.connected && (
+        <p className="notice">
+          Reconnect the channel before changing this case.
+        </p>
+      )}
+      {record.status === 'decided' && (
+        <section className="panel content-stack">
+          <h2>{caseOutcomeLabels[record.outcome!]} · Human decision</h2>
+          <p className="case-prose">{record.rationale}</p>
+          {record.followUp && (
+            <p>
+              <strong>Follow-up:</strong> {record.followUp}
+            </p>
+          )}
+          <p className="muted">
+            Recorded by Twitch user {record.decidedByTwitchUserId} ·{' '}
+            {new Date(record.decidedAt!).toLocaleString()}
+            {record.aiDisposition
+              ? ` · AI suggestion ${record.aiDisposition}`
+              : ''}
+          </p>
+          <p className="muted">
+            This is the saved Lore decision. Any Twitch action must be performed
+            separately.
+          </p>
+        </section>
+      )}
+      <section className="panel content-stack">
+        <div className="panel-title">
+          <h2>The incident & appeal</h2>
+          {editable && (
+            <button
+              className="button secondary"
+              onClick={() => setEditing(!editing)}
+            >
+              Edit case
+            </button>
+          )}
+        </div>
+        <p className="muted">
+          {record.incidentAt
+            ? new Date(record.incidentAt).toLocaleString()
+            : 'Incident time not recorded'}
+        </p>
+        <p className="case-prose">{record.incident}</p>
+        <h3>Appeal</h3>
+        <p className="case-prose">
+          {record.appeal || 'No appeal text was supplied.'}
+        </p>
+        <div className="candidate-source">
+          <h3>
+            {record.ruleTitle} · version {record.ruleVersion}
+          </h3>
+          <p className="case-prose">{record.ruleText}</p>
+        </div>
+      </section>
+      {editing && editable && (
+        <CaseForm
+          initial={record}
+          label="Save case changes"
+          onCancel={() => setEditing(false)}
+          onSave={async (fields) => {
+            setRecord(
+              await update(
+                record,
+                updateCaseSchema.parse({
+                  ...fields,
+                  expectedVersion: record.version,
+                  status:
+                    record.status === 'open' ? 'reviewing' : record.status,
+                }),
+              ),
+            );
+            setEditing(false);
+          }}
+        />
+      )}
+      <CaseEvidencePanel
+        key={`evidence-${record.version}`}
+        record={record}
+        editable={editable}
+        onChanged={setRecord}
+      />
+      <CasePrecedents
+        key={`review-${record.version}`}
+        record={record}
+        editable={editable}
+        onDecided={setRecord}
+      />
+      <section className="panel">
+        <h2>Case history</h2>
+        <ol className="case-history">
+          {record.history.map((item) => (
+            <li key={item.id}>
+              <strong>{item.action.replaceAll('_', ' ')}</strong> · v
+              {item.version}
+              <p className="muted">
+                Twitch user {item.actorTwitchUserId} ·{' '}
+                {new Date(item.occurredAt).toLocaleString()}
+              </p>
+              {item.reason && <p className="case-prose">{item.reason}</p>}
+            </li>
+          ))}
+        </ol>
+      </section>
+    </div>
+  );
+}
