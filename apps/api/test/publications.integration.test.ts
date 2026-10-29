@@ -7,6 +7,9 @@ import { Pool } from 'pg';
 import { Queue } from 'bullmq';
 import { beforeAll, afterAll, expect, it } from 'vitest';
 import {
+  overlaySettingsSchema,
+  overlayTokenSchema,
+  overlayDisplaySchema,
   managedPublicationSchema,
   publicationPageSchema,
   publicFeedSchema,
@@ -910,9 +913,266 @@ it('records dropped and ambiguous sends without replaying a potentially delivere
     ).enabled,
   ).toBe(false);
 });
+let overlayToken = '';
+async function overlaySettings() {
+  return overlaySettingsSchema.parse(await (await request('/overlay')).json());
+}
+async function overlayRead(token = overlayToken, slug = 'twitch-100') {
+  return fetch(`${origin}/api/overlay/${slug}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+it('limits overlay management to reviewers, token management to owners, and requires versioned CSRF-protected approval', async () => {
+  expect((await request('/overlay', 'GET', undefined, team)).status).toBe(404);
+  expect((await request('/overlay', 'GET', undefined, outsider)).status).toBe(
+    404,
+  );
+  expect((await request('/overlay', 'GET', undefined, moderator)).status).toBe(
+    200,
+  );
+  expect((await overlayRead('')).status).toBe(404);
+  expect((await overlayRead('a'.repeat(64))).status).toBe(404);
+  const initial = await overlaySettings();
+  expect(initial).toEqual({
+    version: 0,
+    enabled: false,
+    mode: 'recap',
+    entryIds: [],
+    tokenActive: false,
+  });
+  expect(
+    (
+      await request(
+        '/overlay-token/rotate',
+        'POST',
+        { expectedVersion: 0 },
+        moderator,
+      )
+    ).status,
+  ).toBe(404);
+  expect(
+    (
+      await request(
+        '/overlay-token/rotate',
+        'POST',
+        { expectedVersion: 0 },
+        owner,
+        channelId,
+        false,
+      )
+    ).status,
+  ).toBe(403);
+  const rotations = await Promise.all([
+    request('/overlay-token/rotate', 'POST', { expectedVersion: 0 }),
+    request('/overlay-token/rotate', 'POST', { expectedVersion: 0 }),
+  ]);
+  expect(rotations.map((r) => r.status).sort()).toEqual([200, 409]);
+  const issued = overlayTokenSchema.parse(
+    await rotations.find((r) => r.status === 200)!.json(),
+  );
+  overlayToken = issued.token;
+  const stored = (
+    await pool.query('SELECT * FROM overlay_tokens WHERE channel_id=$1', [
+      channelId,
+    ])
+  ).rows[0];
+  expect(stored.token_hash).toBe(hashToken(overlayToken));
+  expect(JSON.stringify(stored)).not.toContain(overlayToken);
+  expect(JSON.stringify(await overlaySettings())).not.toContain(
+    hashToken(overlayToken),
+  );
+  expect(
+    overlayDisplaySchema.parse(await (await overlayRead()).json()).items,
+  ).toEqual([]);
+  expect((await overlayRead(overlayToken, 'twitch-400')).status).toBe(404);
+  expect((await publicRequest(`?q=${overlayToken}`)).status).toBe(200);
+  const anonymous = await fetch(
+    `${origin}/api/channels/${channelId}/publications`,
+    { headers: { Authorization: `Bearer ${overlayToken}` } },
+  );
+  expect(anonymous.status).toBe(401);
+});
+it('projects only selected approved recap or commitment text and drops withdrawn sources from the overlay', async () => {
+  let recap = await action(
+    await create({
+      kind: 'summary',
+      title: 'Overlay-only reviewed recap',
+      chatSummary: 'The garden is open. Join us next stream.',
+      sourceIds: [],
+    }),
+    'publish',
+  );
+  const commitment = await action(
+    await create({
+      kind: 'commitment',
+      title: 'Name the pond',
+      body: 'This longer public body is not needed on the overlay.',
+    }),
+    'publish',
+  );
+  const draft = await create({
+    kind: 'summary',
+    chatSummary: 'Unapproved text',
+  });
+  const foreign = await create(
+    { kind: 'summary', chatSummary: 'Other channel' },
+    outsider,
+    foreignChannel,
+  );
+  let settings = await overlaySettings();
+  for (const id of [draft.id, foreign.id, randomUUID()]) {
+    expect(
+      (
+        await request(
+          '/overlay',
+          'POST',
+          {
+            expectedVersion: settings.version,
+            enabled: true,
+            mode: 'recap',
+            entryIds: [id],
+          },
+          moderator,
+        )
+      ).status,
+    ).toBe(409);
+  }
+  expect(
+    (
+      await request('/overlay', 'POST', {
+        expectedVersion: settings.version,
+        enabled: true,
+        mode: 'recap',
+        entryIds: [commitment.id],
+      })
+    ).status,
+  ).toBe(409);
+  expect(
+    (
+      await request('/overlay', 'POST', {
+        expectedVersion: settings.version,
+        enabled: true,
+        mode: 'recap',
+        entryIds: [recap.id],
+        tokenHash: 'injected',
+      })
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await request('/overlay', 'POST', {
+        expectedVersion: settings.version,
+        enabled: true,
+        mode: 'recap',
+        entryIds: [],
+      })
+    ).status,
+  ).toBe(400);
+  const input = {
+    expectedVersion: settings.version,
+    enabled: true,
+    mode: 'recap',
+    entryIds: [recap.id],
+  };
+  expect((await request('/overlay', 'POST', input, team)).status).toBe(404);
+  expect(
+    (await request('/overlay', 'POST', input, owner, channelId, false)).status,
+  ).toBe(403);
+  expect((await request('/overlay', 'POST', input, moderator)).status).toBe(
+    200,
+  );
+  expect((await request('/overlay', 'POST', input)).status).toBe(409);
+  const response = await overlayRead();
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(overlayDisplaySchema.parse(await response.json())).toEqual({
+    channel: 'twitch-100',
+    mode: 'recap',
+    items: [{ id: recap.id, title: recap.title, text: recap.chatSummary }],
+  });
+  recap = await action(recap, 'unpublish');
+  expect(
+    overlayDisplaySchema.parse(await (await overlayRead()).json()).items,
+  ).toEqual([]);
+  await action(recap, 'publish');
+  settings = await overlaySettings();
+  expect(
+    (
+      await request('/overlay', 'POST', {
+        expectedVersion: settings.version,
+        enabled: true,
+        mode: 'open_loops',
+        entryIds: [commitment.id],
+      })
+    ).status,
+  ).toBe(200);
+  const loops = overlayDisplaySchema.parse(await (await overlayRead()).json());
+  expect(loops.items).toEqual([
+    { id: commitment.id, title: commitment.title, text: '' },
+  ]);
+  expect(JSON.stringify(loops)).not.toMatch(
+    /PRIVATE_|promiseId|sourceIds|approvedBy|tokenHash|body/,
+  );
+  await action(commitment, 'delete');
+  expect(
+    overlayDisplaySchema.parse(await (await overlayRead()).json()).items,
+  ).toEqual([]);
+  const audit = (
+    await pool.query(
+      "SELECT details FROM audit_events WHERE channel_id=$1 AND action='overlay.content_approved'",
+      [channelId],
+    )
+  ).rows;
+  expect(audit).toHaveLength(2);
+  expect(JSON.stringify(audit)).not.toContain(overlayToken);
+});
+it('immediately rejects rotated and revoked overlay credentials without restoring them on regeneration', async () => {
+  let settings = await overlaySettings();
+  const old = overlayToken;
+  const rotation = await request('/overlay-token/rotate', 'POST', {
+    expectedVersion: settings.version,
+  });
+  const next = overlayTokenSchema.parse(await rotation.json());
+  overlayToken = next.token;
+  expect(overlayToken).not.toBe(old);
+  expect((await overlayRead(old)).status).toBe(404);
+  expect((await overlayRead()).status).toBe(200);
+  expect(
+    (
+      await request(
+        '/overlay-token/revoke',
+        'POST',
+        { expectedVersion: next.settings.version },
+        moderator,
+      )
+    ).status,
+  ).toBe(404);
+  expect(
+    (
+      await request('/overlay-token/revoke', 'POST', {
+        expectedVersion: next.settings.version,
+      })
+    ).status,
+  ).toBe(200);
+  expect((await overlayRead()).status).toBe(404);
+  settings = await overlaySettings();
+  expect(settings.enabled).toBe(false);
+  const regenerated = overlayTokenSchema.parse(
+    await (
+      await request('/overlay-token/rotate', 'POST', {
+        expectedVersion: settings.version,
+      })
+    ).json(),
+  );
+  expect((await overlayRead(overlayToken)).status).toBe(404);
+  overlayToken = regenerated.token;
+  expect((await overlayRead()).status).toBe(200);
+});
+
 it('revokes anonymous pages on disconnect while retaining owner withdrawal access', async () => {
   expect((await request('/disconnect', 'POST', {})).status).toBe(204);
   expect((await publicRequest()).status).toBe(404);
+  expect((await overlayRead()).status).toBe(404);
+  expect((await overlaySettings()).tokenActive).toBe(false);
   expect((await publicRequest('/catch-up')).status).toBe(404);
   expect(
     (await request('/publications', 'GET', undefined, moderator)).status,
@@ -927,4 +1187,26 @@ it('revokes anonymous pages on disconnect while retaining owner withdrawal acces
     ).status,
   ).toBe(409);
   expect((await action(entry, 'unpublish')).status).toBe('unpublished');
+  expect(
+    (
+      await request('/overlay-token/rotate', 'POST', {
+        expectedVersion: (await overlaySettings()).version,
+      })
+    ).status,
+  ).toBe(409);
+  expect(
+    (
+      await fetch(`${origin}/api/channels/connect`, {
+        method: 'POST',
+        headers: {
+          Cookie: `lore_session=${owner.token}`,
+          Origin: origin,
+          'X-CSRF-Token': csrfToken(owner.token),
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      })
+    ).status,
+  ).toBe(200);
+  expect((await overlayRead()).status).toBe(404);
 });

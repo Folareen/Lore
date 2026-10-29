@@ -1,3 +1,4 @@
+import { OverlayScreen } from '../../features/overlay/overlay-settings';
 import { PublicationsScreen } from '../../features/publications/publications';
 import { CommunityPreview } from '../../features/publications/community-preview';
 import { z } from 'zod';
@@ -35,6 +36,7 @@ export default async function PreviewPage({
       'candidates',
       'moderation',
       'workflows',
+      'overlay',
       'publications',
       'community',
       'case',
@@ -66,6 +68,7 @@ export default async function PreviewPage({
     candidates: CandidatesScreen,
     moderation: ModerationScreen,
     workflows: ModeratorDeskScreen,
+    overlay: OverlayScreen,
     publications: PublicationsScreen,
     community: CommunityPreview,
     case: ModerationScreen,

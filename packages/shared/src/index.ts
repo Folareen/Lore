@@ -22,3 +22,5 @@ export * from './ai';
 export * from './cases';
 export * from './moderation';
 export * from './publications';
+
+export * from './overlay';
