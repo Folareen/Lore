@@ -1,4 +1,5 @@
 'use client';
+import { useDemo } from '../demo/demo-seed-context';
 import { createContext, useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
@@ -61,9 +62,11 @@ type CasesWorkspace = {
 };
 const Context = createContext<CasesWorkspace | null>(null);
 export function CasesProvider({ children }: { children: React.ReactNode }) {
-  const { session, channels, preview } = useWorkspace();
+  const { session, channels, preview, fixtureBase } = useWorkspace();
   const router = useRouter();
-  const [fixtures, setFixtures] = useState(previewCases);
+  const [fixtures, setFixtures] = useState<CaseDetail[]>(
+    useDemo()?.data.cases ?? previewCases,
+  );
   const [runs, setRuns] = useState<Record<string, CaseAiRun>>({});
   const [consents, setConsents] = useState<Record<string, boolean>>({});
   async function request<T>(
@@ -145,7 +148,7 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
       value={{
         caseHref: (id, channelId) =>
           preview
-            ? `/preview?view=case&case=${id}&channel=${channelId}`
+            ? `${fixtureBase}?view=case&case=${id}&channel=${channelId}`
             : `/app/cases/${id}?channel=${channelId}`,
         list: async (id, options, signal) => {
           if (!preview)

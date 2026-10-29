@@ -4,7 +4,7 @@ Every stream has a story. Lore remembers it.
 
 A submission for the **Codex x TwitchCon Hackathon**.
 
-pnpm monorepo for the Lore Twitch community memory product. Includes Twitch sign-in, channel settings, team management, opt-in EventSub ingestion, promise capture, and a next-stream brief with a light/dark frontend. Gemini candidate review, private moderation cases, R2 evidence and precedent retrieval are included; consistency reviews, handoffs and public community memory follow in later features.
+pnpm monorepo for the Lore Twitch community memory product. Includes Twitch sign-in, channel/team management, EventSub ingestion, promises and briefs, Gemini candidate review, private moderation cases with R2 evidence and precedent retrieval, consistency reviews, handoffs, public community memory, !catchup replies and a revocable OBS overlay. A light/dark demo is available without Twitch login.
 
 ## Local setup
 
@@ -21,7 +21,7 @@ pnpm db:seed
 pnpm dev
 ```
 
-Open the landing page at http://localhost:3000. Explore the labeled workspace fixtures at http://localhost:3000/preview without a Twitch account. Real authenticated pages live under `/app`; sign-in is at `/login`. The API is at http://127.0.0.1:4000/api/health and is also available through http://localhost:3000/api/health. API health checks PostgreSQL and Redis and returns HTTP 503 if either is unavailable.
+Open the landing page at http://localhost:3000. Open the seeded demo at http://localhost:3000/demo without a Twitch account. The built-in `/preview` remains available without a seeded database. Real authenticated pages live under `/app`; sign-in is at `/login`. The API is at http://127.0.0.1:4000/api/health and is also available through http://localhost:3000/api/health. API health checks PostgreSQL and Redis and returns HTTP 503 if either is unavailable.
 
 Try promise capture without credentials at `/preview?view=streamer`, then open **Next-stream brief**. Demo changes stay in the browser and reset on refresh. Authenticated equivalents are `/app/streamer` and `/app/brief`; the overview also has quick capture. Save an explicit commitment, move it through its allowed statuses, and include a reason when fulfilling or cancelling it. The brief lists saved active promises and links to their sources; it does not call an AI provider. Twitch commands appear after refreshing the promises list once ingestion has processed them. If Twitch registration is blocked by 2FA, this preview and the mocked integration tests remain usable.
 
@@ -50,10 +50,10 @@ pnpm db:logs
 pnpm db:down              # Stops services; named data volumes remain
 pnpm db:generate          # Generate a migration after editing the Drizzle schema
 pnpm db:migrate           # Apply checked-in migrations
-pnpm db:seed              # Idempotent demo channel seed
+pnpm db:seed              # Idempotent seeded demo snapshot
 ```
 
-Run `pnpm --filter @lore/api start` and `pnpm --filter @lore/web start` after building to run without watchers. `pnpm db:seed` creates only a channel labeled **Demo fixture**; it is not yet the complete hosted demo dataset.
+Run `pnpm --filter @lore/api start` and `pnpm --filter @lore/web start` after building to run without watchers. `pnpm db:seed` validates and upserts the complete **Demo fixture** snapshot in its dedicated table. It does not create OAuth identities, sessions or live domain records.
 
 Migrations enable pgvector and create auth, management, EventSub subscription, private source-event, and captured-chat tables. Other domain tables and vector dimensions follow their features.
 
@@ -120,3 +120,11 @@ OBS setup lives at `/app/overlay` (credential-free fixture: `/preview?view=overl
 As the owner, create a browser-source link and copy it immediately; Lore cannot show it again. In OBS, add **Browser Source**, paste the entire URL including `#token=…`, use **720 × 720** as a starting viewport, and enable **Refresh browser source when scene becomes active**. The page background is transparent; resize/place the source in your scene. [OBS browser-source properties](https://obsproject.com/kb/browser-source) explain viewport and refresh options. The existing `!catchup` authorization/settings remain in Community publishing; the overlay needs no new provider credentials or Twitch scopes.
 
 Overlay links grant access only to selected, currently published display text. Tokens are stored only as hashes and travel in an authorization header; the URL fragment stays out of server requests. Treat the full URL as a credential, keep it out of screenshots/logs, and use HTTPS outside localhost. Regeneration/revocation rejects the old token immediately at the API; update the URL in OBS after regeneration. Disconnect and Twitch authorization revocation also revoke the link. The browser checks every five seconds, clears on failure and expires received text after 6.5 seconds without a successful refresh. Already captured footage cannot be recalled. Reconnecting requires a new link and fresh overlay approval.
+
+## Seeded demo mode
+
+After `pnpm db:migrate && pnpm db:seed`, open `/demo`. Landing and login pages link to it. No Twitch account, Gemini/OpenAI key or R2 bucket is needed. The same route works on a hosted app once its ordinary API/database services and migration/seed are in place; deployment is separate from this feature. `/api/demo` serves only the curated `lore-demo` snapshot, with no sign-in or cookie creation.
+
+The guide links Streamer Home, Moderator Desk and Community Lore for an approximately three-minute walkthrough. Start with the island-tour promise or the labeled `!promise`/`!catchup` chat simulator; review a candidate and see confirmed work in the brief. Compare the spoiler appeal with an earlier decision, inspect the seeded consistency concern, repair action and handoff, then open the approved public recap and OBS selection. Public visitor views exclude the synthetic private moderation fields. AI recommendations, chat and overlay credentials are labeled simulations; demo actions never call Twitch, AI providers or R2.
+
+All interactions stay in memory for the current tab while navigating `/demo`. **Reset demo** restores every feature from that tab’s initial seed snapshot; refresh fetches the current server seed. Other visitors and the stored seed are unaffected. Rerun `pnpm db:seed` after changing the curated fixtures. Missing/invalid seed data shows an unavailable state with retry and a built-in `/preview` fallback. The anonymous snapshot intentionally contains synthetic moderator examples; never replace it with production exports or real chat/evidence.

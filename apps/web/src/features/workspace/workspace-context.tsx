@@ -1,4 +1,5 @@
 'use client';
+import { useDemo } from '../demo/demo-seed-context';
 import { createContext, useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
@@ -36,6 +37,7 @@ type Workspace = {
   channels: Channel[];
   selected: Channel | undefined;
   preview: boolean;
+  fixtureBase: '/preview' | '/demo';
   selectChannel: (id: string) => void;
   connect: () => Promise<void>;
   saveRetention: (days: number) => Promise<void>;
@@ -87,29 +89,37 @@ export function WorkspaceProvider({
   session,
   initialChannels,
   preview = false,
+  fixtureBase = '/preview',
   children,
 }: {
   session: Session;
   initialChannels: Channel[];
   preview?: boolean;
+  fixtureBase?: '/preview' | '/demo';
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const demo = useDemo()?.data;
   const [channels, setChannels] = useState(initialChannels);
   const [selectedId, setSelectedId] = useState(initialChannels[0]?.id);
-  const [demoMembers, setDemoMembers] = useState(previewPeople);
-  const [demoLoops, setDemoLoops] = useState(previewOpenLoops);
+  const [demoMembers, setDemoMembers] = useState(demo?.people ?? previewPeople);
+  const [demoLoops, setDemoLoops] = useState<OpenLoop[]>(
+    demo?.loops ?? previewOpenLoops,
+  );
   const [demoHistory, setDemoHistory] = useState<
     Record<string, OpenLoopHistory[]>
   >(() =>
     Object.fromEntries(
-      previewOpenLoops.map((loop) => [loop.id, fixtureHistory(loop)]),
+      (demo?.loops ?? previewOpenLoops).map((loop) => [
+        loop.id,
+        fixtureHistory(loop),
+      ]),
     ),
   );
   const selected = channels.find((channel) => channel.id === selectedId);
   const href: Workspace['href'] = (view) =>
     preview
-      ? `/preview${view === 'overview' ? '' : `?view=${view}`}`
+      ? `${fixtureBase}${view === 'overview' ? '' : `?view=${view}`}`
       : view === 'community'
         ? selected
           ? `/c/${selected.slug}`
@@ -435,6 +445,7 @@ export function WorkspaceProvider({
         channels,
         selected,
         preview,
+        fixtureBase,
         selectChannel: setSelectedId,
         connect,
         saveRetention,

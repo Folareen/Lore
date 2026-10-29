@@ -1,4 +1,5 @@
 'use client';
+import { useDemo } from '../demo/demo-seed-context';
 import { createContext, useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
@@ -64,7 +65,9 @@ export function PublicationsProvider({
 }) {
   const { session, channels, preview } = useWorkspace(),
     router = useRouter();
-  const [entries, setEntries] = useState(previewPublications),
+  const [entries, setEntries] = useState(
+      useDemo()?.data.publications ?? previewPublications,
+    ),
     [events, setEvents] = useState<
       Record<string, z.infer<typeof publicationHistorySchema>[]>
     >({});

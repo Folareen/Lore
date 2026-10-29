@@ -1,4 +1,5 @@
 'use client';
+import { useDemo } from '../demo/demo-seed-context';
 import { createContext, useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
@@ -33,7 +34,9 @@ const Context = createContext<Api | null>(null);
 export function OverlayProvider({ children }: { children: React.ReactNode }) {
   const { session, channels, preview } = useWorkspace(),
     router = useRouter();
-  const [fixtures, setFixtures] = useState<Record<string, OverlaySettings>>({});
+  const [fixtures, setFixtures] = useState<Record<string, OverlaySettings>>(
+    useDemo()?.data.overlays ?? {},
+  );
   async function request<T>(
     path: string,
     schema: z.ZodType<T>,

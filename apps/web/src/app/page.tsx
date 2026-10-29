@@ -27,9 +27,8 @@ export default function Home() {
           <Link className="text-link login-link" href="/login">
             Log in
           </Link>
-          <Link className="button primary compact" href="/login">
-            <TwitchMark size={17} />
-            Get Lore
+          <Link className="button primary compact" href="/demo">
+            Try the demo
             <ArrowUpRight size={17} />
           </Link>
         </div>
@@ -162,8 +161,8 @@ export default function Home() {
             </article>
           </div>
           <p className="section-footnote">
-            A look at what’s ahead. Every public story will be reviewed by your
-            channel’s team.
+            Every public story is reviewed by your channel’s team before it is
+            shared.
           </p>
         </section>
         <section className="closing-section">
@@ -180,8 +179,8 @@ export default function Home() {
               Start with Twitch
               <ArrowRight size={19} />
             </Link>
-            <Link className="quiet-link" href="/preview">
-              Or explore the workspace preview
+            <Link className="quiet-link" href="/demo">
+              Or try the seeded demo
               <ArrowUpRight size={15} />
             </Link>
           </div>

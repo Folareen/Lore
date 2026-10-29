@@ -1,4 +1,5 @@
 'use client';
+import { useDemo } from '../demo/demo-seed-context';
 import { createContext, useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
@@ -21,7 +22,7 @@ import {
   type Handoff,
 } from '@lore/shared';
 import { ApiError, apiRequest } from '../../lib/api';
-import { previewSession, previewPeople } from '../../lib/preview-data';
+import { previewPeople } from '../../lib/preview-data';
 import { useWorkspace } from '../workspace/workspace-context';
 import { useCases } from '../cases/cases-context';
 type DeskQuery = {
@@ -76,6 +77,8 @@ export function ModerationProvider({
   children: React.ReactNode;
 }) {
   const { session, channels, preview } = useWorkspace();
+  const demo = useDemo()?.data;
+  const people = demo?.people ?? previewPeople;
   const cases = useCases();
   const router = useRouter();
   const [state, setState] = useState<
@@ -83,7 +86,15 @@ export function ModerationProvider({
       ModerationDesk,
       'repairs' | 'flags' | 'handoffs' | 'activity' | 'ruleChanges'
     >
-  >({ repairs: [], flags: [], handoffs: [], activity: [], ruleChanges: [] });
+  >(
+    demo?.moderation ?? {
+      repairs: [],
+      flags: [],
+      handoffs: [],
+      activity: [],
+      ruleChanges: [],
+    },
+  );
   const [requests, setRequests] = useState<Record<string, string>>({});
   const now = () => new Date().toISOString();
   function access(id: string, mutation = false) {
@@ -101,7 +112,7 @@ export function ModerationProvider({
     if (
       id &&
       id !== session.user.id &&
-      !previewPeople.some((p) => p.userId === id && p.role === 'moderator')
+      !people.some((p) => p.userId === id && p.role === 'moderator')
     )
       throw new Error('Choose an approved moderator.');
   }
@@ -183,11 +194,11 @@ export function ModerationProvider({
           return {
             assignees: [
               {
-                id: previewSession.user.id,
-                displayName: previewSession.user.displayName,
-                twitchUserId: previewSession.user.twitchUserId,
+                id: session.user.id,
+                displayName: session.user.displayName,
+                twitchUserId: session.user.twitchUserId,
               },
-              ...previewPeople
+              ...people
                 .filter((p) => p.role === 'moderator')
                 .map((p) => ({
                   id: p.userId,

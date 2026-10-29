@@ -1,3 +1,4 @@
+import { DemoModule } from './demo/demo.module';
 import { OverlayModule } from './overlay/overlay.module';
 import { CasesModule } from './cases/cases.module';
 import { PublicationsModule } from './publications/publications.module';
@@ -17,6 +18,7 @@ const redis = new URL(env.REDIS_URL);
 @Module({
   imports: [
     DatabaseModule,
+    DemoModule,
     AuthModule,
     ChannelsModule,
     IngestionModule,

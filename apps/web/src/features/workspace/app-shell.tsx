@@ -142,12 +142,14 @@ export function AppShell({
   session,
   channels,
   preview = false,
+  fixtureBase = '/preview',
   view,
   children,
 }: {
   session: Session;
   channels: Channel[];
   preview?: boolean;
+  fixtureBase?: '/preview' | '/demo';
   view?: string;
   children: React.ReactNode;
 }) {
@@ -156,6 +158,7 @@ export function AppShell({
       session={session}
       initialChannels={channels}
       preview={preview}
+      fixtureBase={fixtureBase}
     >
       <PublicationsProvider>
         <OverlayProvider>

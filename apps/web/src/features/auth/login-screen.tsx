@@ -105,6 +105,9 @@ export function LoginScreen({
               </button>
             </div>
           )}
+          <Link href="/demo" className="quiet-link">
+            Try the seeded demo →
+          </Link>
           <Link href="/preview" className="quiet-link">
             Take a look around first
             <ArrowUpRight size={14} />
