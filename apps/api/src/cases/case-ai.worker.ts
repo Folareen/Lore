@@ -9,7 +9,6 @@ import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
 import { caseAiJobSchema, queueNames } from '@lore/shared';
 import { AiProvider, AiFailure } from '../ai/ai.provider';
-import { env } from '../config';
 import {
   CaseAiRepository,
   caseContext,
@@ -41,22 +40,19 @@ export class CaseAiWorker extends WorkerHost {
       }
       const result = await this.repository.rank(run, vector);
       if (!result) return;
-      let recommendation = null;
-      if (env.OPENAI_API_KEY) {
-        if (!(await this.repository.reserveCall(run))) return;
-        const sources = [record.id, ...result.matches.map((m) => m.record.id)];
-        recommendation = await this.provider.reason(
-          {
-            currentCase: caseContext(record),
-            evidence: result.evidence,
-            additionalEvidenceOmitted: result.additionalEvidenceOmitted,
-            precedents: result.matches.map((m) => caseContext(m.record)),
-            indexedPriorDecisions: result.indexedCount,
-            totalPriorDecisions: result.eligibleCount,
-          },
-          sources,
-        );
-      }
+      if (!(await this.repository.reserveCall(run))) return;
+      const sources = [record.id, ...result.matches.map((m) => m.record.id)];
+      const recommendation = await this.provider.reason(
+        {
+          currentCase: caseContext(record),
+          evidence: result.evidence,
+          additionalEvidenceOmitted: result.additionalEvidenceOmitted,
+          precedents: result.matches.map((m) => caseContext(m.record)),
+          indexedPriorDecisions: result.indexedCount,
+          totalPriorDecisions: result.eligibleCount,
+        },
+        sources,
+      );
       await this.repository.complete(run, result, recommendation);
     } catch (error) {
       const code =

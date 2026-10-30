@@ -243,6 +243,12 @@ it('keeps API version conflicts visible and never presents a decision as saved',
   setup(undefined, false);
   const user = userEvent.setup();
   await screen.findByRole('heading', { name: previewCases[0].title });
+  expect(
+    await screen.findByText(
+      /Configure GEMINI_API_KEY on the API to enable semantic retrieval and reviewable recommendations/,
+    ),
+  ).toBeTruthy();
+  expect(screen.getByText(/On Google’s free tier, inputs/)).toBeTruthy();
   await user.type(
     screen.getByLabelText('Decision rationale'),
     'I reviewed this manually.',

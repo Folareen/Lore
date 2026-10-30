@@ -324,7 +324,6 @@ beforeAll(async () => {
         JSON.stringify({
           access_token: `access-${name}`,
           refresh_token: `refresh-${name}${params.get('grant_type') === 'refresh_token' ? '-rotated' : ''}`,
-          scope: [],
           token_type: 'bearer',
           expires_in: 3600,
         }),
@@ -335,7 +334,7 @@ beforeAll(async () => {
           client_id: invalidClient ? 'other-client' : 'test-client',
           user_id: identity.id,
           login: identity.login,
-          scopes: name === 'owner' && captureGranted ? captureScopes : [],
+          scopes: name === 'owner' && captureGranted ? captureScopes : null,
           expires_in: 3600,
         }),
       );
@@ -457,13 +456,14 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
     expect(failed.headers.get('location')).toBe(`${origin}/login?error=signin`);
   });
 
-  it('stores encrypted credentials and hashed sessions, returning only safe user fields', async () => {
+  it('accepts scope-free token responses, stores encrypted credentials and returns only safe user fields', async () => {
     const result = await pool.query(
-      'SELECT encrypted_tokens FROM oauth_connections WHERE user_id = $1',
+      'SELECT encrypted_tokens, scopes FROM oauth_connections WHERE user_id = $1',
       [owner.id],
     );
     expect(result.rows[0].encrypted_tokens).not.toContain('access-owner');
     expect(result.rows[0].encrypted_tokens).not.toContain('refresh-owner');
+    expect(result.rows[0].scopes).toEqual([]);
     const sessions = await pool.query(
       'SELECT token_hash FROM sessions WHERE user_id = $1',
       [owner.id],

@@ -306,12 +306,16 @@ beforeAll(async () => {
       );
       return;
     }
-    if (url.pathname === '/v1/responses') {
-      expect(body.store).toBe(false);
+    if (url.pathname.endsWith(':generateContent')) {
+      expect(req.headers['x-goog-api-key']).toBe('mock');
       expect(body.tools).toBeUndefined();
-      expect(body.text.format.strict).toBe(true);
+      expect(body.generationConfig.responseMimeType).toBe('application/json');
+      expect(body.generationConfig.responseJsonSchema.required).toContain(
+        'requires_human_approval',
+      );
+      expect(body.systemInstruction.parts[0].text).toContain('UNTRUSTED DATA');
       const context = JSON.parse(
-        body.input[0].content
+        body.contents[0].parts[0].text
           .replace('<untrusted_case_json>\n', '')
           .replace('\n</untrusted_case_json>', ''),
       );
@@ -338,11 +342,10 @@ beforeAll(async () => {
       res.setHeader('Content-Type', 'application/json');
       res.end(
         JSON.stringify({
-          status: 'completed',
-          output: [
+          candidates: [
             {
-              type: 'message',
-              content: [{ type: 'output_text', text: JSON.stringify(draft) }],
+              finishReason: 'STOP',
+              content: { parts: [{ text: JSON.stringify(draft) }] },
             },
           ],
         }),
@@ -377,9 +380,8 @@ beforeAll(async () => {
       TWITCH_EVENTSUB_SECRET: '',
       TWITCH_EVENTSUB_CALLBACK_URL: '',
       GEMINI_API_KEY: 'mock',
-      OPENAI_API_KEY: 'mock',
+      GEMINI_MODEL: 'test-model',
       AI_TEST_BASE_URL: mockOrigin,
-      OPENAI_TEST_BASE_URL: mockOrigin,
       AI_DAILY_CALL_LIMIT: '50',
       R2_ACCOUNT_ID: 'a'.repeat(32),
       R2_BUCKET: 'test-bucket',
@@ -655,8 +657,13 @@ it('uses separate case AI consent and filters channel/private eligibility before
   expect(
     caseAiSettingsSchema.parse(
       await (await request('/cases/ai/settings')).json(),
-    ).enabled,
-  ).toBe(false);
+    ),
+  ).toMatchObject({
+    enabled: false,
+    embeddingsConfigured: true,
+    reasoningConfigured: true,
+    reasoningModel: 'test-model',
+  });
   expect(
     (await request(`/cases/${main.id}/precedents`, 'POST', {})).status,
   ).toBe(409);

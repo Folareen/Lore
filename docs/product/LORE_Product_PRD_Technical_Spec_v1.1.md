@@ -1,7 +1,7 @@
 ## Change log from 1.0
 
 - Replaced the application stack with a pnpm monorepo, NestJS API, Next.js frontend, PostgreSQL with pgvector, Redis with BullMQ, and Docker Compose on a VPS.
-- Added an OpenAI and Gemini provider interface, worker queues, verified webhook handling, live updates, S3 evidence storage, and Twitch OAuth sessions.
+- Added an AI provider interface, worker queues, verified webhook handling, live updates, S3 evidence storage, and Twitch OAuth sessions.
 - Made authorized !promise commands and dashboard capture the primary confirmed promise paths. Kept ordinary chat AI detection as candidate only.
 - Added !catchup, a revocable OBS overlay, per channel chat retention, and evidence preservation.
 - Added hosted demo mode, submission and availability requirements, Codex usage records, and early automated testing.
@@ -200,8 +200,8 @@ The three surfaces share approved underlying records, not unrestricted access to
 | Database | PostgreSQL with pgvector |
 | Database access | Drizzle ORM |
 | Queue | Redis with BullMQ; Redis configured with noeviction |
-| AI | OpenAI and Gemini through one AiProvider interface |
-| AI responsibilities | Gemini for embeddings and bulk candidate extraction; OpenAI for case reasoning and strict structured output |
+| AI | Gemini through one AiProvider interface |
+| AI responsibilities | Gemini for embeddings, bulk candidate extraction and schema-constrained case recommendations |
 | AI validation | All provider responses validated server side with shared Zod schemas |
 | Hosting | Single VPS running Docker Compose |
 | Containers | PostgreSQL, Redis, NestJS API, Next.js web and Caddy |
@@ -226,7 +226,7 @@ The three surfaces share approved underlying records, not unrestricted access to
 6. For event notifications, the controller saves the event once using the Twitch message ID as a unique delivery identifier. It enqueues a BullMQ ingestion job using that same message ID as the job ID, then returns a 2xx response promptly.
 7. If enqueueing fails after the database write, a recovery process finds saved events without a queued or completed job and retries enqueueing. Duplicate delivery must not create duplicate memory records.
 8. Ingestion workers process events. Any extraction or model call runs through a separate AI queue so slow model requests cannot block event ingestion.
-9. Gemini extracts bulk candidates and generates embeddings. OpenAI handles case reasoning and outputs requiring strict structured responses. Every response passes shared Zod validation before storage.
+9. Gemini extracts bulk candidates, generates embeddings and handles case reasoning with schema-constrained responses. Every response passes shared Zod validation before storage.
 10. Authorized humans confirm commitments, decide cases and approve public entries.
 11. When a worker finishes, it publishes a channel-scoped update through Redis pub/sub. NestJS delivers it to authorized clients through Server Sent Events. A Socket.IO gateway may replace this transport if needed.
 12. A repeatable retention job purges expired ordinary chat records. Confirmed evidence excerpts are retained according to their own approved retention policy.
@@ -236,7 +236,7 @@ The three surfaces share approved underlying records, not unrestricted access to
 
 **Access rule:** NestJS guards enforce role permissions. A channel-scoped repository layer applies the channel filter to every data query, including retrieval for AI and vector similarity search. Application code must not bypass this repository layer.
 
-Never call OpenAI or Gemini directly from the browser with secret keys. Never expose database credentials, Redis credentials, OAuth tokens or signing secrets to the client.
+Never call Gemini directly from the browser with secret keys. Never expose database credentials, Redis credentials, OAuth tokens or signing secrets to the client.
 
 ## 8. Data model
 
@@ -283,7 +283,7 @@ Use database constraints for unique Twitch event IDs, valid status transitions a
 
 - Authenticate protected requests in NestJS.
 - Use NestJS guards and a channel-scoped repository layer for every read, search, export and mutation.
-- Filter retrieval by channel and visibility before sending context to either AI provider.
+- Filter retrieval by channel and visibility before sending context to Gemini.
 - Create public entries as separate reviewed records, never as direct database views of private cases.
 - Restrict S3 evidence files with short lived signed URLs issued after authorization checks.
 - Log sensitive reads, decisions and publication actions without logging tokens or raw chat bodies.
@@ -350,7 +350,7 @@ Twitch authentication: https://dev.twitch.tv/docs/authentication/
 
 - Expose one AiProvider interface in NestJS so application workflows do not depend on provider-specific response formats.
 - Use Gemini for embeddings and bulk candidate extraction.
-- Use OpenAI for case reasoning and tasks requiring strict structured output.
+- Use Gemini for case reasoning with JSON-schema-constrained output and explicit human approval.
 - Validate every model response on the server using Zod schemas from packages/shared.
 - Keep provider credentials and calls inside NestJS workers or services.
 
@@ -371,7 +371,7 @@ Validate structured responses server side. Store AI drafts separately from human
 ### Retrieval and prompt safety
 
 - Wrap chat text, imports and attachments in clear delimiters in every prompt. Treat all such material as untrusted data, never as instructions.
-- Filter records by channel and visibility before sending any retrieval context to OpenAI or Gemini.
+- Filter records by channel and visibility before sending any retrieval context to Gemini.
 - For precedent retrieval, apply the channel filter first, rank eligible records by pgvector similarity second, and ask the model to explain the comparison third.
 - Require model explanations to cite source record IDs. Do not accept a case recommendation that cites unavailable records.
 - Exclude private moderation data from public summary retrieval even when the public request mentions a private case or guesses its ID.
@@ -536,7 +536,7 @@ Automated tests are written alongside each feature and run continuously. The fin
 
 **Queues:** Redis with BullMQ, noeviction policy and separate ingestion and AI queues.
 
-**AI:** OpenAI and Gemini behind one AiProvider interface, with shared Zod validation.
+**AI:** Gemini behind one AiProvider interface, with shared Zod validation.
 
 **Hosting:** Single VPS with Docker Compose and Caddy HTTPS reverse proxy.
 

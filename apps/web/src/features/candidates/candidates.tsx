@@ -121,9 +121,11 @@ function ReviewPanel() {
           </span>
         </div>
         <p className="panel-description">
-          When enabled, retained chat from this channel is sent to Google Gemini
-          in small batches. Suggestions stay private to your team and expire
-          with the original chat. Confirming one keeps its source as evidence.
+          On Google’s free tier, inputs and outputs may be used to improve its
+          products. When enabled, retained chat from this channel is sent to
+          Google Gemini in small batches. Suggestions stay private to your team
+          and expire with the original chat. Confirming one keeps its source as
+          evidence.
         </p>
         {status && (
           <>

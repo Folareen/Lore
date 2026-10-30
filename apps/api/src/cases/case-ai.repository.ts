@@ -81,10 +81,10 @@ export class CaseAiRepository {
       return {
         enabled: channel.caseAiEnabled,
         embeddingsConfigured: Boolean(env.GEMINI_API_KEY),
-        reasoningConfigured: Boolean(env.OPENAI_API_KEY),
+        reasoningConfigured: Boolean(env.GEMINI_API_KEY),
         storageConfigured: this.storage.configured,
         embeddingModel: caseEmbeddingModel,
-        reasoningModel: env.OPENAI_MODEL,
+        reasoningModel: env.GEMINI_MODEL,
         dailyUsed: usage?.calls || 0,
         dailyLimit: env.AI_DAILY_CALL_LIMIT,
       };

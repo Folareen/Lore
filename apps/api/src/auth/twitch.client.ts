@@ -12,14 +12,19 @@ export const tokenPairSchema = z.object({
 });
 const tokensSchema = tokenPairSchema.extend({
   expires_in: z.number().int().positive(),
-  scope: z.array(z.string()),
+  // Twitch omits this for scope-free sign-in; /validate supplies granted scopes.
+  scope: z.array(z.string()).optional(),
   token_type: z.literal('bearer'),
 });
 const validationSchema = z.object({
   client_id: z.string(),
   user_id: z.string().min(1),
   login: z.string().min(1),
-  scopes: z.array(z.string()),
+  // A scope-free token can omit scopes or return null; neither grants access.
+  scopes: z.preprocess(
+    (value) => (value === undefined || value === null ? [] : value),
+    z.array(z.string()),
+  ),
   expires_in: z.number().int().nonnegative(),
 });
 const profileSchema = z.object({

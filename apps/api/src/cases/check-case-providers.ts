@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { env } from '../config';
 import { GeminiProvider, AiFailure } from '../ai/ai.provider';
-import { OpenAiProvider } from '../ai/openai.provider';
 import { CaseFileStorage } from './case-files.service';
 async function main() {
   const run = async (
@@ -35,11 +34,11 @@ async function main() {
     },
   );
   await run(
-    'OpenAI structured case recommendation',
-    Boolean(env.OPENAI_API_KEY),
+    'Gemini structured case recommendation',
+    Boolean(env.GEMINI_API_KEY),
     async () => {
       const id = randomUUID();
-      await new OpenAiProvider().reason(
+      await new GeminiProvider().reason(
         {
           currentCase: {
             id,

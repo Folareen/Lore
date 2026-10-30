@@ -3,7 +3,6 @@ import { BullModule } from '@nestjs/bullmq';
 import { queueNames } from '@lore/shared';
 import { AuthModule } from '../auth/auth.module';
 import { OpenLoopsModule } from '../open-loops/open-loops.module';
-import { OpenAiProvider, ModelGateway } from './openai.provider';
 import { AiProvider, GeminiProvider } from './ai.provider';
 import { AiRepository } from './ai.repository';
 import { AiController } from './ai.controller';
@@ -18,9 +17,7 @@ import { AiRecovery, AiWorker } from './ai.worker';
   exports: [AiProvider],
   providers: [
     GeminiProvider,
-    OpenAiProvider,
-    ModelGateway,
-    { provide: AiProvider, useExisting: ModelGateway },
+    { provide: AiProvider, useExisting: GeminiProvider },
     AiRepository,
     AiWorker,
     AiRecovery,
