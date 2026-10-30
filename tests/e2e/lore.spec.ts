@@ -17,6 +17,33 @@ async function signIn(
     },
   ]);
 }
+test('old preview links redirect to the same demo screen and preserve parameters', async ({
+  page,
+}) => {
+  const response = await page.request.get(
+    '/preview?view=case&case=00000000-0000-4000-8000-000000000001&channel=00000000-0000-4000-8000-000000000002',
+    { maxRedirects: 0 },
+  );
+  expect(response.status()).toBe(308);
+  const destination = new URL(
+    response.headers().location,
+    'http://127.0.0.1:4322',
+  );
+  expect(destination.pathname).toBe('/demo');
+  expect(Object.fromEntries(destination.searchParams)).toEqual({
+    view: 'case',
+    case: '00000000-0000-4000-8000-000000000001',
+    channel: '00000000-0000-4000-8000-000000000002',
+  });
+  await page.goto('/preview?view=chat');
+  await expect(page).toHaveURL(/\/demo\?view=chat$/);
+  await expect(page.getByLabel('Simulated chat message')).toBeVisible();
+  await page.goto('/preview');
+  await expect(page).toHaveURL(/\/demo$/);
+  await expect(
+    page.getByRole('heading', { name: 'The next stream remembers.' }),
+  ).toBeVisible();
+});
 test('production CSP permits hydration, themes and the seeded command-to-brief/reset journey', async ({
   page,
 }) => {

@@ -37,7 +37,7 @@ type Workspace = {
   channels: Channel[];
   selected: Channel | undefined;
   preview: boolean;
-  fixtureBase: '/preview' | '/demo';
+  fixtureBase: '/demo';
   selectChannel: (id: string) => void;
   connect: () => Promise<void>;
   saveRetention: (days: number) => Promise<void>;
@@ -89,13 +89,13 @@ export function WorkspaceProvider({
   session,
   initialChannels,
   preview = false,
-  fixtureBase = '/preview',
+  fixtureBase = '/demo',
   children,
 }: {
   session: Session;
   initialChannels: Channel[];
   preview?: boolean;
-  fixtureBase?: '/preview' | '/demo';
+  fixtureBase?: '/demo';
   children: React.ReactNode;
 }) {
   const router = useRouter();

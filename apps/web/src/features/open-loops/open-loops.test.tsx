@@ -100,7 +100,7 @@ it('lets a credential-free demo capture a confirmed promise and carry it into th
   const link = await screen.findByRole('link', {
     name: 'Play the community playlist.',
   });
-  expect(link.getAttribute('href')).toContain('/preview?view=streamer&loop=');
+  expect(link.getAttribute('href')).toContain('/demo?view=streamer&loop=');
   expect(fetchMock).not.toHaveBeenCalled();
 });
 it('requires a completion reason and removes fulfilled work from the brief', async () => {

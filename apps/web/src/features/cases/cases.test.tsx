@@ -189,7 +189,7 @@ it('creates a labeled manual case through the fixture list', async () => {
   await user.click(screen.getByRole('button', { name: 'Create case' }));
   await waitFor(() =>
     expect(router.push).toHaveBeenCalledWith(
-      expect.stringContaining('/preview?view=case&case='),
+      expect.stringContaining('/demo?view=case&case='),
     ),
   );
   expect(fetchMock).not.toHaveBeenCalled();

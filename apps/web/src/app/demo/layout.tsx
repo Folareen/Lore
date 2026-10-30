@@ -1,6 +1,5 @@
-import { demoDatasetSchema } from '@lore/shared';
+import { demoDatasetSchema, demoSeed } from '@lore/shared';
 import { DemoPlayground } from '../../features/demo/demo-context';
-import { DemoUnavailable } from '../../features/demo/demo-home';
 export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Try Lore · Demo fixture',
@@ -19,9 +18,5 @@ export default async function DemoLayout({
       response.ok ? demoDatasetSchema.parse(await response.json()) : null,
     )
     .catch(() => null);
-  return data ? (
-    <DemoPlayground data={data}>{children}</DemoPlayground>
-  ) : (
-    <DemoUnavailable />
-  );
+  return <DemoPlayground data={data ?? demoSeed}>{children}</DemoPlayground>;
 }

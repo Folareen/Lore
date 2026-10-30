@@ -124,7 +124,7 @@ describe('Lore interface behavior', () => {
     expect(screen.getByText('Approved community story')).toBeTruthy();
     expect(screen.getByText('Illustrative story')).toBeTruthy();
   });
-  it('provides an honest preview when Twitch login is not configured', async () => {
+  it('offers one demo entry point when Twitch login is not configured', async () => {
     fetchMock.mockResolvedValue(response({ twitchConfigured: false }));
     render(<LoginScreen />);
     expect(
@@ -136,10 +136,11 @@ describe('Lore interface behavior', () => {
       }).disabled,
     ).toBe(true);
     expect(
-      screen
-        .getByRole('link', { name: /Take a look around first/ })
-        .getAttribute('href'),
-    ).toBe('/preview');
+      screen.getByRole('link', { name: /Try the demo/ }).getAttribute('href'),
+    ).toBe('/demo');
+    expect(
+      screen.queryByRole('link', { name: /Take a look around first/ }),
+    ).toBeNull();
   });
   it('links ready sign-in to NestJS and explains an expired session', async () => {
     fetchMock.mockResolvedValue(response({ twitchConfigured: true }));

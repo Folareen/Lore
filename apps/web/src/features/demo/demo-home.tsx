@@ -125,27 +125,3 @@ export function DemoHome() {
     </div>
   );
 }
-export function DemoUnavailable() {
-  return (
-    <main id="main-content" className="demo-unavailable panel">
-      <p className="eyebrow">DEMO FIXTURE</p>
-      <h1>The demo is taking a break.</h1>
-      <p>
-        The seeded workspace could not be loaded. Try again shortly, or explore
-        the built-in fixture preview.
-      </p>
-      <div className="button-row">
-        <button
-          className="button primary"
-          onClick={() => window.location.reload()}
-        >
-          Try again
-        </button>
-        <Link className="button secondary" href="/preview">
-          Open fixture preview
-        </Link>
-        <Link href="/">Back to Lore</Link>
-      </div>
-    </main>
-  );
-}
