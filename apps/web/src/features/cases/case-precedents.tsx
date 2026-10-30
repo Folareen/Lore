@@ -100,8 +100,10 @@ export function CasePrecedents({
             <>
               <p className="notice">
                 Case AI is a separate opt-in. It sends private case text and
-                retained excerpts to Gemini for retrieval and OpenAI for
-                recommendations. Uploaded file contents are not sent.
+                retained excerpts to Google Gemini for retrieval and
+                recommendations. Uploaded file contents are not sent. On
+                Google’s free tier, inputs and outputs may be used to improve
+                its products.
               </p>
               {selected?.role === 'owner' ? (
                 <button
@@ -124,16 +126,10 @@ export function CasePrecedents({
                   Only the owner can enable private case AI.
                 </p>
               )}
-              {!info.embeddingsConfigured && (
+              {(!info.embeddingsConfigured || !info.reasoningConfigured) && (
                 <p className="notice">
                   Configure GEMINI_API_KEY on the API to enable semantic
-                  retrieval.
-                </p>
-              )}
-              {!info.reasoningConfigured && (
-                <p className="notice">
-                  Configure OPENAI_API_KEY for reviewable recommendations.
-                  Gemini retrieval can run independently.
+                  retrieval and reviewable recommendations.
                 </p>
               )}
             </>

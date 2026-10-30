@@ -157,7 +157,6 @@ async function main() {
     TWITCH_EVENTSUB_SECRET: '',
     TWITCH_EVENTSUB_CALLBACK_URL: '',
     GEMINI_API_KEY: '',
-    OPENAI_API_KEY: '',
     R2_ACCOUNT_ID: '',
     R2_BUCKET: '',
     R2_ACCESS_KEY_ID: '',

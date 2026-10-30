@@ -397,7 +397,6 @@ beforeAll(async () => {
       TWITCH_EVENTSUB_SECRET: secret,
       TWITCH_EVENTSUB_CALLBACK_URL: callback,
       GEMINI_API_KEY: '',
-      OPENAI_API_KEY: '',
       R2_ACCOUNT_ID: '',
       R2_BUCKET: '',
       R2_ACCESS_KEY_ID: '',
