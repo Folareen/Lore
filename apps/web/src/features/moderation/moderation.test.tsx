@@ -224,7 +224,7 @@ it('documents a human rule change and includes it in the next handoff', async ()
     screen
       .getByRole('link', { name: 'Source rule-change record' })
       .getAttribute('href'),
-  ).toContain('/preview?view=workflows#rule-');
+  ).toContain('/demo?view=workflows#rule-');
   expect(fetchMock).not.toHaveBeenCalled();
 });
 it('keeps the desk unavailable to team grants and read-only for disconnected owners', async () => {

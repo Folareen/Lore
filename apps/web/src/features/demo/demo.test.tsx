@@ -20,6 +20,7 @@ import { ModeratorDeskScreen } from '../moderation/moderator-desk';
 import { ModerationScreen } from '../cases/moderation';
 import { CandidatesScreen } from '../candidates/candidates';
 import { OverlayScreen } from '../overlay/overlay-settings';
+import DemoLayout from '../../app/demo/layout';
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
   usePathname: () => '/demo',
@@ -103,6 +104,48 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+it.each([
+  ['unreachable API', () => Promise.reject(new TypeError('fetch failed'))],
+  [
+    'request timeout',
+    () => Promise.reject(new DOMException('Timed out', 'TimeoutError')),
+  ],
+  ['missing seed', () => Promise.resolve(new Response(null, { status: 503 }))],
+  ['invalid JSON', () => Promise.resolve(new Response('not JSON'))],
+  ['invalid dataset', () => Promise.resolve(Response.json({ version: 2 }))],
+])('keeps the demo usable with bundled data on %s', async (_, load) => {
+  fetchMock.mockImplementationOnce(load);
+  render(await DemoLayout({ children: <Screens /> }));
+  const user = userEvent.setup();
+  expect(
+    screen.getByRole('heading', { name: 'The next stream remembers.' }),
+  ).toBeTruthy();
+  await change(user, 'brief');
+  await screen.findByText(demoSeed.loops[0].wording);
+  await change(user, 'chat');
+  await user.click(screen.getByRole('button', { name: 'Simulate command' }));
+  await screen.findByText(
+    'Simulated promise saved. Open the next-stream brief to see it.',
+  );
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining('/api/demo'),
+    expect.objectContaining({
+      cache: 'no-store',
+      signal: expect.any(AbortSignal),
+    }),
+  );
+});
+it('uses the validated backend snapshot when available', async () => {
+  const data = structuredClone(demoSeed);
+  data.loops[0].wording = 'Current backend seed';
+  fetchMock.mockResolvedValueOnce(Response.json(data));
+  render(await DemoLayout({ children: <Screens /> }));
+  await change(userEvent.setup(), 'brief');
+  await screen.findByText('Current backend seed');
+  expect(screen.queryByText(demoSeed.loops[0].wording)).toBeNull();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 it('starts all three surfaces from the supplied seeded snapshot and keeps navigation in demo mode', async () => {
   const data = structuredClone(demoSeed);

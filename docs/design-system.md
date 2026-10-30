@@ -51,6 +51,6 @@ Keep purple as the primary action. Mint, coral, butter yellow, and lilac support
 
 Write like a helpful member of the crew: short, clear, and lightly playful. Don’t make jokes in permission errors or destructive confirmations. Avoid fake testimonials, invented activity metrics, AI sparkle motifs, generic gradient blobs, repetitive card grids, or unbuilt features presented as working.
 
-The public `/preview` uses labeled demo fixtures and browser-local state only. It never signs someone in or accesses a private channel. Real `/app` pages authenticate with NestJS and use its role checks and CSRF-protected mutations.
+The public `/demo` uses labeled demo fixtures and browser-local state only. It never signs someone in or accesses a private channel. Real `/app` pages authenticate with NestJS and use its role checks and CSRF-protected mutations.
 
 **Future features ship end to end:** shared contracts and migrations where needed, NestJS behavior and authorization, usable frontend screens following this system, and relevant tests in the same feature PR. Include loading/error/empty states and verify light/dark, mobile, and keyboard behavior. Explicit user-approved backend-only milestones are the exception, not the default.

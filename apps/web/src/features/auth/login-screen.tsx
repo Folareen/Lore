@@ -106,11 +106,7 @@ export function LoginScreen({
             </div>
           )}
           <Link href="/demo" className="quiet-link">
-            Try the seeded demo →
-          </Link>
-          <Link href="/preview" className="quiet-link">
-            Take a look around first
-            <ArrowUpRight size={14} />
+            Try the demo →
           </Link>
           <p className="auth-footnote">
             Signing in identifies you. Channel access is granted separately by

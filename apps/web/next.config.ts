@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   distDir: process.env.LORE_E2E_BUILD === '1' ? '.next-e2e' : '.next',
   poweredByHeader: false,
   transpilePackages: ['@lore/shared'],
+  async redirects() {
+    return [{ source: '/preview', destination: '/demo', permanent: true }];
+  },
   async headers() {
     return [
       {

@@ -142,14 +142,14 @@ export function AppShell({
   session,
   channels,
   preview = false,
-  fixtureBase = '/preview',
+  fixtureBase = '/demo',
   view,
   children,
 }: {
   session: Session;
   channels: Channel[];
   preview?: boolean;
-  fixtureBase?: '/preview' | '/demo';
+  fixtureBase?: '/demo';
   view?: string;
   children: React.ReactNode;
 }) {
