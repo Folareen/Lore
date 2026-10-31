@@ -15,7 +15,12 @@ const draft = {
   requires_human_approval: true,
   suggested_next_step: 'Ask the streamer to confirm.',
 };
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  vi.clearAllTimers();
+  vi.useRealTimers();
+});
 it('accepts cited suggestions and a conservative empty result', () => {
   expect(validateExtraction({ suggestions: [draft] }, [source])).toEqual([
     draft,
@@ -209,4 +214,98 @@ it('requires microphone suggestions to quote their transcript and remain unconfi
   await expect(
     new GeminiProvider().listen(Buffer.from('audio'), source.id),
   ).rejects.toThrow('invalid_output');
+});
+
+function mockProviderDeadline() {
+  vi.useFakeTimers();
+  vi.spyOn(AbortSignal, 'timeout').mockImplementation((delay) => {
+    const controller = new AbortController();
+    setTimeout(
+      () => controller.abort(new DOMException('Deadline', 'TimeoutError')),
+      delay,
+    );
+    return controller.signal;
+  });
+}
+
+it('accepts a valid background extraction that takes longer than 45 seconds', async () => {
+  mockProviderDeadline();
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      (_url, init: RequestInit) =>
+        new Promise<Response>((resolve, reject) => {
+          const timer = setTimeout(
+            () => resolve(providerOutput({ suggestions: [draft] })),
+            60_000,
+          );
+          init.signal!.addEventListener(
+            'abort',
+            () => {
+              clearTimeout(timer);
+              reject(init.signal!.reason);
+            },
+            { once: true },
+          );
+        }),
+    ),
+  );
+  const result = expect(
+    new GeminiProvider().extract([source]),
+  ).resolves.toEqual([draft]);
+  await vi.advanceTimersByTimeAsync(60_000);
+  await result;
+});
+
+it('still aborts stalled background extraction at its bounded deadline', async () => {
+  mockProviderDeadline();
+  const aborted = vi.fn();
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      (_url, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal!.addEventListener(
+            'abort',
+            () => {
+              aborted();
+              reject(init.signal!.reason);
+            },
+            { once: true },
+          );
+        }),
+    ),
+  );
+  const result = expect(new GeminiProvider().extract([source])).rejects.toThrow(
+    'provider_unavailable',
+  );
+  await vi.advanceTimersByTimeAsync(119_999);
+  expect(aborted).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1);
+  await result;
+  expect(aborted).toHaveBeenCalledOnce();
+});
+
+it('keeps the shorter deadline for interactive generation', async () => {
+  mockProviderDeadline();
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      (_url, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal!.addEventListener(
+            'abort',
+            () => reject(init.signal!.reason),
+            { once: true },
+          );
+        }),
+    ),
+  );
+  const result = expect(
+    new GeminiProvider().summarize([
+      { id: source.id, title: 'Playlist', body: source.text },
+    ]),
+  ).rejects.toThrow('provider_unavailable');
+  await vi.advanceTimersByTimeAsync(45_000);
+  await result;
 });
