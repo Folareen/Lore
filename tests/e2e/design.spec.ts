@@ -161,9 +161,10 @@ test('mobile workspace navigation opens, closes with Escape and follows a destin
     page.getByRole('navigation', { name: 'Community navigation' }),
   ).toBeHidden();
   await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
   await expect(
-    page.getByRole('button', { name: 'Close navigation' }),
-  ).toHaveAttribute('aria-expanded', 'true');
+    page.getByRole('dialog', { name: 'Community menu' }),
+  ).toBeVisible();
   await page
     .getByRole('navigation', { name: 'Community navigation' })
     .getByRole('link', { name: 'Account', exact: true })
@@ -566,4 +567,101 @@ test('saved account themes hydrate with the correct selected control', async ({
     await expect(choices.locator('[aria-pressed="true"]')).toHaveCount(1);
   }
   expect(hydrationWarnings).toEqual([]);
+});
+
+test('mobile community menu isolates the page and fits narrow and landscape screens', async ({
+  page,
+}, info) => {
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/demo?view=account');
+    const trigger = page.getByRole('button', { name: 'Open navigation' });
+    await trigger.click();
+    const menu = page.getByRole('dialog', { name: 'Community menu' });
+    await expect(menu).toBeVisible();
+    await expect(
+      menu.getByRole('button', { name: 'Close navigation' }),
+    ).toBeFocused();
+    await expect
+      .poll(() =>
+        page.locator('html').evaluate((element) => element.style.overflow),
+      )
+      .toBe('hidden');
+    const links = menu.getByRole('navigation').getByRole('link');
+    const positions = await links.evaluateAll((elements) =>
+      elements.map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          left: bounds.left,
+          height: bounds.height,
+          fits: element.scrollWidth <= element.clientWidth,
+        };
+      }),
+    );
+    expect(positions.length).toBeGreaterThan(0);
+    expect(
+      positions.every(
+        (position) =>
+          position.left === positions[0].left &&
+          position.height >= 48 &&
+          position.fits,
+      ),
+    ).toBe(true);
+    const account = menu.getByRole('link', { name: 'Account', exact: true });
+    await expect(account).toHaveAttribute('aria-current', 'page');
+    await account.focus();
+    await page.keyboard.press('Tab');
+    expect(
+      await menu.evaluate((element) =>
+        element.contains(document.activeElement),
+      ),
+    ).toBe(true);
+    await account.scrollIntoViewIfNeeded();
+    const accountBounds = await account.boundingBox();
+    const footerBounds = await menu
+      .locator('.mobile-nav-account')
+      .boundingBox();
+    expect(accountBounds!.y + accountBounds!.height).toBeLessThanOrEqual(
+      footerBounds!.y,
+    );
+    await page.screenshot({
+      path: info.outputPath(`menu-${viewport.width}.png`),
+      animations: 'disabled',
+    });
+    await page.keyboard.press('Escape');
+    await expect(menu).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await expect
+      .poll(() =>
+        page.locator('html').evaluate((element) => element.style.overflow),
+      )
+      .toBe('');
+    await trigger.click();
+    await page.mouse.click(4, viewport.height / 2);
+    await expect(menu).not.toBeVisible();
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => localStorage.setItem('lore-theme', 'dark'));
+  await page.reload();
+  await page.getByRole('button', { name: 'Open navigation' }).click();
+  await page.screenshot({
+    path: info.outputPath('menu-dark.png'),
+    animations: 'disabled',
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(
+    page.getByRole('dialog', { name: 'Community menu' }),
+  ).not.toBeVisible();
+  await expect(
+    page.getByRole('navigation', { name: 'Community navigation' }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.locator('html').evaluate((element) => element.style.overflow),
+    )
+    .toBe('');
 });

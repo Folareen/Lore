@@ -5,14 +5,13 @@ import { DemoToolbar } from '../demo/demo-home';
 import { WorkspaceStream } from '../continuity/live-updates';
 import { OverlayProvider } from '../overlay/overlay-context';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Suspense, useId, useRef, useState } from 'react';
+import { Suspense } from 'react';
+import { MobileNavigation } from './mobile-navigation';
 import {
   BookOpen,
   ClipboardCheck,
   ShieldCheck,
   Monitor,
-  Menu,
-  X,
   Home,
   Settings2,
   Users,
@@ -51,9 +50,6 @@ function Shell({
 }) {
   const { session, channels, selected, preview, selectChannel, href } =
     useWorkspace();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuId = useId();
-  const menuButton = useRef<HTMLButtonElement>(null);
   const path = usePathname();
   const searchParams = useSearchParams();
   const route = preview
@@ -70,53 +66,31 @@ function Shell({
       : route === 'chat'
         ? 'Chat simulation'
         : navigation.find((item) => item.view === current)?.title || 'Overview';
+  const links = navigation
+    .filter(
+      (item) =>
+        !['moderation', 'overlay'].includes(item.view) ||
+        selected?.role === 'owner' ||
+        selected?.role === 'moderator',
+    )
+    .map(({ view: item, title: label, icon: Icon }) => (
+      <Link
+        key={item}
+        href={href(item)}
+        aria-current={current === item ? 'page' : undefined}
+      >
+        <Icon size={19} />
+        <span>{label}</span>
+      </Link>
+    ));
   return (
     <div className="workspace">
-      <aside
-        className="sidebar"
-        onKeyDown={(event) => {
-          if (event.key === 'Escape' && menuOpen) {
-            setMenuOpen(false);
-            menuButton.current?.focus();
-          }
-        }}
-      >
+      <aside className="sidebar">
         <Brand />
-        <button
-          ref={menuButton}
-          className="button secondary mobile-nav-toggle"
-          aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
-          aria-expanded={menuOpen}
-          aria-controls={menuId}
-          onClick={() => setMenuOpen((value) => !value)}
-        >
-          {menuOpen ? (
-            <X size={19} aria-hidden="true" />
-          ) : (
-            <Menu size={19} aria-hidden="true" />
-          )}{' '}
-          Menu
-        </button>
-        <nav id={menuId} data-open={menuOpen} aria-label="Community navigation">
-          {navigation
-            .filter(
-              (item) =>
-                !['moderation', 'overlay'].includes(item.view) ||
-                selected?.role === 'owner' ||
-                selected?.role === 'moderator',
-            )
-            .map(({ view: item, title: label, icon: Icon }) => (
-              <Link
-                key={item}
-                onClick={() => setMenuOpen(false)}
-                href={href(item)}
-                aria-current={current === item ? 'page' : undefined}
-              >
-                <Icon size={19} />
-                <span>{label}</span>
-              </Link>
-            ))}
-        </nav>
+        <MobileNavigation user={session.user} preview={preview}>
+          {links}
+        </MobileNavigation>
+        <nav aria-label="Community navigation">{links}</nav>
         <div className="sidebar-account">
           <Avatar name={session.user.login} size={35} />
           <div>

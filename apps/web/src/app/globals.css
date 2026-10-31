@@ -759,12 +759,12 @@ svg {
   margin: 0 17px 34px;
   font-size: 35px;
 }
-.sidebar nav {
+.sidebar > nav {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
-.sidebar nav a {
+.sidebar > nav a {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -774,11 +774,11 @@ svg {
   color: var(--muted);
   font-weight: 550;
 }
-.sidebar nav a:hover {
+.sidebar > nav a:hover {
   background: var(--raised);
   color: var(--text);
 }
-.sidebar nav a[aria-current='page'] {
+.sidebar > nav a[aria-current='page'] {
   background: var(--purple-soft);
   color: var(--purple-ink);
 }
@@ -1501,17 +1501,6 @@ svg {
     width: 21px;
     height: 24px;
   }
-  .sidebar nav {
-    flex: 1;
-    flex-direction: row;
-    justify-content: flex-end;
-    gap: 4px;
-  }
-  .sidebar nav a {
-    padding: 10px 12px;
-    gap: 7px;
-    font-size: 12px;
-  }
   .sidebar-note,
   .sidebar-account {
     display: none;
@@ -1760,19 +1749,6 @@ svg {
   }
   .sidebar > .brand span {
     display: none;
-  }
-  .sidebar nav {
-    justify-content: space-between;
-  }
-  .sidebar nav a {
-    flex-direction: column;
-    gap: 4px;
-    padding: 7px 9px;
-    font-size: 12px;
-  }
-  .sidebar nav svg {
-    width: 18px;
-    height: 18px;
   }
   .workspace-content {
     padding: 0 18px 35px;
@@ -2614,7 +2590,7 @@ details[open] > summary {
   overflow-y: auto;
   padding-top: 26px;
 }
-.sidebar nav a {
+.sidebar > nav a {
   font-size: 14px;
   padding: 11px 14px;
 }
@@ -3179,24 +3155,6 @@ details[open] > summary {
   }
   .mobile-nav-toggle {
     display: inline-flex;
-    min-height: 44px;
-  }
-  .sidebar nav {
-    grid-column: 1/-1;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    overflow: visible;
-    gap: 5px;
-    max-height: calc(100svh - 90px);
-    overflow-y: auto;
-  }
-  .sidebar nav[data-open='false'] {
-    display: none;
-  }
-  .sidebar nav a {
-    flex-direction: row;
-    justify-content: flex-start;
-    font-size: 14px;
     min-height: 44px;
   }
   .sidebar-account {
@@ -4447,16 +4405,8 @@ details[open] > summary {
     padding: 12px 20px;
     overflow: visible;
   }
-  .sidebar nav {
-    position: absolute;
-    top: var(--workspace-mobile-nav);
-    left: 0;
-    right: 0;
-    background: var(--surface);
-    padding: 12px 20px;
-    max-height: calc(100svh - var(--workspace-mobile-nav) - 16px);
-    overflow-y: auto;
-    box-shadow: var(--shadow);
+  .sidebar > nav {
+    display: none;
   }
   .workspace-topbar {
     top: var(--workspace-mobile-nav);
@@ -4728,4 +4678,86 @@ details[open] > summary {
 .marketing-menu nav .menu-demo-link:hover {
   background: var(--primary-hover);
   color: var(--on-primary);
+}
+
+/* Native modal navigation keeps narrow-screen tasks separate from the page. */
+.mobile-nav-dialog {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  padding: 0;
+  width: min(360px, calc(100vw - 24px));
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 12px 0 0 12px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.mobile-nav-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.mobile-nav-dialog::backdrop {
+  background: #15101c99;
+}
+.mobile-nav-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: calc(16px + env(safe-area-inset-top)) 20px 16px;
+}
+.mobile-nav-dialog-header .brand {
+  font-size: 28px;
+}
+.mobile-nav-dialog-header .icon-button {
+  width: 44px;
+  height: 44px;
+}
+.mobile-nav-dialog nav {
+  flex: 1;
+  min-height: 0;
+  padding: 8px 16px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.mobile-nav-dialog nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 14px;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.mobile-nav-dialog nav a svg {
+  flex-shrink: 0;
+}
+.mobile-nav-dialog nav a:hover {
+  background: var(--raised);
+  color: var(--text);
+}
+.mobile-nav-dialog nav a[aria-current='page'] {
+  background: var(--purple-soft);
+  color: var(--purple-ink);
+}
+.mobile-nav-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--raised);
+  padding: 18px 24px calc(18px + env(safe-area-inset-bottom));
+  font-size: 14px;
+}
+.mobile-nav-account small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
 }
