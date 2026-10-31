@@ -1,11 +1,18 @@
 'use client';
+import { Select } from '../../components/select';
 import Link from 'next/link';
+import { DemoToolbar } from '../demo/demo-home';
 import { WorkspaceStream } from '../continuity/live-updates';
 import { OverlayProvider } from '../overlay/overlay-context';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useId, useRef, useState } from 'react';
 import {
   BookOpen,
+  ClipboardCheck,
+  ShieldCheck,
+  Monitor,
+  Menu,
+  X,
   ChevronRight,
   Home,
   Settings2,
@@ -27,10 +34,10 @@ import { WorkspaceProvider, useWorkspace } from './workspace-context';
 const navigation = [
   { view: 'overview', title: 'Overview', icon: Home },
   { view: 'streamer', title: 'Open loops', icon: Bookmark },
-  { view: 'overlay', title: 'Stream overlay', icon: ListChecks },
+  { view: 'overlay', title: 'Stream overlay', icon: Monitor },
   { view: 'publications', title: 'Community publishing', icon: BookOpen },
-  { view: 'moderation', title: 'Moderation cases', icon: BookOpen },
-  { view: 'candidates', title: 'Needs review', icon: BookOpen },
+  { view: 'moderation', title: 'Moderation cases', icon: ShieldCheck },
+  { view: 'candidates', title: 'Needs review', icon: ClipboardCheck },
   { view: 'brief', title: 'Next-stream brief', icon: ListChecks },
   { view: 'settings', title: 'Channel settings', icon: Settings2 },
   { view: 'team', title: 'Your team', icon: Users },
@@ -45,6 +52,9 @@ function Shell({
 }) {
   const { session, channels, selected, preview, selectChannel, href } =
     useWorkspace();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId();
+  const menuButton = useRef<HTMLButtonElement>(null);
   const path = usePathname();
   const searchParams = useSearchParams();
   const route = preview
@@ -56,13 +66,40 @@ function Shell({
       ? 'publications'
       : route;
   const title =
-    navigation.find((item) => item.view === current)?.title || 'Overview';
+    route === 'guide'
+      ? 'Demo guide'
+      : route === 'chat'
+        ? 'Chat simulation'
+        : navigation.find((item) => item.view === current)?.title || 'Overview';
   return (
     <div className="workspace">
-      <aside className="sidebar">
+      <aside
+        className="sidebar"
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && menuOpen) {
+            setMenuOpen(false);
+            menuButton.current?.focus();
+          }
+        }}
+      >
         <Brand />
-        <p className="sidebar-label">YOUR COMMUNITY SPACE</p>
-        <nav aria-label="Workspace navigation">
+        <button
+          ref={menuButton}
+          className="button secondary mobile-nav-toggle"
+          aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={menuOpen}
+          aria-controls={menuId}
+          onClick={() => setMenuOpen((value) => !value)}
+        >
+          {menuOpen ? (
+            <X size={19} aria-hidden="true" />
+          ) : (
+            <Menu size={19} aria-hidden="true" />
+          )}{' '}
+          Menu
+        </button>
+        <p className="sidebar-label">Workspace</p>
+        <nav id={menuId} data-open={menuOpen} aria-label="Workspace navigation">
           {navigation
             .filter(
               (item) =>
@@ -73,6 +110,7 @@ function Shell({
             .map(({ view: item, title: label, icon: Icon }) => (
               <Link
                 key={item}
+                onClick={() => setMenuOpen(false)}
                 href={href(item)}
                 aria-current={current === item ? 'page' : undefined}
               >
@@ -81,11 +119,6 @@ function Shell({
               </Link>
             ))}
         </nav>
-        <div className="sidebar-note">
-          <BookOpen size={23} />
-          <p>Good stories start here.</p>
-          <small>A little context for the next stream.</small>
-        </div>
         <div className="sidebar-account">
           <Avatar name={session.user.login} size={35} />
           <div>
@@ -105,36 +138,37 @@ function Shell({
             {channels.length > 0 && (
               <label className="channel-picker">
                 <span className="sr-only">Selected channel</span>
-                <select
+                <Select
                   aria-label="Selected channel"
                   value={selected?.id || ''}
-                  onChange={(event) => selectChannel(event.target.value)}
+                  onValueChange={(event) => selectChannel(event)}
                 >
                   {channels.map((channel) => (
                     <option key={channel.id} value={channel.id}>
                       {channel.displayName}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             )}
             <ThemeToggle />
             <Avatar name={session.user.login} size={34} />
           </div>
         </header>
-        {preview && (
-          <div className="preview-banner">
-            <span>
-              <strong>Demo fixture</strong> · Preview only. Changes reset on
-              refresh.
-            </span>
-            <Link href="/login">
-              Make it yours
-              <ArrowUpRight size={12} />
-            </Link>
-          </div>
-        )}
         <main id="main-content">
+          {preview && (
+            <div className="demo-session-bar">
+              <span>
+                <strong>Demo fixture</strong> · Simulated actions
+              </span>
+              <div className="demo-session-actions">
+                <DemoToolbar />
+                <Link href="/login">
+                  Sign in <ArrowUpRight size={12} aria-hidden="true" />
+                </Link>
+              </div>
+            </div>
+          )}
           <WorkspaceStream />
           {children}
         </main>

@@ -36,9 +36,8 @@ export function Account() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">A FAMILIAR FACE</p>
-          <h1>Your little corner.</h1>
-          <p>Your Twitch identity, your preferences, your space.</p>
+          <h1>Account</h1>
+          <p>Your Twitch account and appearance preferences.</p>
         </div>
       </div>
       <div className="content-stack">
@@ -96,16 +95,16 @@ export function Account() {
         </section>
         <section className="panel">
           <div className="panel-title">
-            <h2>Set the mood</h2>
+            <h2>Appearance</h2>
           </div>
           <p className="panel-description">
-            Bright room, late stream, or whatever your device is doing.
+            Choose light, dark or your device’s theme.
           </p>
           <ThemeChoices />
         </section>
         <section className="panel danger-section">
           <div>
-            <h2>See you next stream.</h2>
+            <h2>Sign out</h2>
             <p>
               Signing out ends this Lore session. Your channel and team stay
               right where you left them.

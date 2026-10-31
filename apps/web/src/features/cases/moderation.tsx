@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -19,14 +20,9 @@ export function ModerationScreen() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">CONTEXT BEFORE THE CALL</p>
-          <h1>A fairer place to review.</h1>
-          <p>
-            Case files, retained evidence, and the reasoning behind each human
-            decision.
-          </p>
+          <h1>Moderation cases</h1>
+          <p>Review evidence, applicable rules and earlier decisions.</p>
         </div>
-        <FolderOpen size={30} aria-hidden="true" />
       </div>
       {!selected ? (
         <p className="notice">Choose a channel first.</p>
@@ -106,19 +102,19 @@ function CasesList() {
         </button>
         <label className="field">
           Case status
-          <select
+          <Select
             value={filter}
             disabled={busy}
-            onChange={(e) => {
+            onValueChange={(e) => {
               setRows([]);
-              setFilter(e.target.value);
+              setFilter(e);
             }}
           >
             <option value="all">All cases</option>
             <option value="open">Open</option>
             <option value="reviewing">Reviewing</option>
             <option value="decided">Decided</option>
-          </select>
+          </Select>
         </label>
         <button
           className="button secondary"
@@ -166,7 +162,7 @@ function CasesList() {
             key={record.id}
           >
             <div>
-              <span className="eyebrow">
+              <span className="record-meta">
                 {record.origin === 'demo_fixture'
                   ? 'Demo fixture'
                   : 'Manual import'}{' '}

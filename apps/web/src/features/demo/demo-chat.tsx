@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useState } from 'react';
 import Link from 'next/link';
 import { parsePromiseCommand } from '@lore/shared';
@@ -67,7 +68,7 @@ export function DemoChat() {
     <div className="content-stack">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">DEMO FIXTURE · CHAT SIMULATION</p>
+          <p className="record-meta">Demo fixture · Chat simulation</p>
           <h1>Try a command.</h1>
           <p>
             Nothing is sent to Twitch. This illustrates the promise and catch-up
@@ -78,15 +79,15 @@ export function DemoChat() {
       <form className="panel" onSubmit={send}>
         <div className="field">
           <label htmlFor="demo-speaker">Simulated speaker</label>
-          <select
+          <Select
             id="demo-speaker"
             value={role}
-            onChange={(e) => setRole(e.target.value)}
+            onValueChange={(e) => setRole(e)}
           >
             <option value="broadcaster">Broadcaster</option>
             <option value="moderator">Moderator</option>
             <option value="viewer">Viewer</option>
-          </select>
+          </Select>
         </div>
         <div className="field">
           <label htmlFor="demo-command">Simulated chat message</label>

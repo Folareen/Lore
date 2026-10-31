@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -82,12 +83,8 @@ function PublishingDesk() {
     <div className="content-stack">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">A WARMER WELCOME</p>
-          <h1>The Lore you choose to share.</h1>
-          <p>
-            Community stories and newcomer context, with a human behind every
-            publish.
-          </p>
+          <h1>Community publishing</h1>
+          <p>Prepare stories and recaps, then review them before publishing.</p>
         </div>
         <Link
           className="button secondary"
@@ -130,12 +127,12 @@ function PublishingDesk() {
         </button>
         <label className="field">
           Publication status
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <Select value={filter} onValueChange={(e) => setFilter(e)}>
             <option value="all">All entries</option>
             <option value="draft">Drafts</option>
             <option value="published">Published</option>
             <option value="unpublished">Unpublished</option>
-          </select>
+          </Select>
         </label>
         <button
           className="button secondary"
@@ -168,7 +165,7 @@ function PublishingDesk() {
       {loading && <p role="status">Loading community entries…</p>}
       {!loading && !error && !rows.length && (
         <div className="panel">
-          <h2>Make a little room for the next viewer.</h2>
+          <h2>No community entries yet.</h2>
           <p>
             Start with a moment, a recurring chat reference, or a short catch-up
             summary.
@@ -247,7 +244,7 @@ function PublicationCard({
   return (
     <article className="panel content-stack" aria-label={r.title}>
       <div className="panel-title">
-        <p className="eyebrow">{publicationLabels[r.kind]}</p>
+        <p className="record-meta">{publicationLabels[r.kind]}</p>
         <span className="status purple">{r.status}</span>
       </div>
       <h2>{r.title}</h2>

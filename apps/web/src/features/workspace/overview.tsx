@@ -1,5 +1,4 @@
 'use client';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import {
@@ -11,13 +10,14 @@ import {
   Settings2,
   Users,
   Plus,
+  Bookmark,
 } from 'lucide-react';
 import { useWorkspace } from './workspace-context';
 import { Avatar } from '../../components/avatar';
 import { TwitchMark } from '../../components/brand';
 import { QuickCapture } from '../open-loops/quick-capture';
 export function Overview() {
-  const { session, channels, selected, preview, selectChannel, connect, href } =
+  const { session, channels, selected, selectChannel, connect, href } =
     useWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -41,13 +41,9 @@ export function Overview() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">YOUR NEXT CHAPTER STARTS HERE</p>
           <h1>Hey, {session.user.displayName}.</h1>
-          <p>A little setup now. A little less to forget next stream.</p>
+          <p>Pick a channel, save a promise or see what’s next.</p>
         </div>
-        <span>
-          {preview ? 'A look around Lore' : 'Your community, your space'}
-        </span>
       </div>
       {error && (
         <p className="notice error" role="alert">
@@ -138,52 +134,68 @@ export function Overview() {
         </section>
         <section className="panel">
           <div className="panel-title">
-            <h2>Make yourself at home</h2>
+            <h2>
+              {selected && selected.role !== 'owner'
+                ? 'Your access'
+                : 'Get set up'}
+            </h2>
           </div>
-          <div className="setup-list">
-            <div
-              className={`setup-step ${ownChannel?.connected ? 'done' : ''}`}
-            >
-              <span className="step-icon">
-                {ownChannel?.connected ? (
-                  <Check size={16} />
-                ) : (
-                  <TwitchMark size={16} />
-                )}
-              </span>
-              <div>
-                <strong>Connect your Twitch</strong>
-                <small>
-                  {ownChannel?.connected
-                    ? 'You’re connected. Nice.'
-                    : 'Your channel, right here.'}
-                </small>
-              </div>
+          {selected && selected.role !== 'owner' ? (
+            <div className="content-stack">
+              <p>
+                You have {selected.role === 'moderator' ? 'moderator' : 'team'}{' '}
+                access. The channel owner manages roles and connections.
+              </p>
+              <Link className="button secondary" href={href('brief')}>
+                Open the next-stream brief
+              </Link>
+              <Link className="text-link" href={href('candidates')}>
+                Review suggestions →
+              </Link>
             </div>
-            <Link
-              className={`setup-step ${selected ? 'done' : ''}`}
-              href={href('settings')}
-            >
-              <span className="step-icon">
-                <Settings2 size={15} />
-              </span>
-              <div>
-                <strong>Set your preferences</strong>
-                <small>Keep things on your terms.</small>
+          ) : (
+            <div className="setup-list">
+              <div
+                className={`setup-step ${ownChannel?.connected ? 'done' : ''}`}
+              >
+                <span className="step-icon">
+                  {ownChannel?.connected ? (
+                    <Check size={16} />
+                  ) : (
+                    <TwitchMark size={16} />
+                  )}
+                </span>
+                <div>
+                  <strong>Connect your Twitch</strong>
+                  <small>
+                    {ownChannel?.connected
+                      ? 'Channel linked'
+                      : 'Use your own Twitch channel.'}
+                  </small>
+                </div>
               </div>
-              <ArrowUpRight size={14} />
-            </Link>
-            <Link className="setup-step" href={href('team')}>
-              <span className="step-icon">
-                <Link2 size={15} />
-              </span>
-              <div>
-                <strong>Bring your people</strong>
-                <small>A familiar face goes a long way.</small>
-              </div>
-              <ArrowUpRight size={14} />
-            </Link>
-          </div>
+              <Link className="setup-step" href={href('settings')}>
+                <span className="step-icon">
+                  <Settings2 size={15} />
+                </span>
+                <div>
+                  <strong>Set your preferences</strong>
+                  <small>Capture, retention and feature settings.</small>
+                </div>
+                <ArrowUpRight size={14} />
+              </Link>
+              <Link className="setup-step" href={href('team')}>
+                <span className="step-icon">
+                  <Link2 size={15} />
+                </span>
+                <div>
+                  <strong>Add your team</strong>
+                  <small>Grant moderators and team members access.</small>
+                </div>
+                <ArrowUpRight size={14} />
+              </Link>
+            </div>
+          )}
         </section>
       </div>
       {selected && (
@@ -198,22 +210,36 @@ export function Overview() {
           </Link>
         </div>
       )}
-      <section className="workspace-note">
-        <Image
-          src="/illustrations/memory-party.png"
-          alt=""
-          width="168"
-          height="120"
-        />
-        <div>
-          <h2>The best bits are still ahead.</h2>
-          <p>
-            Keep your promises close and bring the open ones into your next
-            stream. Moderator handoffs and approved community stories are coming
-            in later chapters.
-          </p>
-        </div>
-      </section>
+      {selected && (
+        <section className="overview-shortcuts" aria-label="Where to next">
+          <Link href={href('brief')}>
+            <Bookmark size={21} aria-hidden="true" />
+            <span>
+              <strong>Before you go live</strong>
+              <small>Open your next-stream brief</small>
+            </span>
+            <ArrowUpRight size={17} aria-hidden="true" />
+          </Link>
+          {selected.role !== 'team' && (
+            <Link href={href('workflows')}>
+              <Users size={21} aria-hidden="true" />
+              <span>
+                <strong>Taking over a shift?</strong>
+                <small>Read your team’s handoff</small>
+              </span>
+              <ArrowUpRight size={17} aria-hidden="true" />
+            </Link>
+          )}
+          <Link href={href('publications')}>
+            <Radio size={21} aria-hidden="true" />
+            <span>
+              <strong>Something worth sharing?</strong>
+              <small>Prepare a community update</small>
+            </span>
+            <ArrowUpRight size={17} aria-hidden="true" />
+          </Link>
+        </section>
+      )}
     </>
   );
 }

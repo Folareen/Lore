@@ -379,7 +379,7 @@ function VoiceReview({
 }) {
   return (
     <section className="content-stack">
-      <p className="eyebrow">Gemini · microphone transcript · unverified</p>
+      <p className="record-meta">Gemini · microphone transcript · unverified</p>
       <p className="case-prose">
         {capture.transcript ?? 'Transcript unavailable'}
       </p>

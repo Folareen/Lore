@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -77,7 +78,7 @@ export function CasePrecedents({
   const active = run && ['queued', 'processing'].includes(run.status);
   return (
     <section className="panel content-stack">
-      <h2>What can we learn from earlier calls?</h2>
+      <h2>Earlier cases & recommendations</h2>
       <p className="panel-description">
         Potential precedents come from decided cases in this channel. Similarity
         helps find context; it does not establish guilt or require the same
@@ -385,28 +386,26 @@ function DecisionForm({
           </button>
           <label className="field">
             How did you review the AI suggestion?
-            <select
+            <Select
               value={disposition}
               required
-              onChange={(e) =>
-                setDisposition(e.target.value as typeof disposition)
-              }
+              onValueChange={(e) => setDisposition(e as typeof disposition)}
               disabled={busy}
             >
               <option value="">Choose your assessment</option>
               <option value="accepted">Accept the suggested outcome</option>
               <option value="modified">Change the suggestion</option>
               <option value="rejected">Reject the suggestion</option>
-            </select>
+            </Select>
           </label>
         </>
       )}
       <label className="field">
         Decision
-        <select
+        <Select
           value={outcome}
-          onChange={(e) => {
-            setOutcome(caseOutcomeSchema.parse(e.target.value));
+          onValueChange={(e) => {
+            setOutcome(caseOutcomeSchema.parse(e));
             if (disposition === 'accepted') setDisposition('modified');
           }}
           disabled={busy}
@@ -416,7 +415,7 @@ function DecisionForm({
               {label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <label className="field">
         Decision rationale
@@ -430,7 +429,7 @@ function DecisionForm({
         />
       </label>
       <label className="field">
-        Required follow-up (optional)
+        Follow-up (optional)
         <textarea
           value={followUp}
           onChange={(e) => setFollowUp(e.target.value)}

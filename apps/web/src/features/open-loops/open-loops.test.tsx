@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectValue } from '../../test/select-value';
 import { useState, type AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import {
@@ -109,7 +110,9 @@ it('requires a completion reason and removes fulfilled work from the brief', asy
   const card = await screen.findByRole('article', {
     name: previewOpenLoops[0].wording,
   });
-  await user.selectOptions(
+  await user.click(within(card).getByText('Change status'));
+  await selectValue(
+    user,
     within(card).getByLabelText('Next status'),
     'fulfilled',
   );
@@ -144,7 +147,9 @@ it('confirms cancellations and exposes retained source wording and human history
   const card = await screen.findByRole('article', {
     name: previewOpenLoops[0].wording,
   });
-  await user.selectOptions(
+  await user.click(within(card).getByText('Change status'));
+  await selectValue(
+    user,
     within(card).getByLabelText('Next status'),
     'cancelled',
   );
@@ -200,6 +205,7 @@ it('keeps disconnected owner views read-only and clearly distinguishes an unavai
     screen.getByRole<HTMLButtonElement>('button', { name: 'Save promise' })
       .disabled,
   ).toBe(true);
+  await userEvent.click(within(card).getByText('Change status'));
   expect(
     within(card).getByRole<HTMLButtonElement>('button', {
       name: 'Update promise',
@@ -229,7 +235,7 @@ it('retains a stable request ID when retrying a failed dashboard capture and sen
   });
   setup(false);
   const user = userEvent.setup();
-  await screen.findByText('Nothing in this chapter yet.');
+  await screen.findByText('No promises here yet.');
   await user.type(
     screen.getByLabelText('What did we promise?'),
     'Keep the mock plan.',
@@ -260,6 +266,7 @@ it('shows mutation conflicts without pretending a status change succeeded', asyn
   const card = await screen.findByRole('article', {
     name: previewOpenLoops[0].wording,
   });
+  await user.click(within(card).getByText('Change status'));
   await user.click(
     within(card).getByRole('button', { name: 'Update promise' }),
   );
@@ -276,7 +283,7 @@ it('handles private list failures and expired sessions with a refresh path', asy
   const user = userEvent.setup();
   await screen.findByRole('alert');
   await user.click(screen.getByRole('button', { name: 'Refresh promises' }));
-  expect(await screen.findByText('Nothing in this chapter yet.')).toBeTruthy();
+  expect(await screen.findByText('No promises here yet.')).toBeTruthy();
   fetchMock.mockResolvedValue(response({}, 401));
   await user.click(screen.getByRole('button', { name: 'Refresh promises' }));
   await waitFor(() =>

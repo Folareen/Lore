@@ -68,7 +68,7 @@ export function WorkspaceStream() {
     return () => stream.close();
   }, [selected?.id, preview]);
   return !preview && selected ? (
-    <div className="content-stack">
+    <div className="workspace-stream">
       <p className="muted" aria-live="polite">
         {status}
       </p>

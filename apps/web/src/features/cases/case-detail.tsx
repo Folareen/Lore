@@ -100,13 +100,13 @@ function CaseFile({ id }: { id: string }) {
     <div className="content-stack">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">
-            PRIVATE MODERATION ·{' '}
+          <p className="record-meta">
+            Private moderation ·{' '}
             {record.origin === 'demo_fixture'
-              ? 'DEMO FIXTURE'
+              ? 'Demo fixture'
               : record.origin === 'live_twitch'
-                ? 'TWITCH EVENT IMPORT'
-                : 'MANUAL IMPORT'}
+                ? 'Twitch event import'
+                : 'Manual import'}
           </p>
           <h1>{record.title}</h1>
           {record.origin === 'live_twitch' && (

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectValue } from '../../test/select-value';
 import type { AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import {
@@ -58,7 +59,8 @@ it('takes a concern through comparison, annotation and a final human review with
   const user = userEvent.setup();
   await screen.findByRole('heading', { name: 'Consistency review' });
   await user.click(screen.getByRole('button', { name: 'Raise a concern' }));
-  await user.selectOptions(
+  await selectValue(
+    user,
     screen.getByLabelText('Compare with (optional)'),
     previewCases[1].id,
   );
@@ -87,10 +89,7 @@ it('takes a concern through comparison, annotation and a final human review with
     ).toBeTruthy(),
   );
   await user.click(screen.getByRole('button', { name: 'Review concern' }));
-  await user.selectOptions(
-    screen.getByLabelText('Review outcome'),
-    'dismissed',
-  );
+  await selectValue(user, screen.getByLabelText('Review outcome'), 'dismissed');
   await user.clear(screen.getByLabelText('Review rationale'));
   await user.type(
     screen.getByLabelText('Review rationale'),
@@ -113,12 +112,13 @@ it('assigns an agreed re-entry condition and records explicit completion proof',
     screen.getByLabelText('Action title'),
     'Explain expectations before re-entry',
   );
-  await user.selectOptions(screen.getByLabelText('Action type'), 're_entry');
+  await selectValue(user, screen.getByLabelText('Action type'), 're_entry');
   await user.type(
     screen.getByLabelText('Agreed resolution or condition'),
     'Moderator agreed to explain the spoiler rule.',
   );
-  await user.selectOptions(
+  await selectValue(
+    user,
     screen.getByLabelText('Assigned moderator'),
     '00000000-0000-4000-8000-000000000200',
   );
@@ -127,7 +127,7 @@ it('assigns an agreed re-entry condition and records explicit completion proof',
     name: 'Explain expectations before re-entry',
   });
   await user.click(screen.getByRole('button', { name: 'Update action' }));
-  await user.selectOptions(screen.getByLabelText('Action status'), 'completed');
+  await selectValue(user, screen.getByLabelText('Action status'), 'completed');
   await user.type(
     screen.getByLabelText('Progress, completion proof or cancellation reason'),
     'The moderator explained the rule and the viewer acknowledged it.',
@@ -167,10 +167,7 @@ it('creates a handoff from source records and requires a note to acknowledge and
   await user.click(
     within(task()).getByRole('button', { name: 'Update handoff task' }),
   );
-  await user.selectOptions(
-    screen.getByLabelText('Task status'),
-    'acknowledged',
-  );
+  await selectValue(user, screen.getByLabelText('Task status'), 'acknowledged');
   await user.type(
     screen.getByLabelText('Handoff note / resolution'),
     'I will inspect the reminder context next shift.',
@@ -183,7 +180,7 @@ it('creates a handoff from source records and requires a note to acknowledge and
     within(task()).getByRole('button', { name: 'Update handoff task' }),
   );
   expect(within(task()).queryByRole('option', { name: 'Pending' })).toBeNull();
-  await user.selectOptions(screen.getByLabelText('Task status'), 'resolved');
+  await selectValue(user, screen.getByLabelText('Task status'), 'resolved');
   await user.click(screen.getByRole('button', { name: 'Save handoff task' }));
   await waitFor(() =>
     expect(within(task()).getByText('resolved')).toBeTruthy(),

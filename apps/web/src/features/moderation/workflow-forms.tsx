@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useState } from 'react';
 import type { ModerationDesk } from '@lore/shared';
 export function AssigneeField({
@@ -11,7 +12,7 @@ export function AssigneeField({
   return (
     <label className="field">
       Assigned moderator
-      <select name="assigneeId" defaultValue={initial ?? ''}>
+      <Select name="assigneeId" defaultValue={initial ?? ''}>
         <option value="">Unassigned</option>
         {initial && !people.some((p) => p.id === initial) && (
           <option value={initial}>
@@ -23,7 +24,7 @@ export function AssigneeField({
             {p.displayName}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
 }

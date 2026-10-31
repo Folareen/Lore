@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useState } from 'react';
 import Link from 'next/link';
 import { Check, Link2, Radio } from 'lucide-react';
@@ -17,7 +18,7 @@ export function ChannelSettings() {
         <div className="page-heading">
           <div>
             <h1>Channel settings</h1>
-            <p>A few preferences to make this space yours.</p>
+            <p>Capture, retention and channel access.</p>
           </div>
         </div>
         <div className="empty-state">
@@ -94,7 +95,6 @@ function SettingsPanel({ channel }: { channel: Channel }) {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">YOUR CHANNEL, YOUR TERMS</p>
           <h1>Make it your space.</h1>
           <p>Connection and privacy preferences for {channel.displayName}.</p>
         </div>
@@ -140,23 +140,21 @@ function SettingsPanel({ channel }: { channel: Channel }) {
         </section>
         <section className="panel">
           <div className="panel-title">
-            <h2>Keep the context. Set the limit.</h2>
+            <h2>Chat retention</h2>
           </div>
           <p className="panel-description">
-            Choose how long ordinary captured chat can stay. The default is
-            seven days; excerpts intentionally kept as evidence follow their own
-            retention policy. Shortening this setting permanently caps existing
-            chat deadlines.
+            Ordinary chat expires after this period. Shortening retention also
+            shortens existing deadlines. Retained evidence is kept separately.
           </p>
           <form onSubmit={save}>
             <div className="field">
               <label htmlFor="retention">Ordinary chat retention</label>
-              <select
+              <Select
                 id="retention"
                 value={days}
                 disabled={!owner || busy}
-                onChange={(event) => {
-                  setDays(Number(event.target.value));
+                onValueChange={(event) => {
+                  setDays(Number(event));
                   setSaved(false);
                 }}
               >
@@ -168,10 +166,7 @@ function SettingsPanel({ channel }: { channel: Channel }) {
                     </option>
                   ),
                 )}
-              </select>
-              <small>
-                Shorter is always okay. Longer retention isn’t available yet.
-              </small>
+              </Select>
             </div>
             {owner && (
               <div className="save-row">

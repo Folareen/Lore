@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -144,8 +145,7 @@ function OverlayDesk() {
     <div className="content-stack">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">TAKE THE STORY LIVE</p>
-          <h1>A little context, on stream.</h1>
+          <h1>Stream overlay</h1>
           <p>Choose the Lore your audience sees in OBS.</p>
         </div>
         <Link className="button secondary" href={href('publications')}>
@@ -196,13 +196,11 @@ function OverlayDesk() {
               </p>
               <label className="overlay-field">
                 Display
-                <select
+                <Select
                   value={mode}
                   disabled={busy || !channel.connected}
-                  onChange={(e) => {
-                    setMode(
-                      e.target.value === 'recap' ? 'recap' : 'open_loops',
-                    );
+                  onValueChange={(e) => {
+                    setMode(e === 'recap' ? 'recap' : 'open_loops');
                     setIds([]);
                   }}
                 >
@@ -210,7 +208,7 @@ function OverlayDesk() {
                   <option value="open_loops">
                     Open loops · up to three commitments
                   </option>
-                </select>
+                </Select>
               </label>
               <div className="overlay-entry-choices">
                 {choices.map((row) => (

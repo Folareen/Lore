@@ -29,25 +29,27 @@ Keep purple as the primary action. Mint, coral, butter yellow, and lilac support
 
 ## Typography and layout
 
-- Use locally bundled **Space Grotesk Variable** for headings and the wordmark, **DM Sans Variable** for body and UI. Avoid remote font requests. Use sentence case.
-- Landing headings may be large and tightly spaced. Workspace page titles are approximately 40px desktop / 31px mobile; section titles 19–24px; UI copy 12–15px. Keep long paragraphs to a comfortable reading width.
+- Use locally bundled **Space Grotesk Variable** for marketing headings and the wordmark, **DM Sans Variable** for workspace headings, body and UI. Avoid remote font requests. Use sentence case.
+- Landing headings may be large and tightly spaced. Workspace page titles are approximately 32px desktop / 28px mobile; section titles 19–24px; UI copy 14–16px; secondary metadata at least 12px. Keep long paragraphs to a comfortable reading width.
 - Use a 4px spacing rhythm, with 16–24px between related controls and 24–32px panel padding. Give pages generous outer margins; compact screens reduce gutters to 18–22px.
 - Round controls by 6–8px and panels by 10–14px. Avatars use softly squared corners. Avoid pill-shaped everything.
 - Separate surfaces with filled backgrounds and space. Use only subtle shadows. Do not outline panels, cards, inputs, or buttons. Visible keyboard focus rings are a required accessibility exception.
-- Keep the desktop workspace navigation stable. On narrow screens, use a compact top navigation and stack content. Avoid page-level horizontal scrolling.
+- Keep the desktop workspace navigation stable. On narrow screens, use a labeled, collapsible navigation menu and stack content. Avoid page-level horizontal scrolling.
 
 ## Components and states
 
-- Reuse the button, panel, form, status, avatar, theme, and confirmation patterns already implemented. Add abstractions when a real shared use appears.
+- Reuse the button, panel, form, custom Select, status, avatar, theme, and confirmation patterns already implemented. Add abstractions when a real shared use appears.
 - One prominent primary action per task. Secondary actions use filled neutral surfaces; destructive actions use restrained red-tinted fills and explicit confirmation.
 - Label every input. Provide clear loading, empty, error, success, disabled, and read-only states. Explain owner-only controls rather than presenting a broken form.
 - Use Lucide icons consistently at 16–24px; pair unfamiliar actions with text. Decorative icons and avatars are hidden from assistive technology.
 - Original [community illustration](../apps/web/public/illustrations/memory-party.png) was made with built-in ImageGen; its [prompt](../apps/web/public/illustrations/memory-party.prompt.txt) is included beside the asset.
 - Generated geometric avatars are identity placeholders, not claimed Twitch profile photos. Original illustrations live in `apps/web/public/illustrations`; keep them separate from task-critical information and do not reuse other brands’ mascots.
-- Animation is limited to brief control feedback and loading. Respect reduced-motion preferences; do not add perpetual floating decorations or scroll choreography.
+- Use brief marketing entrances, story transitions, optional game feedback and control/loading feedback. The illustrative story may use gentle looping motion with a visible pause/play control. Disable it for reduced-motion preferences; keep other sections free of looping decorations and scroll choreography. The landing memory game is optional: four pairs, an untimed one-use peek, clear match/round feedback and a best score kept only for the current visit. It never affects community records.
 - Support light, dark, and device themes through `next-themes`, persisted as `lore-theme`. Both themes must remain readable. Statuses need words/icons, not color alone. Target WCAG AA contrast and retain native keyboard behavior.
 
 ## Content and shipping
+
+- Lead sections with descriptive headings. Do not add decorative eyebrows or numbered kicker labels. Keep necessary source, demo and review states as plain metadata. Use consistent section spacing and avoid stacking heading margins with container gaps.
 
 Write like a helpful member of the crew: short, clear, and lightly playful. Don’t make jokes in permission errors or destructive confirmations. Avoid fake testimonials, invented activity metrics, AI sparkle motifs, generic gradient blobs, repetitive card grids, or unbuilt features presented as working.
 

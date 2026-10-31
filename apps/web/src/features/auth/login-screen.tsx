@@ -41,7 +41,7 @@ export function LoginScreen({
             <br />
             Your stories.
             <br />
-            Your little Lore.
+            Your next stream.
           </h2>
           <Image
             src="/illustrations/memory-party.png"
@@ -60,8 +60,8 @@ export function LoginScreen({
           </span>
           <h1>Welcome in.</h1>
           <p>
-            One Twitch account. A place for your whole community. First time?
-            Your Lore account is created when you sign in.
+            Sign in with Twitch to open your workspace. First time? We’ll create
+            your Lore account.
           </p>
           {expired && (
             <p className="notice">
@@ -90,7 +90,7 @@ export function LoginScreen({
           {status === 'disabled' && (
             <p className="notice" role="status">
               Our Twitch connection isn’t ready just yet. You can still explore
-              the workspace preview below.
+              the demo below.
             </p>
           )}
           {status === 'error' && (
@@ -109,13 +109,12 @@ export function LoginScreen({
             Try the demo →
           </Link>
           <p className="auth-footnote">
-            Signing in identifies you. Channel access is granted separately by
-            its owner. You won’t be asked for chat or moderation permissions at
-            this stage.
+            Channel owners grant team access. Sign-in requests no chat or
+            moderation permissions.
           </p>
           <Link href="/" className="quiet-link">
             <ArrowLeft size={14} />
-            Back to the story
+            Back to Lore
           </Link>
         </div>
       </section>

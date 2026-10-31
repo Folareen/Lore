@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Check, CornerDownRight, MoveUpRight } from 'lucide-react';
+import { Check, CornerDownRight, Pause, Play } from 'lucide-react';
 import { Avatar } from './avatar';
 const chapters = [
   {
@@ -14,7 +14,7 @@ const chapters = [
     color: 'coral',
   },
   {
-    title: 'The follow-through',
+    title: 'The payoff',
     quote: '“Chat, I brought the heart-rate monitor.”',
     person: 'cozybyte',
     context: 'Friday has entered the chat',
@@ -34,16 +34,45 @@ const chapters = [
 ];
 export function LandingStory() {
   const [chapter, setChapter] = useState(0);
+  const [paused, setPaused] = useState(false);
   const story = chapters[chapter];
   return (
-    <section className="story-stage" aria-label="An illustrative Lore story">
+    <section
+      className="story-stage"
+      data-motion={paused ? 'paused' : 'playing'}
+      aria-label="An illustrative Lore story"
+    >
       <div className="stage-top">
-        <span className="eyebrow">A LITTLE LORE, FOR EXAMPLE</span>
+        <button
+          className="story-motion-control"
+          onClick={() => setPaused((value) => !value)}
+          aria-label={
+            paused ? 'Resume story animation' : 'Pause story animation'
+          }
+          aria-pressed={paused}
+        >
+          {paused ? (
+            <Play size={15} aria-hidden="true" />
+          ) : (
+            <Pause size={15} aria-hidden="true" />
+          )}
+          {paused ? 'Play' : 'Pause'}
+        </button>
         <span className="sample-label">Illustrative story</span>
+      </div>
+      <div className="chapter-nav" role="group" aria-label="Story chapters">
+        {chapters.map((item, index) => (
+          <button
+            key={item.title}
+            aria-pressed={chapter === index}
+            onClick={() => setChapter(index)}
+          >
+            {item.title}
+          </button>
+        ))}
       </div>
       <div className="stage-scene">
         <article className="memory-note" key={chapter}>
-          <span className="tiny-label">IT STARTED IN CHAT</span>
           <blockquote>{story.quote}</blockquote>
           <div className="person">
             <Avatar name={story.person} size={36} />
@@ -66,30 +95,10 @@ export function LandingStory() {
           <div className={`receipt-icon ${story.color}`}>
             <Check size={25} />
           </div>
-          <span className="tiny-label">THE PART WE KEEP</span>
           <h3>{story.status}</h3>
           <p>{story.detail}</p>
           <CornerDownRight size={24} />
         </div>
-        <div className="chat-sticker" aria-hidden="true">
-          chat
-          <br />
-          remembers.
-          <MoveUpRight size={22} />
-        </div>
-      </div>
-      <div className="chapter-nav" role="group" aria-label="Story chapters">
-        {chapters.map((item, index) => (
-          <button
-            key={item.title}
-            aria-pressed={chapter === index}
-            onClick={() => setChapter(index)}
-          >
-            <span>0{index + 1}</span>
-            {item.title}
-            <span className="chapter-dot" />
-          </button>
-        ))}
       </div>
     </section>
   );

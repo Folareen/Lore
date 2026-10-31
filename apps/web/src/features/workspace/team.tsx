@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import Link from 'next/link';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
@@ -126,12 +127,8 @@ export function Team() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">GOOD PEOPLE. SHARED CONTEXT.</p>
-          <h1>Your people, in the loop.</h1>
-          <p>
-            Give your trusted team a seat in{' '}
-            {selected?.displayName || 'your community'}.
-          </p>
+          <h1>Your team</h1>
+          <p>Manage access to {selected?.displayName || 'your community'}.</p>
         </div>
       </div>
       {!selected && (
@@ -150,12 +147,12 @@ export function Team() {
             <ShieldCheck size={30} />
             <h2>
               {selected.role !== 'owner'
-                ? 'This seat belongs to the owner.'
+                ? 'Only the owner can manage the team.'
                 : 'Reconnect to bring your team back.'}
             </h2>
             <p>
               {selected.role !== 'owner'
-                ? 'Only the channel owner can see and manage team grants. Your own role is shown on the overview.'
+                ? 'The owner adds people and assigns roles. You can see your role on the overview.'
                 : 'Team access is cleared when a channel is disconnected. Reconnect, then add your people again.'}
             </p>
             <Link href={href('settings')} className="button secondary">
@@ -222,17 +219,15 @@ export function Team() {
                       <strong>{person.displayName}</strong>
                       <small>Owner-approved access</small>
                     </div>
-                    <select
+                    <Select
                       aria-label={`Role for ${person.displayName}`}
                       value={person.role}
                       disabled={busy}
-                      onChange={(event) =>
-                        void changeRole(person, event.target.value)
-                      }
+                      onValueChange={(event) => void changeRole(person, event)}
                     >
                       <option value="moderator">Moderator</option>
                       <option value="team">Team member</option>
-                    </select>
+                    </Select>
                     <button
                       className="icon-button"
                       aria-label={`Remove ${person.displayName}`}
@@ -278,20 +273,19 @@ export function Team() {
               </div>
               <div className="field">
                 <label htmlFor="team-role">Role</label>
-                <select
+                <Select
                   id="team-role"
                   value={role}
-                  onChange={(event) => {
-                    const parsed = grantMembershipSchema.shape.role.safeParse(
-                      event.target.value,
-                    );
+                  onValueChange={(event) => {
+                    const parsed =
+                      grantMembershipSchema.shape.role.safeParse(event);
                     if (parsed.success) setRole(parsed.data);
                   }}
                   disabled={busy}
                 >
                   <option value="moderator">Moderator</option>
                   <option value="team">Team member</option>
-                </select>
+                </Select>
               </div>
               <button className="button primary" disabled={busy}>
                 {busy ? (

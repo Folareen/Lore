@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectValue } from '../../test/select-value';
 import { useState, type AnchorHTMLAttributes } from 'react';
 import { beforeEach, afterEach, it, expect, vi } from 'vitest';
 import {
@@ -156,7 +157,7 @@ it('starts all three surfaces from the supplied seeded snapshot and keeps naviga
     screen.getByRole('heading', { name: 'The next stream remembers.' }),
   ).toBeTruthy();
   expect(
-    screen.getByRole('link', { name: 'Streamer home' }).getAttribute('href'),
+    screen.getByRole('link', { name: 'Open loops' }).getAttribute('href'),
   ).toBe('/demo?view=streamer');
   await change(user, 'brief');
   await screen.findByText('Seed snapshot marker');
@@ -183,13 +184,11 @@ it('captures simulated authorized chat into the brief and resets only this visit
   setup();
   const user = userEvent.setup();
   await change(user, 'chat');
-  await user.selectOptions(
-    screen.getByLabelText('Simulated speaker'),
-    'viewer',
-  );
+  await selectValue(user, screen.getByLabelText('Simulated speaker'), 'viewer');
   await user.click(screen.getByRole('button', { name: 'Simulate command' }));
   await screen.findByText(/Use !catchup, or send !promise/);
-  await user.selectOptions(
+  await selectValue(
+    user,
     screen.getByLabelText('Simulated speaker'),
     'broadcaster',
   );
@@ -199,6 +198,7 @@ it('captures simulated authorized chat into the brief and resets only this visit
   );
   await change(user, 'brief');
   await screen.findByText('Name the garden pond with chat next stream.');
+  await user.click(screen.getByText('Demo tools', { exact: true }));
   await user.click(screen.getByRole('button', { name: 'Reset demo' }));
   await user.click(
     within(screen.getByRole('dialog')).getByRole('button', {
@@ -235,6 +235,7 @@ it('updates simulated catch-up after human source withdrawal and restores the re
   await user.click(screen.getByRole('button', { name: 'Use !catchup' }));
   await user.click(screen.getByRole('button', { name: 'Simulate command' }));
   await screen.findByText('No catch-up summary has been approved yet.');
+  await user.click(screen.getByText('Demo tools', { exact: true }));
   await user.click(screen.getByRole('button', { name: 'Reset demo' }));
   await user.click(
     within(screen.getByRole('dialog')).getByRole('button', {

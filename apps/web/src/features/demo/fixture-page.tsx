@@ -1,3 +1,4 @@
+import { DemoHome } from './demo-home';
 import { DemoChat } from '../demo/demo-chat';
 import { OverlayScreen } from '../overlay/overlay-settings';
 import { PublicationsScreen } from '../publications/publications';
@@ -27,6 +28,7 @@ export default async function FixturePage({
   const focused = z.uuid().safeParse(loop);
   const current = z
     .enum([
+      'guide',
       'chat',
       'overview',
       'streamer',
@@ -57,6 +59,7 @@ export default async function FixturePage({
     );
   }
   const Screen = {
+    guide: DemoHome,
     chat: DemoChat,
     overview: Overview,
     settings: ChannelSettings,

@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { MicrophonePanel } from '../continuity/microphone';
 import { useEffect, useState } from 'react';
@@ -27,11 +28,8 @@ export function CandidatesScreen() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">YOUR CALL, ALWAYS</p>
-          <h1>Worth following up?</h1>
-          <p>
-            Chat moves fast. Review the possibilities before keeping a promise.
-          </p>
+          <h1>Review suggestions</h1>
+          <p>Check the source before confirming a promise.</p>
         </div>
         <ClipboardCheck size={30} aria-hidden="true" />
       </div>
@@ -119,17 +117,15 @@ function ReviewPanel() {
       <MicrophonePanel />
       <section className="panel content-stack" aria-label="Extraction settings">
         <div className="panel-title">
-          <h2>Catch possible follow-ups</h2>
+          <h2>Chat suggestions</h2>
           <span className="status purple">
             {preview ? 'Demo fixture' : status?.enabled ? 'Enabled' : 'Off'}
           </span>
         </div>
         <p className="panel-description">
-          On Google’s free tier, inputs and outputs may be used to improve its
-          products. When enabled, retained chat from this channel is sent to
-          Google Gemini in small batches. Suggestions stay private to your team
-          and expire with the original chat. Confirming one keeps its source as
-          evidence.
+          Gemini reviews retained chat when enabled. Suggestions stay private
+          and need human confirmation. Google may use free-tier inputs and
+          outputs to improve its products.
         </p>
         {status && (
           <>
@@ -226,19 +222,19 @@ function ReviewPanel() {
       <div className="button-row">
         <label className="field">
           Show
-          <select
+          <Select
             disabled={busy}
             value={filter}
-            onChange={(event) => {
+            onValueChange={(event) => {
               setItems([]);
-              setFilter(candidateStatusSchema.parse(event.target.value));
+              setFilter(candidateStatusSchema.parse(event));
             }}
           >
             <option value="pending">Needs review</option>
             <option value="confirmed">Confirmed</option>
             <option value="dismissed">Dismissed</option>
             <option value="expired">Expired</option>
-          </select>
+          </Select>
         </label>
         <button
           className="button secondary"
@@ -359,7 +355,7 @@ function CandidateCard({
       aria-label={draft?.summary || 'Expired source'}
     >
       <div className="panel-title">
-        <span className="eyebrow">
+        <span className="record-meta">
           {draft ? candidateKindLabels[draft.task_type] : 'Source unavailable'}
         </span>
         <span className="status purple">

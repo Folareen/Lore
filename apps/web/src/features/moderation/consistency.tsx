@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -100,19 +101,19 @@ export function ConsistencyReviews({
           {!record && (
             <label className="field">
               Case to review
-              <select name="caseId" required>
+              <Select name="caseId" required>
                 <option value="">Choose a case</option>
                 {options.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.title}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           )}
           <label className="field">
             Compare with (optional)
-            <select name="comparedCaseId">
+            <Select name="comparedCaseId">
               <option value="">Concern about this case only</option>
               {options
                 .filter((c) => c.id !== record?.id)
@@ -121,7 +122,7 @@ export function ConsistencyReviews({
                     {c.title} · {c.ruleTitle} v{c.ruleVersion}
                   </option>
                 ))}
-            </select>
+            </Select>
           </label>
           <NoteField label="Concern or missing rationale" />
           {busy && <p role="status">Loading case choices…</p>}
@@ -192,7 +193,7 @@ function FlagCard({
     >
       <div className="panel-title">
         <h3>Potential inconsistency · {flag.status}</h3>
-        <span className="eyebrow">
+        <span className="record-meta">
           {flag.origin === 'human'
             ? 'Human concern'
             : 'Documented outcome comparison'}
@@ -268,11 +269,11 @@ function FlagCard({
           >
             <label className="field">
               Review outcome
-              <select name="status">
+              <Select name="status">
                 <option value="open">Annotate · keep open</option>
                 <option value="confirmed">Confirm concern</option>
                 <option value="dismissed">Dismiss concern</option>
-              </select>
+              </Select>
             </label>
             <NoteField
               label="Review rationale"

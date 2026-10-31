@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { z } from 'zod';
@@ -63,7 +64,7 @@ export function PublicShell({
         {children}
       </main>
       <footer className="community-footer">
-        A little context, a warmer welcome. <Link href="/">Made with Lore</Link>
+        Your community, caught up. <Link href="/">Made with Lore</Link>
       </footer>
     </div>
   );
@@ -160,8 +161,7 @@ export function PublicReader({
           {view.mode === 'feed' ? (
             <>
               <div className="community-heading">
-                <p className="eyebrow">COMMUNITY LORE</p>
-                <h1>A little context goes a long way.</h1>
+                <h1>The stories so far.</h1>
                 <p>
                   Milestones, inside references, and the stories worth bringing
                   along.
@@ -186,7 +186,7 @@ export function PublicReader({
                 </label>
                 <label className="field">
                   Show
-                  <select
+                  <Select
                     name="kind"
                     defaultValue={new URLSearchParams(query).get('kind') ?? ''}
                   >
@@ -196,7 +196,7 @@ export function PublicReader({
                         {label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
                 <button className="button secondary">Find context</button>
               </form>
@@ -252,7 +252,6 @@ export function PublicReader({
             <>
               <div className="community-heading community-welcome">
                 <div>
-                  <p className="eyebrow">NEWCOMER COMPASS</p>
                   <h1>You can join the story from here.</h1>
                   <p>
                     A short recap, a few familiar references, and a seat for you
@@ -268,7 +267,6 @@ export function PublicReader({
               </div>
               {view.data.summary ? (
                 <article className="panel content-stack community-recap">
-                  <p className="eyebrow">LATEST APPROVED CATCH-UP</p>
                   <h2>{view.data.summary.title}</h2>
                   <p className="case-prose">{view.data.summary.body}</p>
                   <PublishedAt entry={view.data.summary} />
@@ -295,7 +293,7 @@ export function PublicReader({
             </>
           ) : (
             <article className="panel content-stack">
-              <p className="eyebrow">
+              <p className="record-meta">
                 {publicationLabels[view.data.entry.kind]}
               </p>
               <h1>{view.data.entry.title}</h1>
@@ -352,7 +350,7 @@ export function EntryCard({
 }) {
   return (
     <article className="panel community-entry">
-      <p className="eyebrow">{publicationLabels[entry.kind]}</p>
+      <p className="record-meta">{publicationLabels[entry.kind]}</p>
       <h2>
         <Link href={href} prefetch={false}>
           {entry.title}

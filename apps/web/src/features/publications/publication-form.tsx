@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import type { z } from 'zod';
 import { useEffect, useState } from 'react';
 import {
@@ -71,11 +72,10 @@ export function PublicationForm({
   }, [channelId]);
   return (
     <div className="panel content-stack">
-      <h2>{initial ? 'Edit community draft' : 'A story worth sharing'}</h2>
+      <h2>{initial ? 'Edit community draft' : 'New community draft'}</h2>
       <p className="muted">
-        Write for someone who just arrived. Keep private cases, identities,
-        appeals and repair plans out of public copy. Saving creates a draft for
-        human review.
+        Write for someone new. Leave private case details out. Saving creates an
+        unpublished draft.
       </p>
       {suggested && (
         <p className="notice">
@@ -101,10 +101,10 @@ export function PublicationForm({
       >
         <label className="field">
           Entry type
-          <select
+          <Select
             value={kind}
-            onChange={(e) =>
-              setKind(publicationFieldsSchema.shape.kind.parse(e.target.value))
+            onValueChange={(e) =>
+              setKind(publicationFieldsSchema.shape.kind.parse(e))
             }
           >
             {Object.entries(publicationLabels).map(([value, label]) => (
@@ -112,7 +112,7 @@ export function PublicationForm({
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="field">
           Public title
@@ -222,20 +222,20 @@ export function PublicationForm({
             )}
             <label className="field">
               Confirmed promise (optional)
-              <select
-                value={promiseId}
-                onChange={(e) => setPromiseId(e.target.value)}
-              >
+              <Select value={promiseId} onValueChange={(e) => setPromiseId(e)}>
                 <option value="">No promise source</option>
-                {promiseId && !promises.some((p) => p.id === promiseId) && (
-                  <option value={promiseId}>Previously selected promise</option>
-                )}
+                {promiseId !== '' &&
+                  !promises.some((p) => p.id === promiseId) && (
+                    <option value={promiseId}>
+                      Previously selected promise
+                    </option>
+                  )}
                 {promises.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.wording}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <button
               type="button"

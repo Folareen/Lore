@@ -56,7 +56,7 @@ export function CommunityPreview() {
             id={`public-preview-${e.id}`}
             key={e.id}
           >
-            <p className="eyebrow">{publicationLabels[e.kind]}</p>
+            <p className="record-meta">{publicationLabels[e.kind]}</p>
             <h2>{e.title}</h2>
             <p className="case-prose">{e.body}</p>
             <PublishedAt entry={e} />
