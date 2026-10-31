@@ -33,8 +33,11 @@ export function LoginScreen({
   }, [retry]);
   return (
     <main className="auth-page" id="main-content">
-      <section className="auth-story">
+      <header className="auth-header">
         <Brand />
+        <ThemeToggle />
+      </header>
+      <section className="auth-story">
         <div>
           <h2>
             Your people.
@@ -53,11 +56,7 @@ export function LoginScreen({
         <p>Every stream has a story. Lore remembers it.</p>
       </section>
       <section className="auth-form-side">
-        <ThemeToggle />
         <div className="auth-form">
-          <span className="auth-symbol">
-            <TwitchMark size={29} />
-          </span>
           <h1>Welcome in.</h1>
           <p>
             Sign in with Twitch to open Lore. First time? We’ll create your Lore
