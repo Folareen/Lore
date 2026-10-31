@@ -1,5 +1,4 @@
 import FixturePage from '../../features/demo/fixture-page';
-import { DemoHome } from '../../features/demo/demo-home';
 export default async function DemoPage({
   searchParams,
 }: {
@@ -11,9 +10,5 @@ export default async function DemoPage({
   }>;
 }) {
   const params = await searchParams;
-  return params.view ? (
-    <FixturePage searchParams={Promise.resolve(params)} />
-  ) : (
-    <DemoHome />
-  );
+  return <FixturePage searchParams={Promise.resolve(params)} />;
 }

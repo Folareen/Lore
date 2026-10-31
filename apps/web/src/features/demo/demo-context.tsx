@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import type { DemoDataset } from '@lore/shared';
 import { AppShell } from '../workspace/app-shell';
-import { DemoToolbar } from './demo-home';
 import { DemoSeedContext } from './demo-seed-context';
 export function DemoPlayground({
   data,
@@ -23,7 +22,6 @@ export function DemoPlayground({
         preview
         fixtureBase="/demo"
       >
-        <DemoToolbar />
         {children}
       </AppShell>
     </DemoSeedContext.Provider>

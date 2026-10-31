@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectValue } from '../../test/select-value';
 import { type AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import {
@@ -94,7 +95,8 @@ it('takes a fixture case through evidence, precedent review and an explicitly co
   await user.click(
     screen.getByRole('button', { name: 'Use recommendation as a draft' }),
   );
-  await user.selectOptions(
+  await selectValue(
+    user,
     screen.getByLabelText('How did you review the AI suggestion?'),
     'modified',
   );
@@ -283,7 +285,7 @@ it('preserves a human rationale when a new recommendation arrives', async () => 
     (
       screen.getByLabelText(
         'How did you review the AI suggestion?',
-      ) as HTMLSelectElement
+      ) as HTMLButtonElement
     ).value,
   ).toBe('');
   expect(fetchMock).not.toHaveBeenCalled();

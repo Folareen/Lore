@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -156,11 +157,11 @@ function LoopsPanel({
       <div className="promise-toolbar">
         <div className="field">
           <label htmlFor="promise-filter">Show promises</label>
-          <select
+          <Select
             id="promise-filter"
             value={filter}
-            onChange={(event) =>
-              setFilter(event.target.value as OpenLoopStatus | 'all')
+            onValueChange={(event) =>
+              setFilter(event as OpenLoopStatus | 'all')
             }
             disabled={busy}
           >
@@ -170,7 +171,7 @@ function LoopsPanel({
                 {openLoopLabels[status]}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <button
           className="button secondary"
@@ -361,12 +362,10 @@ function OpenLoopCard({
           >
             <div className="field">
               <label htmlFor={`status-${loop.id}`}>Next status</label>
-              <select
+              <Select
                 id={`status-${loop.id}`}
                 value={target}
-                onChange={(event) =>
-                  setTarget(event.target.value as OpenLoopStatus)
-                }
+                onValueChange={(event) => setTarget(event as OpenLoopStatus)}
                 disabled={busy || disabled}
               >
                 {next.map((status) => (
@@ -374,7 +373,7 @@ function OpenLoopCard({
                     {openLoopLabels[status]}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="field">
               <label htmlFor={`reason-${loop.id}`}>

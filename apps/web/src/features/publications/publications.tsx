@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -126,12 +127,12 @@ function PublishingDesk() {
         </button>
         <label className="field">
           Publication status
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <Select value={filter} onValueChange={(e) => setFilter(e)}>
             <option value="all">All entries</option>
             <option value="draft">Drafts</option>
             <option value="published">Published</option>
             <option value="unpublished">Unpublished</option>
-          </select>
+          </Select>
         </label>
         <button
           className="button secondary"

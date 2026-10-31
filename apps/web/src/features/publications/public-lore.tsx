@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { z } from 'zod';
@@ -185,7 +186,7 @@ export function PublicReader({
                 </label>
                 <label className="field">
                   Show
-                  <select
+                  <Select
                     name="kind"
                     defaultValue={new URLSearchParams(query).get('kind') ?? ''}
                   >
@@ -195,7 +196,7 @@ export function PublicReader({
                         {label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
                 <button className="button secondary">Find context</button>
               </form>

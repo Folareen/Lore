@@ -2992,7 +2992,7 @@ details[open] > summary {
   margin-block: 18px;
   max-width: 35ch;
 }
-.game-copy .button {
+.game-copy .button.secondary {
   background: var(--surface);
 }
 .game-progress {
@@ -3974,7 +3974,7 @@ details[open] > summary {
   grid-column: 2;
   grid-row: 1;
 }
-.memory-game .memory-board {
+.memory-game .game-arena {
   grid-column: 1;
   grid-row: 1;
 }
@@ -4063,7 +4063,7 @@ details[open] > summary {
     margin-bottom: 24px;
   }
   .memory-game .game-copy,
-  .memory-game .memory-board {
+  .memory-game .game-arena {
     grid-column: auto;
     grid-row: auto;
   }
@@ -4170,5 +4170,407 @@ details[open] > summary {
   }
   .how-intro > p:not(.record-meta) {
     font-size: 16px;
+  }
+}
+
+/* Shared custom select: the popup uses Lore surfaces, independently of OS menus. */
+.select-trigger {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 11px 13px;
+  border-radius: 7px;
+  background: var(--raised);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.select-trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.select-trigger > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.select-trigger[data-state='open'] {
+  background: var(--hover);
+}
+.select-trigger[data-disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.select-content {
+  z-index: 150;
+  min-width: min(var(--radix-select-trigger-width), 440px, calc(100vw - 24px));
+  max-width: min(440px, calc(100vw - 24px));
+  max-height: min(340px, var(--radix-select-content-available-height));
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 9px;
+  box-shadow: 0 12px 40px #0002;
+  overflow: hidden;
+}
+.select-viewport {
+  padding: 6px;
+}
+.select-option {
+  position: relative;
+  min-height: 44px;
+  padding: 11px 36px 11px 12px;
+  border-radius: 5px;
+  font-size: 14px;
+  line-height: 1.5;
+  cursor: pointer;
+  outline: none;
+  overflow-wrap: anywhere;
+  user-select: none;
+}
+.select-option[data-highlighted] {
+  background: var(--purple-soft);
+  color: var(--purple-ink);
+}
+.select-option[data-state='checked'] {
+  font-weight: 650;
+}
+.select-option[data-disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.select-check {
+  position: absolute;
+  right: 12px;
+  top: 14px;
+  color: var(--purple-ink);
+}
+.select-scroll {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  background: var(--surface);
+}
+.decision-form .select-trigger {
+  background: var(--surface);
+}
+.channel-picker .select-trigger {
+  width: 100%;
+}
+.promise-toolbar .field,
+.moderation-toolbar .field {
+  min-width: 180px;
+}
+
+/* The same fixed workspace chrome is used for authenticated and simulated data. */
+.workspace {
+  --workspace-sidebar: 234px;
+  --workspace-header: 80px;
+}
+.workspace-content {
+  padding-top: var(--workspace-header);
+}
+.workspace-topbar {
+  position: fixed;
+  top: 0;
+  left: var(--workspace-sidebar);
+  width: calc(100% - var(--workspace-sidebar));
+  max-width: 1530px;
+  z-index: 60;
+  min-height: var(--workspace-header);
+  height: var(--workspace-header);
+  padding-inline: 44px;
+  background: var(--page);
+  box-shadow: var(--shadow);
+}
+.workspace [id] {
+  scroll-margin-top: calc(var(--workspace-header) + 24px);
+}
+.demo-session-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  margin-block: 12px 24px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 12px;
+}
+.demo-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+}
+.demo-session-actions > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  color: var(--purple-ink);
+}
+.demo-tools {
+  position: relative;
+}
+.demo-tools summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  color: var(--text);
+  padding: 6px;
+}
+.demo-tools summary::after {
+  content: '⌄';
+  margin-left: 8px;
+}
+.demo-tools-menu {
+  position: absolute;
+  z-index: 65;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 230px;
+  padding: 10px;
+  background: var(--surface);
+  border-radius: 9px;
+  box-shadow: 0 12px 36px #0002;
+}
+.demo-tools-menu nav {
+  display: grid;
+  gap: 2px;
+}
+.demo-tools-menu nav a {
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text);
+}
+.demo-tools-menu nav a:hover {
+  background: var(--raised);
+}
+.demo-tools-menu > .button {
+  width: 100%;
+  margin-top: 8px;
+}
+.demo-tools details[open] > summary {
+  margin-bottom: 0;
+}
+
+/* Shorter cards, clear progress and a playful reveal keep the side game moving. */
+.game-arena {
+  min-width: 0;
+}
+.game-score {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
+  font-size: 14px;
+}
+.game-score > span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.memory-board {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.memory-tile {
+  position: relative;
+  aspect-ratio: 1 / 1.15;
+  min-height: 100px;
+  padding: 24px 8px 14px;
+  background: var(--purple-soft);
+  color: var(--purple-ink);
+  gap: 6px;
+}
+.memory-tile:disabled:not(.face-up) {
+  opacity: 0.75;
+}
+.tile-number {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+.memory-tile small {
+  font-weight: 650;
+  font-size: 12px;
+}
+.memory-tile.face-up {
+  background: var(--surface);
+  color: var(--purple-ink);
+  animation: card-reveal 0.22s ease-out;
+}
+.memory-tile.pair-green.face-up {
+  color: var(--green-ink);
+}
+.memory-tile.pair-peach.face-up {
+  color: var(--danger);
+}
+.memory-tile.pair-yellow.face-up {
+  color: var(--text);
+  background: var(--peach);
+}
+.memory-tile.matched {
+  opacity: 1;
+}
+.tile-matched {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+.game-collection {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+.game-collection > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  opacity: 0.5;
+  font-size: 12px;
+}
+.game-collection .collected {
+  opacity: 1;
+  color: var(--green-ink);
+}
+.game-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-block: 24px 18px;
+}
+.game-best {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green-ink);
+  font-size: 13px !important;
+}
+.game-won .game-score strong {
+  color: var(--green-ink);
+}
+@keyframes card-reveal {
+  from {
+    transform: scale(0.94);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@media (max-width: 1100px) {
+  .workspace {
+    --workspace-sidebar: 215px;
+  }
+  .workspace-topbar {
+    padding-inline: 28px;
+  }
+}
+@media (max-width: 850px) {
+  .workspace {
+    --workspace-sidebar: 0px;
+    --workspace-header: 64px;
+    --workspace-mobile-nav: 68px;
+  }
+  .workspace-content {
+    padding-top: calc(var(--workspace-mobile-nav) + var(--workspace-header));
+  }
+  .sidebar {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 70;
+    height: var(--workspace-mobile-nav);
+    min-height: var(--workspace-mobile-nav);
+    padding: 12px 20px;
+    overflow: visible;
+  }
+  .sidebar nav {
+    position: absolute;
+    top: var(--workspace-mobile-nav);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    padding: 12px 20px;
+    max-height: calc(100svh - var(--workspace-mobile-nav) - 16px);
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+  }
+  .workspace-topbar {
+    top: var(--workspace-mobile-nav);
+    padding-inline: 25px;
+  }
+  .workspace .breadcrumb {
+    display: none;
+  }
+  .workspace .topbar-actions {
+    width: 100%;
+  }
+  .workspace .channel-picker {
+    flex: 1;
+    max-width: none;
+  }
+  .workspace [id] {
+    scroll-margin-top: calc(
+      var(--workspace-mobile-nav) + var(--workspace-header) + 20px
+    );
+  }
+}
+@media (max-width: 600px) {
+  .workspace-topbar {
+    padding-inline: 18px;
+  }
+  .select-trigger {
+    font-size: 16px;
+  }
+  .demo-session-bar {
+    padding: 6px 10px;
+  }
+  .demo-session-actions {
+    gap: 12px;
+  }
+  .demo-tools-menu {
+    left: 0;
+    right: auto;
+  }
+  .memory-game {
+    padding: 24px;
+  }
+  .memory-board {
+    gap: 8px;
+  }
+  .memory-tile {
+    min-height: 84px;
+    aspect-ratio: auto;
+    padding: 20px 4px 10px;
+  }
+  .memory-tile .tile-face > svg {
+    width: 24px;
+    height: 24px;
+  }
+  .memory-tile small {
+    font-size: 11px;
+  }
+  .tile-number {
+    top: 5px;
+    left: 6px;
+  }
+  .game-collection {
+    gap: 10px;
+  }
+  .game-collection > span {
+    font-size: 11px;
   }
 }

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectValue } from '../../test/select-value';
 import { useState, type AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import {
@@ -110,7 +111,8 @@ it('requires a completion reason and removes fulfilled work from the brief', asy
     name: previewOpenLoops[0].wording,
   });
   await user.click(within(card).getByText('Change status'));
-  await user.selectOptions(
+  await selectValue(
+    user,
     within(card).getByLabelText('Next status'),
     'fulfilled',
   );
@@ -146,7 +148,8 @@ it('confirms cancellations and exposes retained source wording and human history
     name: previewOpenLoops[0].wording,
   });
   await user.click(within(card).getByText('Change status'));
-  await user.selectOptions(
+  await selectValue(
+    user,
     within(card).getByLabelText('Next status'),
     'cancelled',
   );

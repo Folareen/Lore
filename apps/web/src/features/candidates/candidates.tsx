@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { MicrophonePanel } from '../continuity/microphone';
 import { useEffect, useState } from 'react';
@@ -221,19 +222,19 @@ function ReviewPanel() {
       <div className="button-row">
         <label className="field">
           Show
-          <select
+          <Select
             disabled={busy}
             value={filter}
-            onChange={(event) => {
+            onValueChange={(event) => {
               setItems([]);
-              setFilter(candidateStatusSchema.parse(event.target.value));
+              setFilter(candidateStatusSchema.parse(event));
             }}
           >
             <option value="pending">Needs review</option>
             <option value="confirmed">Confirmed</option>
             <option value="dismissed">Dismissed</option>
             <option value="expired">Expired</option>
-          </select>
+          </Select>
         </label>
         <button
           className="button secondary"

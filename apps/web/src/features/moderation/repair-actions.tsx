@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -88,11 +89,11 @@ export function RepairActions({
           </label>
           <label className="field">
             Action type
-            <select name="kind">
+            <Select name="kind">
               <option value="follow_up">Follow-up</option>
               <option value="repair">Community repair</option>
               <option value="re_entry">Re-entry condition</option>
-            </select>
+            </Select>
           </label>
           <label className="field">
             Agreed resolution or condition
@@ -208,20 +209,20 @@ function RepairUpdate({
     >
       <label className="field">
         Action status
-        <select name="status" defaultValue={action.status}>
+        <Select name="status" defaultValue={action.status}>
           {[action.status, ...repairTransitions[action.status]].map((s) => (
             <option key={s} value={s}>
               {s.replaceAll('_', ' ')}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <AssigneeField people={people} initial={action.assigneeId} />
       <NoteField label="Progress, completion proof or cancellation reason" />
       {record && (
         <label className="field">
           Retained completion evidence (optional; completing only)
-          <select name="evidenceId">
+          <Select name="evidenceId">
             <option value="">No evidence reference</option>
             {record.evidence
               .filter((e) => !e.removed && (!e.file || e.file.available))
@@ -230,7 +231,7 @@ function RepairUpdate({
                   {e.label}
                 </option>
               ))}
-          </select>
+          </Select>
         </label>
       )}
       <p className="muted">

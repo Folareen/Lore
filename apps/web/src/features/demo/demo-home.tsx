@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useDemo } from './demo-seed-context';
 import { useWorkspace } from '../workspace/workspace-context';
@@ -8,22 +8,46 @@ export function DemoToolbar() {
   const demo = useDemo(),
     { href } = useWorkspace();
   const [confirm, setConfirm] = useState(false);
+  const tools = useRef<HTMLDetailsElement>(null);
   if (!demo) return null;
+  function close() {
+    if (tools.current) {
+      tools.current.open = false;
+      tools.current.querySelector('summary')?.focus();
+    }
+  }
   return (
-    <div className="demo-toolbar">
-      <nav aria-label="Demo journey">
-        <Link href="/demo">Demo guide</Link>
-        <Link href="/demo?view=chat">Chat simulation</Link>
-        <Link href={href('streamer')}>Streamer home</Link>
-        <Link href={href('moderation')}>Moderator desk</Link>
-        <Link href={href('community')}>Community Lore</Link>
-      </nav>
-      <button
-        className="button secondary compact"
-        onClick={() => setConfirm(true)}
+    <div className="demo-tools">
+      <details
+        ref={tools}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') close();
+        }}
       >
-        Reset demo
-      </button>
+        <summary>Demo tools</summary>
+        <div className="demo-tools-menu">
+          <nav aria-label="Demo tools">
+            <Link href="/demo?view=guide" onClick={close}>
+              Demo guide
+            </Link>
+            <Link href="/demo?view=chat" onClick={close}>
+              Chat simulation
+            </Link>
+            <Link href={href('community')} onClick={close}>
+              Public viewer preview
+            </Link>
+          </nav>
+          <button
+            className="button secondary compact"
+            onClick={() => {
+              close();
+              setConfirm(true);
+            }}
+          >
+            Reset demo
+          </button>
+        </div>
+      </details>
       {confirm && (
         <ConfirmDialog
           title="Reset your demo?"

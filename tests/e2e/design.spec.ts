@@ -1,3 +1,4 @@
+import { chooseSelect } from './select-control';
 import { test, expect } from '@playwright/test';
 const views = [
   'overview',
@@ -131,6 +132,10 @@ test('landing content, optional memory game, FAQ and tour work on mobile', async
     fullPage: true,
     animations: 'disabled',
   });
+  await page.locator('.memory-game').screenshot({
+    path: info.outputPath('game-desktop.png'),
+    animations: 'disabled',
+  });
   await page.evaluate(() => localStorage.setItem('lore-theme', 'dark'));
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -176,7 +181,7 @@ test('mobile workspace navigation opens, closes with Escape and follows a destin
   const card = page.getByRole('article').first();
   await expect(card.getByLabel('Next status')).toBeHidden();
   await card.getByText('Change status', { exact: true }).click();
-  await card.getByLabel('Next status').selectOption('fulfilled');
+  await chooseSelect(page, card.getByLabel('Next status'), 'fulfilled');
   await expect(card.getByLabel('Reason (required)')).toBeVisible();
   const input = page.getByLabel('What did we promise?');
   expect(
@@ -303,4 +308,106 @@ test('marketing headers stay fixed and tour layout and anchor navigation stay cl
       })
       .toBe(true);
   }
+});
+
+test('demo uses the real workspace, fixed headers and keyboard-accessible custom selects', async ({
+  page,
+}, info) => {
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/demo');
+    await expect(
+      page.getByRole('heading', { name: 'Hey, cozybyte.', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'The next stream remembers.' }),
+    ).toHaveCount(0);
+    await expect(page.locator('.demo-session-bar')).toBeVisible();
+    await expect(page.locator('.demo-toolbar')).toHaveCount(0);
+    const header = page.locator('.workspace-topbar');
+    const heading = await page.locator('main h1').boundingBox();
+    const top = await header.boundingBox();
+    expect(heading!.y).toBeGreaterThanOrEqual(top!.y + top!.height);
+    await page.evaluate(() => scrollTo(0, 600));
+    await expect
+      .poll(async () => (await header.boundingBox())!.y)
+      .toBe(width === 390 ? 68 : 0);
+    await page.goto('/demo?view=moderation');
+    const filter = page.getByRole('combobox', { name: 'Case status' });
+    await filter.click();
+    const list = page.getByRole('listbox');
+    await expect(list).toBeVisible();
+    const bounds = await list.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(900);
+    await page.screenshot({
+      path: info.outputPath(`select-${width}.png`),
+      animations: 'disabled',
+    });
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await expect(filter).toHaveText('Decided');
+    await expect(filter).toBeFocused();
+    await expect(list).toBeHidden();
+    await filter.click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Escape');
+    await expect(filter).toHaveText('Decided');
+    await expect(filter).toBeFocused();
+    if (width === 1440) {
+      await page
+        .getByRole('button', { name: 'Toggle light and dark mode' })
+        .click();
+      await filter.click();
+      await page.screenshot({
+        path: info.outputPath('select-dark-desktop.png'),
+        animations: 'disabled',
+      });
+      await page.keyboard.press('Escape');
+    }
+    await page.locator('.demo-tools summary').click();
+    await page.getByRole('link', { name: 'Demo guide', exact: true }).click();
+    await expect(
+      page.getByRole('heading', { name: 'The next stream remembers.' }),
+    ).toBeVisible();
+  }
+});
+
+test('the memory game supports a self-paced peek, matching and a completed round', async ({
+  page,
+}, info) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  const game = page.locator('.memory-game');
+  await game.getByRole('button', { name: 'Play a quick round' }).click();
+  await game.getByRole('button', { name: 'Take a peek' }).click();
+  const groups: Record<string, number[]> = {};
+  for (const label of await game
+    .locator('.memory-tile')
+    .evaluateAll((cards) =>
+      cards.map((card) => card.getAttribute('aria-label')!),
+    )) {
+    const [pair, card] = label.split(', card ');
+    (groups[pair] ??= []).push(Number(card));
+  }
+  await game.screenshot({
+    path: info.outputPath('game-peek-mobile.png'),
+    animations: 'disabled',
+  });
+  await game.getByRole('button', { name: 'Hide the cards' }).click();
+  for (const indexes of Object.values(groups)) {
+    for (const index of indexes)
+      await game
+        .getByRole('button', { name: `Turn card ${index}`, exact: true })
+        .click();
+  }
+  await expect(
+    game.getByRole('heading', { name: 'Chat has receipts.' }),
+  ).toBeVisible();
+  await expect(game.getByRole('status')).toContainText('All four pairs found');
+  await expect(game.getByText('4 / 4 pairs')).toBeVisible();
+  await game.getByRole('button', { name: 'New round' }).click();
+  await expect(game.getByText('0 / 4 pairs')).toBeVisible();
 });

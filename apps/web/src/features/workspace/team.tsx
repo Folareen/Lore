@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import Link from 'next/link';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
@@ -218,17 +219,15 @@ export function Team() {
                       <strong>{person.displayName}</strong>
                       <small>Owner-approved access</small>
                     </div>
-                    <select
+                    <Select
                       aria-label={`Role for ${person.displayName}`}
                       value={person.role}
                       disabled={busy}
-                      onChange={(event) =>
-                        void changeRole(person, event.target.value)
-                      }
+                      onValueChange={(event) => void changeRole(person, event)}
                     >
                       <option value="moderator">Moderator</option>
                       <option value="team">Team member</option>
-                    </select>
+                    </Select>
                     <button
                       className="icon-button"
                       aria-label={`Remove ${person.displayName}`}
@@ -274,20 +273,19 @@ export function Team() {
               </div>
               <div className="field">
                 <label htmlFor="team-role">Role</label>
-                <select
+                <Select
                   id="team-role"
                   value={role}
-                  onChange={(event) => {
-                    const parsed = grantMembershipSchema.shape.role.safeParse(
-                      event.target.value,
-                    );
+                  onValueChange={(event) => {
+                    const parsed =
+                      grantMembershipSchema.shape.role.safeParse(event);
                     if (parsed.success) setRole(parsed.data);
                   }}
                   disabled={busy}
                 >
                   <option value="moderator">Moderator</option>
                   <option value="team">Team member</option>
-                </select>
+                </Select>
               </div>
               <button className="button primary" disabled={busy}>
                 {busy ? (

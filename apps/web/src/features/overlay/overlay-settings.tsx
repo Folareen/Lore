@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -195,13 +196,11 @@ function OverlayDesk() {
               </p>
               <label className="overlay-field">
                 Display
-                <select
+                <Select
                   value={mode}
                   disabled={busy || !channel.connected}
-                  onChange={(e) => {
-                    setMode(
-                      e.target.value === 'recap' ? 'recap' : 'open_loops',
-                    );
+                  onValueChange={(e) => {
+                    setMode(e === 'recap' ? 'recap' : 'open_loops');
                     setIds([]);
                   }}
                 >
@@ -209,7 +208,7 @@ function OverlayDesk() {
                   <option value="open_loops">
                     Open loops · up to three commitments
                   </option>
-                </select>
+                </Select>
               </label>
               <div className="overlay-entry-choices">
                 {choices.map((row) => (

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectValue } from '../../test/select-value';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   cleanup,
@@ -158,7 +159,8 @@ describe('Lore interface behavior', () => {
     );
     workspace(<ChannelSettings />);
     const user = userEvent.setup();
-    await user.selectOptions(
+    await selectValue(
+      user,
       screen.getByLabelText('Ordinary chat retention'),
       '3',
     );
@@ -177,7 +179,8 @@ describe('Lore interface behavior', () => {
     fetchMock.mockResolvedValue(response({ message: 'unavailable' }, 503));
     workspace(<ChannelSettings />);
     const user = userEvent.setup();
-    await user.selectOptions(
+    await selectValue(
+      user,
       screen.getByLabelText('Ordinary chat retention'),
       '2',
     );
@@ -191,7 +194,8 @@ describe('Lore interface behavior', () => {
     fetchMock.mockResolvedValue(response({ unexpected: true }));
     workspace(<ChannelSettings />);
     const user = userEvent.setup();
-    await user.selectOptions(
+    await selectValue(
+      user,
       screen.getByLabelText('Ordinary chat retention'),
       '2',
     );
@@ -229,7 +233,7 @@ describe('Lore interface behavior', () => {
       [previewChannels[1]],
     );
     expect(
-      screen.getByLabelText<HTMLSelectElement>('Ordinary chat retention')
+      screen.getByLabelText<HTMLButtonElement>('Ordinary chat retention')
         .disabled,
     ).toBe(true);
     expect(
@@ -260,7 +264,7 @@ describe('Lore interface behavior', () => {
     const user = userEvent.setup();
     expect(await screen.findByText('moss.jpeg')).toBeTruthy();
     await user.type(screen.getByLabelText('Twitch user ID'), '300');
-    await user.selectOptions(screen.getByLabelText('Role'), 'team');
+    await selectValue(user, screen.getByLabelText('Role'), 'team');
     await user.click(screen.getByRole('button', { name: 'Add to team' }));
     expect(await screen.findByText('pixel_pilot')).toBeTruthy();
     const call = fetchMock.mock.calls.find(
@@ -292,13 +296,14 @@ describe('Lore interface behavior', () => {
     workspace(<Team />);
     const user = userEvent.setup();
     await screen.findByText('moss.jpeg');
-    await user.selectOptions(
+    await selectValue(
+      user,
       screen.getByLabelText('Role for moss.jpeg'),
       'team',
     );
     await waitFor(() =>
       expect(
-        screen.getByLabelText<HTMLSelectElement>('Role for moss.jpeg').value,
+        screen.getByLabelText<HTMLButtonElement>('Role for moss.jpeg').value,
       ).toBe('team'),
     );
     await user.click(screen.getByRole('button', { name: 'Remove moss.jpeg' }));
@@ -324,7 +329,7 @@ describe('Lore interface behavior', () => {
     );
     const user = userEvent.setup();
     await screen.findByText('moss.jpeg');
-    expect(screen.getByText(/Try anything. Refresh to reset./)).toBeTruthy();
+    expect(screen.getByText(/Simulated actions/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Remove moss.jpeg' }));
     await user.click(
       within(screen.getByRole('dialog')).getByRole('button', {
@@ -338,7 +343,8 @@ describe('Lore interface behavior', () => {
     fetchMock.mockResolvedValue(response({ message: 'Sign in required' }, 401));
     workspace(<ChannelSettings />);
     const user = userEvent.setup();
-    await user.selectOptions(
+    await selectValue(
+      user,
       screen.getByLabelText('Ordinary chat retention'),
       '2',
     );
@@ -383,7 +389,8 @@ describe('Lore interface behavior', () => {
     expect(
       screen.getByRole('button', { name: 'Disconnect channel' }),
     ).toBeTruthy();
-    await user.selectOptions(
+    await selectValue(
+      user,
       screen.getByLabelText('Selected channel'),
       previewChannels[1].id,
     );
@@ -391,10 +398,10 @@ describe('Lore interface behavior', () => {
       screen.queryByRole('button', { name: 'Disconnect channel' }),
     ).toBeNull();
     expect(
-      screen.getByLabelText<HTMLSelectElement>('Ordinary chat retention').value,
+      screen.getByLabelText<HTMLButtonElement>('Ordinary chat retention').value,
     ).toBe('3');
     expect(
-      screen.getByLabelText<HTMLSelectElement>('Ordinary chat retention')
+      screen.getByLabelText<HTMLButtonElement>('Ordinary chat retention')
         .disabled,
     ).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();

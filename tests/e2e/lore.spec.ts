@@ -1,3 +1,4 @@
+import { chooseSelect } from './select-control';
 import { test, expect, type BrowserContext } from '@playwright/test';
 const channelId = '00000000-0000-4000-8000-000000009200';
 async function signIn(
@@ -41,7 +42,7 @@ test('old preview links redirect to the same demo screen and preserve parameters
   await page.goto('/preview');
   await expect(page).toHaveURL(/\/demo$/);
   await expect(
-    page.getByRole('heading', { name: 'The next stream remembers.' }),
+    page.getByRole('heading', { name: 'Hey, cozybyte.' }),
   ).toBeVisible();
 });
 test('production CSP permits hydration, themes and the seeded command-to-brief/reset journey', async ({
@@ -66,12 +67,13 @@ test('production CSP permits hydration, themes and the seeded command-to-brief/r
   expect(csp).not.toContain('unsafe-eval');
   expect(response!.headers()['x-powered-by']).toBeUndefined();
   await expect(
-    page.getByRole('heading', { name: 'The next stream remembers.' }),
+    page.getByRole('heading', { name: 'Hey, cozybyte.' }),
   ).toBeVisible();
   await page
     .getByRole('button', { name: 'Toggle light and dark mode' })
     .click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.locator('.demo-tools summary').click();
   await page
     .getByRole('link', { name: 'Chat simulation', exact: true })
     .click();
@@ -89,6 +91,7 @@ test('production CSP permits hydration, themes and the seeded command-to-brief/r
   await expect(
     page.getByText('Browser journey commitment.', { exact: true }),
   ).toBeVisible();
+  await page.locator('.demo-tools summary').click();
   await page.getByRole('button', { name: 'Reset demo', exact: true }).click();
   await page
     .getByRole('dialog')
@@ -129,9 +132,11 @@ test('demo evidence, precedent and human decision remain connected across naviga
   await page
     .getByRole('button', { name: 'Use recommendation as a draft' })
     .click();
-  await page
-    .getByLabel('How did you review the AI suggestion?')
-    .selectOption('modified');
+  await chooseSelect(
+    page,
+    page.getByLabel('How did you review the AI suggestion?'),
+    'modified',
+  );
   await page
     .getByLabel('Decision rationale')
     .fill(
@@ -145,7 +150,10 @@ test('demo evidence, precedent and human decision remain connected across naviga
   await expect(
     page.getByRole('heading', { name: 'Modify · Human decision' }),
   ).toBeVisible();
-  await page.getByRole('link', { name: 'Community Lore', exact: true }).click();
+  await page.locator('.demo-tools summary').click();
+  await page
+    .getByRole('link', { name: 'Public viewer preview', exact: true })
+    .click();
   await expect(
     page.getByText(
       'Browser review: checked the reminder, evidence gap and rule version.',
@@ -180,9 +188,9 @@ test('authenticated promise capture, retention and publication use real API data
   await page
     .getByRole('link', { name: 'Channel settings', exact: true })
     .click();
-  await page.getByLabel('Ordinary chat retention').selectOption('1');
+  await chooseSelect(page, page.getByLabel('Ordinary chat retention'), '1');
   await page.getByRole('button', { name: 'Save preferences' }).click();
-  await expect(page.getByLabel('Ordinary chat retention')).toHaveValue('1');
+  await expect(page.getByLabel('Ordinary chat retention')).toHaveText('1 day');
   const purged = page.waitForResponse((r) =>
     r.url().endsWith('/retention/purge'),
   );
@@ -195,7 +203,7 @@ test('authenticated promise capture, retention and publication use real API data
     .getByRole('link', { name: 'Community publishing', exact: true })
     .click();
   await page.getByRole('button', { name: 'New community draft' }).click();
-  await page.getByLabel('Entry type').selectOption('summary');
+  await chooseSelect(page, page.getByLabel('Entry type'), 'summary');
   await page
     .getByLabel('Public title', { exact: true })
     .fill('Browser-approved recap');
@@ -315,7 +323,7 @@ test('mobile demo remains usable in light/dark and a missing-token OBS canvas st
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/demo');
   await expect(
-    page.getByRole('heading', { name: 'The next stream remembers.' }),
+    page.getByRole('heading', { name: 'Hey, cozybyte.' }),
   ).toBeVisible();
   expect(
     await page.evaluate(

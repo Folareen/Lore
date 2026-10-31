@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useState } from 'react';
 import Link from 'next/link';
 import { Check, Link2, Radio } from 'lucide-react';
@@ -148,12 +149,12 @@ function SettingsPanel({ channel }: { channel: Channel }) {
           <form onSubmit={save}>
             <div className="field">
               <label htmlFor="retention">Ordinary chat retention</label>
-              <select
+              <Select
                 id="retention"
                 value={days}
                 disabled={!owner || busy}
-                onChange={(event) => {
-                  setDays(Number(event.target.value));
+                onValueChange={(event) => {
+                  setDays(Number(event));
                   setSaved(false);
                 }}
               >
@@ -165,7 +166,7 @@ function SettingsPanel({ channel }: { channel: Channel }) {
                     </option>
                   ),
                 )}
-              </select>
+              </Select>
             </div>
             {owner && (
               <div className="save-row">

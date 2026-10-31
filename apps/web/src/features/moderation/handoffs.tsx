@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -222,13 +223,13 @@ function Task({
           >
             <label className="field">
               Task status
-              <select name="status" defaultValue={item.status}>
+              <Select name="status" defaultValue={item.status}>
                 {item.status === 'pending' && (
                   <option value="pending">Pending</option>
                 )}
                 <option value="acknowledged">Acknowledged</option>
                 <option value="resolved">Resolved for this shift</option>
-              </select>
+              </Select>
             </label>
             <AssigneeField people={people} initial={item.assigneeId} />
             <NoteField

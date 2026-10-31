@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectValue } from '../../test/select-value';
 import { useState, type AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import {
@@ -107,7 +108,7 @@ it('requires an explicit dismissal reason and preserves the reviewed decision', 
   );
   await user.click(screen.getByRole('button', { name: 'Confirm dismissal' }));
   await waitFor(() => expect(screen.queryByRole('article')).toBeNull());
-  await user.selectOptions(screen.getByLabelText('Show'), 'dismissed');
+  await selectValue(user, screen.getByLabelText('Show'), 'dismissed');
   await screen.findByText(/Just brainstorming/);
   expect(
     screen.queryByRole('button', { name: 'Review as promise' }),

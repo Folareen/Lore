@@ -1,5 +1,7 @@
 'use client';
+import { Select } from '../../components/select';
 import Link from 'next/link';
+import { DemoToolbar } from '../demo/demo-home';
 import { WorkspaceStream } from '../continuity/live-updates';
 import { OverlayProvider } from '../overlay/overlay-context';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -64,7 +66,11 @@ function Shell({
       ? 'publications'
       : route;
   const title =
-    navigation.find((item) => item.view === current)?.title || 'Overview';
+    route === 'guide'
+      ? 'Demo guide'
+      : route === 'chat'
+        ? 'Chat simulation'
+        : navigation.find((item) => item.view === current)?.title || 'Overview';
   return (
     <div className="workspace">
       <aside
@@ -132,35 +138,37 @@ function Shell({
             {channels.length > 0 && (
               <label className="channel-picker">
                 <span className="sr-only">Selected channel</span>
-                <select
+                <Select
                   aria-label="Selected channel"
                   value={selected?.id || ''}
-                  onChange={(event) => selectChannel(event.target.value)}
+                  onValueChange={(event) => selectChannel(event)}
                 >
                   {channels.map((channel) => (
                     <option key={channel.id} value={channel.id}>
                       {channel.displayName}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             )}
             <ThemeToggle />
             <Avatar name={session.user.login} size={34} />
           </div>
         </header>
-        {preview && (
-          <div className="preview-banner">
-            <span>
-              <strong>Demo fixture</strong> · Try anything. Refresh to reset.
-            </span>
-            <Link href="/login">
-              Sign in
-              <ArrowUpRight size={12} />
-            </Link>
-          </div>
-        )}
         <main id="main-content">
+          {preview && (
+            <div className="demo-session-bar">
+              <span>
+                <strong>Demo fixture</strong> · Simulated actions
+              </span>
+              <div className="demo-session-actions">
+                <DemoToolbar />
+                <Link href="/login">
+                  Sign in <ArrowUpRight size={12} aria-hidden="true" />
+                </Link>
+              </div>
+            </div>
+          )}
           <WorkspaceStream />
           {children}
         </main>

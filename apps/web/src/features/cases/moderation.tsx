@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -22,7 +23,6 @@ export function ModerationScreen() {
           <h1>Moderation cases</h1>
           <p>Review evidence, applicable rules and earlier decisions.</p>
         </div>
-        <FolderOpen size={30} aria-hidden="true" />
       </div>
       {!selected ? (
         <p className="notice">Choose a channel first.</p>
@@ -102,19 +102,19 @@ function CasesList() {
         </button>
         <label className="field">
           Case status
-          <select
+          <Select
             value={filter}
             disabled={busy}
-            onChange={(e) => {
+            onValueChange={(e) => {
               setRows([]);
-              setFilter(e.target.value);
+              setFilter(e);
             }}
           >
             <option value="all">All cases</option>
             <option value="open">Open</option>
             <option value="reviewing">Reviewing</option>
             <option value="decided">Decided</option>
-          </select>
+          </Select>
         </label>
         <button
           className="button secondary"

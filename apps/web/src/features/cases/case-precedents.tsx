@@ -1,4 +1,5 @@
 'use client';
+import { Select } from '../../components/select';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -385,28 +386,26 @@ function DecisionForm({
           </button>
           <label className="field">
             How did you review the AI suggestion?
-            <select
+            <Select
               value={disposition}
               required
-              onChange={(e) =>
-                setDisposition(e.target.value as typeof disposition)
-              }
+              onValueChange={(e) => setDisposition(e as typeof disposition)}
               disabled={busy}
             >
               <option value="">Choose your assessment</option>
               <option value="accepted">Accept the suggested outcome</option>
               <option value="modified">Change the suggestion</option>
               <option value="rejected">Reject the suggestion</option>
-            </select>
+            </Select>
           </label>
         </>
       )}
       <label className="field">
         Decision
-        <select
+        <Select
           value={outcome}
-          onChange={(e) => {
-            setOutcome(caseOutcomeSchema.parse(e.target.value));
+          onValueChange={(e) => {
+            setOutcome(caseOutcomeSchema.parse(e));
             if (disposition === 'accepted') setDisposition('modified');
           }}
           disabled={busy}
@@ -416,7 +415,7 @@ function DecisionForm({
               {label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <label className="field">
         Decision rationale
