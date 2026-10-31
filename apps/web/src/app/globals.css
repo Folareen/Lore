@@ -478,24 +478,24 @@ svg {
   margin-top: 16px;
 }
 .chapter-nav {
-  display: flex;
-  justify-content: center;
-  padding: 24px 25px 28px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 520px;
+  margin-inline: auto;
+  padding: 0 28px 24px;
   gap: 8px;
   position: relative;
   z-index: 4;
 }
 .chapter-nav button {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   background: #ffffff38;
-  min-height: 40px;
+  min-height: 44px;
   border-radius: 6px;
-  padding: 11px 18px;
+  padding: 10px 8px;
   color: inherit;
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 .chapter-nav button[aria-pressed='true'] {
   background: #fffaf0;
@@ -507,21 +507,6 @@ svg {
 [data-theme='dark'] .chapter-nav button[aria-pressed='true'] {
   background: #66527a;
   color: #fff;
-}
-.chapter-nav button > span:first-child {
-  font-size: 12px;
-  opacity: 0.8;
-}
-.chapter-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0;
-  margin-left: 12px;
-}
-[aria-pressed='true'] .chapter-dot {
-  opacity: 1;
 }
 .stage-caption {
   display: flex;
@@ -1670,21 +1655,11 @@ svg {
     height: 230px;
   }
   .chapter-nav {
-    padding: 12px 12px 20px;
+    padding: 0 16px 28px;
     gap: 5px;
   }
   .chapter-nav button {
-    padding: 10px 7px;
-    gap: 5px;
-    font-size: 12px;
-    flex: 1;
-    justify-content: center;
-  }
-  .chapter-nav button > span:first-child {
-    font-size: 12px;
-  }
-  .chapter-dot {
-    display: none;
+    padding-inline: 4px;
   }
   .stage-caption {
     font-size: 12px;
@@ -4638,6 +4613,9 @@ details[open] > summary {
 [data-theme='dark'] .story-motion-control {
   background: #ffffff12;
 }
+.story-stage {
+  padding-bottom: 32px;
+}
 .stage-scene {
   height: 360px;
 }
@@ -4741,7 +4719,7 @@ details[open] > summary {
     gap: 20px;
   }
   .stage-top {
-    padding: 16px 20px 24px;
+    padding: 16px 20px;
   }
   .stage-scene {
     height: auto;

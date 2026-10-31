@@ -437,6 +437,26 @@ test('the illustrative story loops, can be paused, and respects reduced motion',
   const story = page.getByRole('region', {
     name: 'An illustrative Lore story',
   });
+  const chapters = story.getByRole('group', { name: 'Story chapters' });
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const controls = await chapters.boundingBox();
+    const scene = await story.locator('.stage-scene').boundingBox();
+    expect(controls).not.toBeNull();
+    expect(scene).not.toBeNull();
+    expect(controls!.y + controls!.height).toBeLessThanOrEqual(scene!.y);
+    expect(
+      await chapters.getByRole('button').evaluateAll((buttons) =>
+        buttons.every((button) => {
+          const bounds = button.getBoundingClientRect();
+          return (
+            bounds.height >= 44 && button.scrollWidth <= button.clientWidth
+          );
+        }),
+      ),
+    ).toBe(true);
+  }
+  await page.setViewportSize({ width: 390, height: 900 });
   const image = story.locator('.hero-illustration img');
   await expect
     .poll(() =>
@@ -475,7 +495,7 @@ test('the illustrative story loops, can be paused, and respects reduced motion',
       ),
     )
     .toBe(true);
-  await story.getByRole('button', { name: /The follow-through/ }).click();
+  await story.getByRole('button', { name: 'The payoff', exact: true }).click();
   await expect(
     story.getByRole('heading', { name: 'Promise fulfilled' }),
   ).toBeVisible();

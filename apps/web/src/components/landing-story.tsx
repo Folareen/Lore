@@ -14,7 +14,7 @@ const chapters = [
     color: 'coral',
   },
   {
-    title: 'The follow-through',
+    title: 'The payoff',
     quote: '“Chat, I brought the heart-rate monitor.”',
     person: 'cozybyte',
     context: 'Friday has entered the chat',
@@ -60,6 +60,17 @@ export function LandingStory() {
         </button>
         <span className="sample-label">Illustrative story</span>
       </div>
+      <div className="chapter-nav" role="group" aria-label="Story chapters">
+        {chapters.map((item, index) => (
+          <button
+            key={item.title}
+            aria-pressed={chapter === index}
+            onClick={() => setChapter(index)}
+          >
+            {item.title}
+          </button>
+        ))}
+      </div>
       <div className="stage-scene">
         <article className="memory-note" key={chapter}>
           <blockquote>{story.quote}</blockquote>
@@ -88,19 +99,6 @@ export function LandingStory() {
           <p>{story.detail}</p>
           <CornerDownRight size={24} />
         </div>
-      </div>
-      <div className="chapter-nav" role="group" aria-label="Story chapters">
-        {chapters.map((item, index) => (
-          <button
-            key={item.title}
-            aria-pressed={chapter === index}
-            onClick={() => setChapter(index)}
-          >
-            <span>0{index + 1}</span>
-            {item.title}
-            <span className="chapter-dot" />
-          </button>
-        ))}
       </div>
     </section>
   );
