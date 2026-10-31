@@ -3,7 +3,7 @@ import { channelResponseSchema, sessionResponseSchema } from '@lore/shared';
 import { serverApi } from '../../lib/server-api';
 import { AppShell } from '../../features/workspace/app-shell';
 export const metadata = {
-  title: 'Your workspace',
+  title: 'Your community',
   robots: { index: false, follow: false },
 };
 export default async function WorkspaceLayout({

@@ -1,6 +1,7 @@
 'use client';
 import { Moon, Sun, Monitor } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   return (
@@ -16,6 +17,8 @@ export function ThemeToggle() {
 }
 export function ThemeChoices() {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   return (
     <div className="theme-choices" role="group" aria-label="Color theme">
       {(
@@ -29,7 +32,7 @@ export function ThemeChoices() {
           key={value}
           type="button"
           className="theme-option"
-          aria-pressed={theme === value}
+          aria-pressed={mounted && theme === value}
           onClick={() => setTheme(value)}
         >
           <Icon size={21} />

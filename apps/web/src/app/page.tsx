@@ -233,10 +233,10 @@ export default function Home() {
           <div>
             <h2>Your private work stays private.</h2>
             <p>
-              Case files and team notes stay in the workspace. Public stories
-              are separate records that an owner or moderator reviews before
-              publishing. Optional AI features require owner consent and human
-              review.
+              Case files and team notes stay in your private team area. Public
+              stories are separate records that an owner or moderator reviews
+              before publishing. Optional AI features require owner consent and
+              human review.
             </p>
             <Link href="/how-it-works#permissions" className="text-link">
               How access works <ArrowRight size={15} aria-hidden="true" />

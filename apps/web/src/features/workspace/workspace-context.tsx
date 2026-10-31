@@ -481,7 +481,7 @@ export function WorkspaceProvider({
         loadLoopHistory,
         loadBrief,
         recordPreviewReview: (loop) => {
-          if (!preview) throw new Error('Demo workspace required');
+          if (!preview) throw new Error('Open the demo to try this action');
           requirePreviewConnection(loop.channelId);
           setDemoLoops((current) => [
             loop,

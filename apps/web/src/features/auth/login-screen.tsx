@@ -41,7 +41,7 @@ export function LoginScreen({
             <br />
             Your stories.
             <br />
-            Your next stream.
+            <span className="auth-story-last-line">Your next stream.</span>
           </h2>
           <Image
             src="/illustrations/memory-party.png"
@@ -60,8 +60,8 @@ export function LoginScreen({
           </span>
           <h1>Welcome in.</h1>
           <p>
-            Sign in with Twitch to open your workspace. First time? We’ll create
-            your Lore account.
+            Sign in with Twitch to open Lore. First time? We’ll create your Lore
+            account.
           </p>
           {expired && (
             <p className="notice">

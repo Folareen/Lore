@@ -112,7 +112,7 @@ export default function HowItWorks() {
               <dt>Channel access</dt>
               <dd>
                 Owners grant roles inside Lore. Twitch moderator status alone
-                doesn’t open the private workspace.
+                doesn’t open the private team area.
               </dd>
             </div>
             <div>
