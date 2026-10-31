@@ -72,6 +72,16 @@ test('landing content, optional memory game, FAQ and tour work on mobile', async
       page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     )
     .toBe(true);
+  const arrival = await page
+    .locator('.newcomer-arrival blockquote')
+    .boundingBox();
+  expect(arrival?.width).toBeGreaterThan(160);
+  await expect(
+    page.getByRole('heading', {
+      name: 'You don’t have to have been there.',
+      exact: true,
+    }),
+  ).toBeVisible();
   await page.getByText('Do I need a Twitch account?', { exact: true }).click();
   await expect(
     page.getByText(
@@ -113,8 +123,24 @@ test('landing content, optional memory game, FAQ and tour work on mobile', async
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
+  const closing = await page.locator('.closing-section h2').boundingBox();
+  expect(closing).not.toBeNull();
+  expect(Math.abs(closing!.x + closing!.width / 2 - 720)).toBeLessThan(2);
   await page.screenshot({
     path: info.outputPath('landing-desktop.png'),
+    fullPage: true,
+    animations: 'disabled',
+  });
+  await page.evaluate(() => localStorage.setItem('lore-theme', 'dark'));
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
+  await page.screenshot({
+    path: info.outputPath('landing-desktop-dark.png'),
     fullPage: true,
     animations: 'disabled',
   });

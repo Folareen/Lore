@@ -2824,9 +2824,6 @@ details[open] > summary {
   align-items: center;
   gap: 80px;
 }
-.workflow-scene.reverse .workflow-description {
-  order: 2;
-}
 .workflow-description {
   max-width: 440px;
 }
@@ -3404,9 +3401,6 @@ details[open] > summary {
     grid-template-columns: 1fr;
     gap: 24px;
   }
-  .workflow-scene.reverse .workflow-description {
-    order: 0;
-  }
   .workflow-description h2 {
     font-size: 34px;
   }
@@ -3864,5 +3858,216 @@ details[open] > summary {
   }
   .content-stack > .page-heading {
     margin-block: 8px 0;
+  }
+}
+
+/* Each product story gets a layout suited to the task it introduces. */
+.story-explainer {
+  display: block;
+  max-width: 820px;
+  margin-inline: auto;
+  text-align: center;
+}
+.story-explainer .explanation-copy {
+  max-width: 62ch;
+  margin: 24px auto 0;
+}
+.promise-scene {
+  background: var(--purple-soft);
+  padding: 48px;
+  border-radius: 12px;
+}
+.promise-scene .workflow-description {
+  max-width: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 64px;
+  align-items: start;
+}
+.promise-scene .workflow-description h2 {
+  grid-row: span 2;
+}
+.promise-scene .workflow-description p {
+  margin: 0 0 20px;
+}
+.promise-scene .workflow-description .text-link {
+  justify-self: start;
+}
+.promise-scene .sample-promises {
+  background: var(--surface);
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 24px 40px;
+  margin-top: 40px;
+}
+.sample-promises .sample-caption,
+.sample-promises .sample-heading {
+  grid-column: 1 / -1;
+}
+.sample-promises .sample-promise {
+  padding: 24px;
+  background: var(--raised);
+}
+.sample-promises .sample-change {
+  align-self: center;
+  align-items: flex-start;
+}
+.sample-promises .sample-change svg {
+  flex-shrink: 0;
+  color: var(--green-ink);
+  margin-top: 3px;
+}
+.handoff-scene {
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+}
+.handoff-scene .sample-handoff {
+  padding: 40px;
+}
+.community-scene {
+  padding: 48px;
+  border-radius: 12px;
+  background: var(--peach);
+}
+.community-scene .workflow-description {
+  max-width: 700px;
+  margin: 0 auto 40px;
+  text-align: center;
+}
+.community-window {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  align-items: center;
+  gap: 56px;
+  max-width: 1000px;
+  margin-inline: auto;
+}
+.newcomer-arrival {
+  display: grid;
+  justify-items: start;
+  gap: 20px;
+  padding: 16px;
+}
+.newcomer-arrival blockquote {
+  font-size: clamp(24px, 2.4vw, 32px);
+  line-height: 1.35;
+  letter-spacing: -0.035em;
+  margin: 0;
+}
+.newcomer-arrival > span:not(.avatar) {
+  font-size: 13px;
+  color: var(--muted);
+}
+.community-window .sample-community {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.landing-questions {
+  display: block;
+  max-width: 800px;
+  margin-inline: auto;
+}
+.landing-questions h2 {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.memory-game .game-copy {
+  grid-column: 2;
+  grid-row: 1;
+}
+.memory-game .memory-board {
+  grid-column: 1;
+  grid-row: 1;
+}
+.closing-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: normal;
+  justify-items: center;
+  text-align: center;
+  gap: 28px;
+  padding: 56px 32px;
+}
+@media (max-width: 900px) {
+  .promise-scene,
+  .community-scene {
+    padding: 32px;
+  }
+  .promise-scene .workflow-description {
+    column-gap: 32px;
+  }
+  .community-window {
+    gap: 24px;
+  }
+}
+@media (max-width: 600px) {
+  .story-explainer {
+    text-align: left;
+  }
+  .promise-scene,
+  .community-scene {
+    padding: 24px;
+  }
+  .promise-scene .workflow-description,
+  .promise-scene .sample-promises,
+  .handoff-scene,
+  .community-window {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .promise-scene .workflow-description h2 {
+    grid-row: auto;
+  }
+  .promise-scene .workflow-description p {
+    margin-block: 20px;
+  }
+  .promise-scene .sample-promises {
+    padding: 20px;
+    margin-top: 28px;
+    gap: 20px;
+  }
+  .sample-promises .sample-promise {
+    padding: 20px;
+  }
+  .handoff-scene .sample-handoff {
+    padding: 24px;
+  }
+  .community-scene .workflow-description {
+    margin-bottom: 24px;
+    text-align: left;
+  }
+  .community-window {
+    gap: 28px;
+  }
+  .community-window .sample-community {
+    padding: 20px;
+  }
+  .newcomer-arrival {
+    padding: 0;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 12px 16px;
+    align-items: center;
+  }
+  .newcomer-arrival .avatar {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .newcomer-arrival blockquote {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 22px;
+  }
+  .newcomer-arrival > span:not(.avatar) {
+    grid-column: 2;
+  }
+  .landing-questions h2 {
+    text-align: left;
+    margin-bottom: 24px;
+  }
+  .memory-game .game-copy,
+  .memory-game .memory-board {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .closing-section {
+    padding: 32px 24px;
   }
 }

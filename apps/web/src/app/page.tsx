@@ -73,7 +73,7 @@ export default function Home() {
           className="workflow-showcase"
           aria-label="What you can do with Lore"
         >
-          <article className="workflow-scene">
+          <article className="promise-scene">
             <div className="workflow-description">
               <h2>
                 “Next stream”
@@ -111,7 +111,7 @@ export default function Home() {
               </div>
             </div>
           </article>
-          <article className="workflow-scene reverse">
+          <article className="workflow-scene handoff-scene">
             <div className="workflow-description">
               <h2>
                 A handoff.
@@ -154,13 +154,9 @@ export default function Home() {
               </p>
             </div>
           </article>
-          <article className="workflow-scene">
+          <article className="community-scene">
             <div className="workflow-description">
-              <h2>
-                You don’t have to
-                <br />
-                have been there.
-              </h2>
+              <h2>You don’t have to have been there.</h2>
               <p>
                 Publish the stories your community wants to share. New viewers
                 get a catch-up page they can read without an account, and{' '}
@@ -170,21 +166,32 @@ export default function Home() {
                 Be the new viewer <ArrowUpRight size={16} aria-hidden="true" />
               </Link>
             </div>
-            <div className="product-sample sample-community">
-              <p className="sample-caption">Example · Public Community Lore</p>
-              <MessageCircle size={28} aria-hidden="true" />
-              <h3>So, what’s with the garden?</h3>
-              <p>
-                Chat built an island garden together. We’re naming the pond next
-                — bring your worst puns.
-              </p>
-              <div className="sample-source">
-                <span className="mini-faces">
-                  <Avatar name="pixel" size={28} />
-                  <Avatar name="juniper" size={28} />
-                  <Avatar name="new-friend" size={28} />
-                </span>
-                <span>You’re caught up. Welcome in.</span>
+            <div className="community-window">
+              <div className="newcomer-arrival">
+                <Avatar name="new-friend" size={40} />
+                <blockquote>
+                  “First stream here. What’s with the garden?”
+                </blockquote>
+                <span>Every new viewer starts somewhere.</span>
+              </div>
+              <div className="product-sample sample-community">
+                <p className="sample-caption">
+                  Example · Public Community Lore
+                </p>
+                <MessageCircle size={28} aria-hidden="true" />
+                <h3>So, what’s with the garden?</h3>
+                <p>
+                  Chat built an island garden together. We’re naming the pond
+                  next — bring your worst puns.
+                </p>
+                <div className="sample-source">
+                  <span className="mini-faces">
+                    <Avatar name="pixel" size={28} />
+                    <Avatar name="juniper" size={28} />
+                    <Avatar name="new-friend" size={28} />
+                  </span>
+                  <span>You’re caught up. Welcome in.</span>
+                </div>
               </div>
             </div>
           </article>
