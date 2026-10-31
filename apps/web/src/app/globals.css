@@ -662,9 +662,12 @@ svg {
   overflow: hidden;
 }
 .auth-story h2 {
-  font-size: clamp(45px, 5vw, 70px);
-  max-width: 450px;
+  font-size: clamp(28px, 4vw, 56px);
+  max-width: none;
   margin-top: 70px;
+}
+.auth-story-last-line {
+  white-space: nowrap;
 }
 .auth-story img {
   width: 430px;
@@ -1477,9 +1480,6 @@ svg {
   .auth-form-side {
     padding: 45px 30px;
   }
-  .auth-story h2 {
-    font-size: 46px;
-  }
   .auth-story img {
     height: 230px;
   }
@@ -1711,18 +1711,17 @@ svg {
     position: relative;
   }
   .auth-story h2 {
-    font-size: 33px;
-    max-width: 230px;
+    font-size: clamp(24px, 6vw, 33px);
     margin-top: 30px;
     position: relative;
     z-index: 1;
   }
   .auth-story img {
     position: absolute;
-    width: 170px;
-    right: 5px;
-    bottom: -15px;
-    height: 140px;
+    width: clamp(80px, 24vw, 140px);
+    right: 12px;
+    bottom: 12px;
+    height: auto;
     margin: 0;
   }
   .auth-story > p {

@@ -41,7 +41,7 @@ export function LoginScreen({
             <br />
             Your stories.
             <br />
-            Your next stream.
+            <span className="auth-story-last-line">Your next stream.</span>
           </h2>
           <Image
             src="/illustrations/memory-party.png"
