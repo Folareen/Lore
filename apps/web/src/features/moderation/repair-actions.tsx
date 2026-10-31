@@ -128,7 +128,7 @@ export function RepairActions({
               {action.status.replaceAll('_', ' ')}
             </span>
           </div>
-          <p className="eyebrow">{action.kind.replaceAll('_', ' ')}</p>
+          <p className="record-meta">{action.kind.replaceAll('_', ' ')}</p>
           <p className="case-prose">{action.agreement}</p>
           <p className="muted">
             Assigned to{' '}

@@ -23,7 +23,6 @@ export default function Home() {
       <main id="main-content">
         <section className="landing-intro" id="the-story">
           <div className="intro-heading">
-            <p className="eyebrow">For the next stream</p>
             <h1>
               The stream ends.
               <br />
@@ -53,7 +52,6 @@ export default function Home() {
         </div>
         <section className="story-explainer" id="how-it-works">
           <div>
-            <p className="eyebrow">Less “wait, what happened?”</p>
             <h2>
               Chat moves on.
               <br />
@@ -77,7 +75,6 @@ export default function Home() {
         >
           <article className="workflow-scene">
             <div className="workflow-description">
-              <span className="section-number">01 / Follow through</span>
               <h2>
                 “Next stream”
                 <br />
@@ -116,7 +113,6 @@ export default function Home() {
           </article>
           <article className="workflow-scene reverse">
             <div className="workflow-description">
-              <span className="section-number">02 / Keep the context</span>
               <h2>
                 A handoff.
                 <br />
@@ -160,7 +156,6 @@ export default function Home() {
           </article>
           <article className="workflow-scene">
             <div className="workflow-description">
-              <span className="section-number">03 / Let people in</span>
               <h2>
                 You don’t have to
                 <br />
@@ -196,7 +191,6 @@ export default function Home() {
         </section>
         <section className="crew-section crew-compact" id="your-crew">
           <div className="section-heading">
-            <p className="eyebrow">Same community, different jobs</p>
             <h2>A place for the whole crew.</h2>
           </div>
           <div className="crew-stories">
@@ -242,7 +236,6 @@ export default function Home() {
         </section>
         <section className="landing-questions" id="questions">
           <div>
-            <p className="eyebrow">Before you jump in</p>
             <h2>A few good questions.</h2>
           </div>
           <div className="faq-list">
@@ -282,7 +275,6 @@ export default function Home() {
         <MemoryGame />
         <section className="closing-section">
           <div>
-            <p className="eyebrow">See you next stream</p>
             <h2>
               Give the next “remember when?”
               <br />

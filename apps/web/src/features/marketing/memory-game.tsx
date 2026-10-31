@@ -57,7 +57,6 @@ export function MemoryGame() {
   return (
     <section className="memory-game" aria-labelledby="memory-game-title">
       <div className="game-copy">
-        <p className="eyebrow">A little side quest</p>
         <h2 id="memory-game-title">Good memory, chat?</h2>
         <p>
           Match the pairs while you’re here. Your channel setup can wait a

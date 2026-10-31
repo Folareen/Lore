@@ -160,7 +160,6 @@ export function PublicReader({
           {view.mode === 'feed' ? (
             <>
               <div className="community-heading">
-                <p className="eyebrow">COMMUNITY LORE</p>
                 <h1>The stories so far.</h1>
                 <p>
                   Milestones, inside references, and the stories worth bringing
@@ -252,7 +251,6 @@ export function PublicReader({
             <>
               <div className="community-heading community-welcome">
                 <div>
-                  <p className="eyebrow">NEWCOMER COMPASS</p>
                   <h1>You can join the story from here.</h1>
                   <p>
                     A short recap, a few familiar references, and a seat for you
@@ -268,7 +266,6 @@ export function PublicReader({
               </div>
               {view.data.summary ? (
                 <article className="panel content-stack community-recap">
-                  <p className="eyebrow">LATEST APPROVED CATCH-UP</p>
                   <h2>{view.data.summary.title}</h2>
                   <p className="case-prose">{view.data.summary.body}</p>
                   <PublishedAt entry={view.data.summary} />
@@ -295,7 +292,7 @@ export function PublicReader({
             </>
           ) : (
             <article className="panel content-stack">
-              <p className="eyebrow">
+              <p className="record-meta">
                 {publicationLabels[view.data.entry.kind]}
               </p>
               <h1>{view.data.entry.title}</h1>
@@ -352,7 +349,7 @@ export function EntryCard({
 }) {
   return (
     <article className="panel community-entry">
-      <p className="eyebrow">{publicationLabels[entry.kind]}</p>
+      <p className="record-meta">{publicationLabels[entry.kind]}</p>
       <h2>
         <Link href={href} prefetch={false}>
           {entry.title}

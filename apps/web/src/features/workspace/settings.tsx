@@ -94,7 +94,6 @@ function SettingsPanel({ channel }: { channel: Channel }) {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">YOUR CHANNEL, YOUR TERMS</p>
           <h1>Make it your space.</h1>
           <p>Connection and privacy preferences for {channel.displayName}.</p>
         </div>

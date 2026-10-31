@@ -126,7 +126,6 @@ export function Team() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">GOOD PEOPLE. SHARED CONTEXT.</p>
           <h1>Your team</h1>
           <p>Manage access to {selected?.displayName || 'your community'}.</p>
         </div>

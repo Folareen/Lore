@@ -49,7 +49,7 @@ export function DemoHome() {
     <div className="content-stack demo-guide">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">DEMO FIXTURE · ABOUT THREE MINUTES</p>
+          <p className="record-meta">Demo fixture · About three minutes</p>
           <h1>The next stream remembers.</h1>
           <p>
             Meet cozybyte’s community: an island garden, a promise to finish the
@@ -64,7 +64,6 @@ export function DemoHome() {
       </p>
       <ol className="demo-journey">
         <li>
-          <span className="eyebrow">01 · STREAMER HOME</span>
           <h2>Carry a promise into the next stream.</h2>
           <p>
             Open the island-tour promise, change its status, then check the
@@ -85,7 +84,6 @@ export function DemoHome() {
           </div>
         </li>
         <li>
-          <span className="eyebrow">02 · MODERATOR DESK</span>
           <h2>Context before a decision.</h2>
           <p>
             Review the repeated spoiler warning, read its evidence and compare
@@ -100,7 +98,6 @@ export function DemoHome() {
           </div>
         </li>
         <li>
-          <span className="eyebrow">03 · COMMUNITY LORE</span>
           <h2>Let newcomers join the story.</h2>
           <p>
             Read the approved garden recap and public commitment. Withdraw a

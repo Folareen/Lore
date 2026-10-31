@@ -243,7 +243,7 @@ function PublicationCard({
   return (
     <article className="panel content-stack" aria-label={r.title}>
       <div className="panel-title">
-        <p className="eyebrow">{publicationLabels[r.kind]}</p>
+        <p className="record-meta">{publicationLabels[r.kind]}</p>
         <span className="status purple">{r.status}</span>
       </div>
       <h2>{r.title}</h2>

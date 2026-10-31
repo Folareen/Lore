@@ -192,7 +192,7 @@ function FlagCard({
     >
       <div className="panel-title">
         <h3>Potential inconsistency · {flag.status}</h3>
-        <span className="eyebrow">
+        <span className="record-meta">
           {flag.origin === 'human'
             ? 'Human concern'
             : 'Documented outcome comparison'}

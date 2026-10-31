@@ -41,7 +41,6 @@ export function Overview() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Your workspace</p>
           <h1>Hey, {session.user.displayName}.</h1>
           <p>Pick a channel, save a promise or see what’s next.</p>
         </div>

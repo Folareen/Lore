@@ -162,7 +162,7 @@ function CasesList() {
             key={record.id}
           >
             <div>
-              <span className="eyebrow">
+              <span className="record-meta">
                 {record.origin === 'demo_fixture'
                   ? 'Demo fixture'
                   : 'Manual import'}{' '}

@@ -36,7 +36,6 @@ export function Account() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">A FAMILIAR FACE</p>
           <h1>Account</h1>
           <p>Your Twitch account and appearance preferences.</p>
         </div>

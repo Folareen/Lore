@@ -234,18 +234,6 @@ svg {
 .muted {
   color: var(--muted);
 }
-.eyebrow,
-.tiny-label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  line-height: 1.4;
-}
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
 .live-dot {
   width: 7px;
   height: 7px;
@@ -310,9 +298,6 @@ svg {
   align-items: end;
   gap: 20px;
   padding: 62px 0 52px;
-}
-.intro-heading .eyebrow {
-  margin-bottom: 26px;
 }
 .landing h1 {
   font-size: clamp(64px, 7.3vw, 105px);
@@ -407,10 +392,6 @@ svg {
   transform: rotate(5deg);
   background: #c5b4d490;
 }
-.memory-note .tiny-label {
-  color: #71637b;
-  font-size: 12px;
-}
 .memory-note blockquote {
   font-family: 'Space Grotesk Variable', sans-serif;
   font-size: 25px;
@@ -482,10 +463,6 @@ svg {
 .receipt-icon.lilac {
   background: #cfb5ed;
   color: #6134a2;
-}
-.story-receipt .tiny-label {
-  font-size: 12px;
-  opacity: 0.8;
 }
 .story-receipt h3 {
   font-size: 22px;
@@ -560,9 +537,6 @@ svg {
   gap: 110px;
   margin: 104px 0 90px;
 }
-.story-explainer .eyebrow {
-  margin-bottom: 25px;
-}
 .story-explainer h2 {
   font-size: 43px;
 }
@@ -580,9 +554,6 @@ svg {
 }
 .section-heading {
   margin-bottom: 30px;
-}
-.section-heading .eyebrow {
-  margin-bottom: 18px;
 }
 .section-heading h2 {
   font-size: 33px;
@@ -659,10 +630,6 @@ svg {
   border-radius: var(--radius);
   padding: 43px 45px;
   margin-bottom: 70px;
-}
-.closing-section .eyebrow {
-  font-size: 12px;
-  margin-bottom: 20px;
 }
 .closing-section h2 {
   font-size: 47px;
@@ -923,14 +890,10 @@ svg {
   gap: 25px;
   margin: 29px 0 34px;
 }
-.page-heading .eyebrow {
-  color: var(--purple-ink);
-  margin-bottom: 12px;
-}
 .page-heading h1 {
   font-size: 32px;
 }
-.page-heading p:not(.eyebrow) {
+.page-heading p:not(.record-meta) {
   color: var(--muted);
   font-size: 13px;
   margin-top: 12px;
@@ -1631,10 +1594,6 @@ svg {
     padding: 25px 0 32px;
     gap: 25px;
   }
-  .intro-heading .eyebrow {
-    font-size: 12px;
-    margin-bottom: 20px;
-  }
   .landing h1 {
     font-size: clamp(49px, 11vw, 67px);
     line-height: 1.06;
@@ -1667,10 +1626,6 @@ svg {
   .stage-top {
     padding: 20px 17px;
     gap: 10px;
-  }
-  .stage-top .eyebrow {
-    font-size: 12px;
-    letter-spacing: 0.06em;
   }
   .sample-label {
     font-size: 12px;
@@ -1746,10 +1701,6 @@ svg {
   }
   .story-explainer h2 {
     font-size: 32px;
-  }
-  .story-explainer .eyebrow {
-    font-size: 12px;
-    margin-bottom: 18px;
   }
   .explanation-copy {
     font-size: 14px;
@@ -1916,14 +1867,10 @@ svg {
   .page-heading h1 {
     font-size: 28px;
   }
-  .page-heading .eyebrow {
-    font-size: 12px;
-    margin-bottom: 10px;
-  }
   .page-heading > span {
     display: none;
   }
-  .page-heading p:not(.eyebrow) {
+  .page-heading p:not(.record-meta) {
     font-size: 12px;
     line-height: 1.6;
   }
@@ -2699,7 +2646,7 @@ details[open] > summary {
   letter-spacing: -0.04em;
   line-height: 1.15;
 }
-.page-heading p:not(.eyebrow) {
+.page-heading p:not(.record-meta) {
   font-size: 14px;
   margin-top: 8px;
   max-width: 62ch;
@@ -2867,10 +2814,6 @@ details[open] > summary {
   font-size: 17px;
   line-height: 1.7;
 }
-.eyebrow {
-  letter-spacing: 0.08em;
-  font-size: 12px;
-}
 .workflow-showcase {
   display: grid;
   gap: 80px;
@@ -2886,14 +2829,6 @@ details[open] > summary {
 }
 .workflow-description {
   max-width: 440px;
-}
-.section-number {
-  display: block;
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--muted);
-  margin-bottom: 18px;
-  letter-spacing: 0.04em;
 }
 .workflow-description h2 {
   font-size: clamp(32px, 3.5vw, 46px);
@@ -3021,9 +2956,6 @@ details[open] > summary {
   gap: 70px;
   padding-block: 100px;
 }
-.landing-questions .eyebrow {
-  margin-bottom: 20px;
-}
 .landing-questions h2 {
   font-size: 38px;
   letter-spacing: -0.05em;
@@ -3055,14 +2987,11 @@ details[open] > summary {
   border-radius: 12px;
   margin-bottom: 80px;
 }
-.game-copy .eyebrow {
-  margin-bottom: 16px;
-}
 .game-copy h2 {
   font-size: 40px;
   letter-spacing: -0.05em;
 }
-.game-copy > p:not(.eyebrow) {
+.game-copy > p:not(.record-meta) {
   margin-block: 18px;
   max-width: 35ch;
 }
@@ -3165,10 +3094,7 @@ details[open] > summary {
   padding: 64px 0 78px;
   max-width: 900px;
 }
-.how-intro .eyebrow {
-  margin-bottom: 22px;
-}
-.how-intro > p:not(.eyebrow) {
+.how-intro > p:not(.record-meta) {
   color: var(--muted);
   max-width: 52ch;
   font-size: 19px;
@@ -3200,7 +3126,7 @@ details[open] > summary {
   font-size: 28px;
   letter-spacing: -0.04em;
 }
-.how-steps p:not(.section-number) {
+.how-steps p {
   color: var(--muted);
   margin-top: 18px;
   line-height: 1.8;
@@ -3446,9 +3372,6 @@ details[open] > summary {
     padding-block: 30px 36px;
     gap: 24px;
   }
-  .intro-heading .eyebrow {
-    margin-bottom: 20px;
-  }
   .intro-aside p {
     font-size: 16px;
     line-height: 1.7;
@@ -3464,9 +3387,6 @@ details[open] > summary {
     padding: 18px;
     gap: 10px;
   }
-  .stage-top .eyebrow {
-    font-size: 10px;
-  }
   .sample-label {
     font-size: 10px;
   }
@@ -3476,9 +3396,6 @@ details[open] > summary {
   .story-explainer {
     margin-block: 60px 44px;
     gap: 22px;
-  }
-  .story-explainer .eyebrow {
-    font-size: 12px;
   }
   .story-explainer h2 {
     font-size: 34px;
@@ -3605,7 +3522,7 @@ details[open] > summary {
   .page-heading h1 {
     font-size: 28px;
   }
-  .page-heading p:not(.eyebrow) {
+  .page-heading p:not(.record-meta) {
     font-size: 14px;
   }
   .page-heading > .button {
@@ -3661,7 +3578,7 @@ details[open] > summary {
   .how-intro {
     padding-block: 32px 50px;
   }
-  .how-intro > p:not(.eyebrow) {
+  .how-intro > p:not(.record-meta) {
     font-size: 17px;
   }
   .how-steps article {
@@ -3851,4 +3768,101 @@ details[open] > summary {
 
 .decision-form .field :is(input, textarea, select) {
   background-color: var(--surface);
+}
+
+/* Section titles lead directly; provenance and review states remain plain metadata. */
+.record-meta {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.landing {
+  --section-space: 96px;
+}
+.landing-intro {
+  padding-block: 64px 56px;
+  align-items: center;
+  gap: 48px;
+}
+.stage-top {
+  justify-content: flex-end;
+}
+.story-explainer {
+  margin-block: var(--section-space);
+  align-items: start;
+}
+.explanation-copy {
+  padding-top: 0;
+}
+.workflow-showcase {
+  gap: var(--section-space);
+}
+.workflow-scene {
+  gap: 64px;
+}
+.crew-compact {
+  padding-block: var(--section-space) 48px;
+}
+.section-heading {
+  margin-bottom: 24px;
+}
+.landing-questions {
+  padding-block: var(--section-space);
+}
+.memory-game {
+  margin-bottom: var(--section-space);
+}
+.how-intro {
+  padding-block: 64px 72px;
+}
+.how-permissions h2 {
+  margin-top: 0;
+}
+.content-stack {
+  gap: 24px;
+}
+.content-stack > .page-heading {
+  margin-block: 8px 4px;
+}
+.panel.content-stack {
+  gap: 16px;
+}
+.page-heading .record-meta {
+  margin-bottom: 8px;
+}
+@media (max-width: 900px) {
+  .landing-intro {
+    gap: 28px;
+  }
+  .workflow-scene {
+    gap: 32px;
+  }
+}
+@media (max-width: 600px) {
+  .landing {
+    --section-space: 56px;
+  }
+  .landing-intro {
+    padding-block: 32px 40px;
+    gap: 24px;
+  }
+  .story-explainer {
+    gap: 24px;
+  }
+  .workflow-scene {
+    gap: 24px;
+  }
+  .crew-compact {
+    padding-bottom: 32px;
+  }
+  .section-heading {
+    margin-bottom: 20px;
+  }
+  .how-intro {
+    padding-block: 32px 48px;
+  }
+  .content-stack > .page-heading {
+    margin-block: 8px 0;
+  }
 }

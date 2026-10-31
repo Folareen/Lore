@@ -49,6 +49,8 @@ Keep purple as the primary action. Mint, coral, butter yellow, and lilac support
 
 ## Content and shipping
 
+- Lead sections with descriptive headings. Do not add decorative eyebrows or numbered kicker labels. Keep necessary source, demo and review states as plain metadata. Use consistent section spacing and avoid stacking heading margins with container gaps.
+
 Write like a helpful member of the crew: short, clear, and lightly playful. Don’t make jokes in permission errors or destructive confirmations. Avoid fake testimonials, invented activity metrics, AI sparkle motifs, generic gradient blobs, repetitive card grids, or unbuilt features presented as working.
 
 The public `/demo` uses labeled demo fixtures and browser-local state only. It never signs someone in or accesses a private channel. Real `/app` pages authenticate with NestJS and use its role checks and CSRF-protected mutations.

@@ -169,7 +169,7 @@ export function SummaryGenerator({
               </button>
               {draft && (
                 <article className="content-stack">
-                  <p className="eyebrow">Gemini draft · not published</p>
+                  <p className="record-meta">Gemini draft · not published</p>
                   <h3>{draft.title}</h3>
                   <p className="case-prose">{draft.body}</p>
                   <p>Suggested chat wording: {draft.chatSummary}</p>

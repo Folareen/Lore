@@ -38,12 +38,10 @@ export function LandingStory() {
   return (
     <section className="story-stage" aria-label="An illustrative Lore story">
       <div className="stage-top">
-        <span className="eyebrow">A LITTLE LORE, FOR EXAMPLE</span>
         <span className="sample-label">Illustrative story</span>
       </div>
       <div className="stage-scene">
         <article className="memory-note" key={chapter}>
-          <span className="tiny-label">IT STARTED IN CHAT</span>
           <blockquote>{story.quote}</blockquote>
           <div className="person">
             <Avatar name={story.person} size={36} />
@@ -66,7 +64,6 @@ export function LandingStory() {
           <div className={`receipt-icon ${story.color}`}>
             <Check size={25} />
           </div>
-          <span className="tiny-label">THE PART WE KEEP</span>
           <h3>{story.status}</h3>
           <p>{story.detail}</p>
           <CornerDownRight size={24} />

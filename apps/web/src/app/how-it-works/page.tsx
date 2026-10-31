@@ -16,7 +16,6 @@ export default function HowItWorks() {
       <MarketingHeader />
       <main id="main-content" className="how-page">
         <section className="how-intro">
-          <p className="eyebrow">A quick tour</p>
           <h1>
             One community.
             <br />
@@ -37,7 +36,6 @@ export default function HowItWorks() {
               <Users size={26} aria-hidden="true" />
             </span>
             <div>
-              <p className="section-number">01 / Your space</p>
               <h2>Connect your channel. Invite your people.</h2>
               <p>
                 Sign in with Twitch and connect your own channel. Add moderators
@@ -51,7 +49,6 @@ export default function HowItWorks() {
               <Bookmark size={26} aria-hidden="true" />
             </span>
             <div>
-              <p className="section-number">02 / Between streams</p>
               <h2>Keep promises where you’ll see them.</h2>
               <p>
                 Save a commitment in the dashboard, or enable live capture and
@@ -70,7 +67,6 @@ export default function HowItWorks() {
               <ShieldCheck size={26} aria-hidden="true" />
             </span>
             <div>
-              <p className="section-number">03 / Behind the scenes</p>
               <h2>Give the next mod the context.</h2>
               <p>
                 Keep incident details, applicable rules, evidence and human
@@ -91,7 +87,6 @@ export default function HowItWorks() {
               <Users size={26} aria-hidden="true" />
             </span>
             <div>
-              <p className="section-number">04 / Out in the community</p>
               <h2>Publish something worth catching up on.</h2>
               <p>
                 Your team prepares community stories and recap drafts. An owner
@@ -107,7 +102,6 @@ export default function HowItWorks() {
           </article>
         </section>
         <section id="permissions" className="how-permissions">
-          <p className="eyebrow">You choose what’s connected</p>
           <h2>Sign-in is just the beginning.</h2>
           <p>
             Logging in identifies your Twitch account. It doesn’t turn on chat

@@ -67,7 +67,7 @@ export function DemoChat() {
     <div className="content-stack">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">DEMO FIXTURE · CHAT SIMULATION</p>
+          <p className="record-meta">Demo fixture · Chat simulation</p>
           <h1>Try a command.</h1>
           <p>
             Nothing is sent to Twitch. This illustrates the promise and catch-up

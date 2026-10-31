@@ -354,7 +354,7 @@ function CandidateCard({
       aria-label={draft?.summary || 'Expired source'}
     >
       <div className="panel-title">
-        <span className="eyebrow">
+        <span className="record-meta">
           {draft ? candidateKindLabels[draft.task_type] : 'Source unavailable'}
         </span>
         <span className="status purple">
