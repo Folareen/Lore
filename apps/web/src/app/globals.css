@@ -665,10 +665,11 @@ svg {
 }
 .auth-story {
   background: var(--purple-soft);
-  padding: 150px 64px 48px;
+  padding: 120px 64px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  position: relative;
   overflow: hidden;
 }
 .auth-story h2 {
@@ -688,6 +689,9 @@ svg {
 .auth-story > p {
   font-size: 12px;
   color: var(--muted);
+  position: absolute;
+  bottom: 40px;
+  inset-inline: 64px;
 }
 .auth-form-side {
   display: flex;
@@ -1473,7 +1477,11 @@ svg {
     padding: 32px 30px 0 35px;
   }
   .auth-story {
-    padding: 130px 35px 35px;
+    padding: 110px 35px;
+  }
+  .auth-story > p {
+    bottom: 32px;
+    inset-inline: 35px;
   }
   .auth-form-side {
     padding: 45px 30px;
