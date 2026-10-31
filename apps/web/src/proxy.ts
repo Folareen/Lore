@@ -8,6 +8,7 @@ export function proxy(request: NextRequest) {
     // Generated avatar colors and next-themes use inline styles; scripts still require a nonce.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
+    "media-src 'self' blob:",
     "font-src 'self'",
     `connect-src 'self'${dev ? ' ws:' : ''}`,
     "object-src 'none'",

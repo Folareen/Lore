@@ -111,3 +111,18 @@ it.each(['user:read:chat', true, {}])(
     ).rejects.toThrow('Twitch returned an invalid response');
   },
 );
+it('adds optional moderation reads while preserving supported existing capture and chat grants', () => {
+  const scopes = new URL(
+    new TwitchClient().authorizationUrl('state', true, false, true, [
+      'user:write:chat',
+      'unrelated:permission',
+    ]),
+  ).searchParams
+    .get('scope')!
+    .split(' ');
+  expect(scopes).toContain('channel:moderate');
+  expect(scopes).toContain('moderator:read:unban_requests');
+  expect(scopes).toContain('user:write:chat');
+  expect(scopes).toContain('user:read:chat');
+  expect(scopes).not.toContain('unrelated:permission');
+});

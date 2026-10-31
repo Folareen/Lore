@@ -12,6 +12,7 @@ import type {
   Handoff,
   HandoffItem,
   ManagedPublication,
+  MicrophoneCapture,
 } from '@lore/shared';
 import {
   check,
@@ -68,6 +69,28 @@ export const channels = pgTable(
       withTimezone: true,
     }),
     captureRequested: boolean('capture_requested').default(false).notNull(),
+    moderationImportsEnabled: boolean('moderation_imports_enabled')
+      .default(false)
+      .notNull(),
+    moderationImportsEnabledAt: timestamp('moderation_imports_enabled_at', {
+      withTimezone: true,
+    }),
+    promiseConfirmationsEnabled: boolean('promise_confirmations_enabled')
+      .default(false)
+      .notNull(),
+    promiseConfirmationsEnabledAt: timestamp(
+      'promise_confirmations_enabled_at',
+      { withTimezone: true },
+    ),
+    lastPromiseConfirmationAt: timestamp('last_promise_confirmation_at', {
+      withTimezone: true,
+    }),
+    publicSummaryAiEnabled: boolean('public_summary_ai_enabled')
+      .default(false)
+      .notNull(),
+    microphoneEnabled: boolean('microphone_enabled').default(false).notNull(),
+    featuresGeneration: integer('features_generation').default(0).notNull(),
+    workspaceRevision: integer('workspace_revision').default(0).notNull(),
     aiExtractionEnabled: boolean('ai_extraction_enabled')
       .default(false)
       .notNull(),
@@ -254,7 +277,7 @@ export const sourceEvents = pgTable(
     unique('source_events_channel_id_unique').on(table.channelId, table.id),
     check(
       'source_events_origin_private',
-      sql`${table.origin} = 'live_twitch' AND ${table.visibility} = 'private'`,
+      sql`${table.origin} IN ('live_twitch', 'manual_import') AND ${table.visibility} = 'private'`,
     ),
   ],
 );
@@ -301,6 +324,9 @@ export const auditEvents = pgTable(
     details: jsonb('details')
       .$type<{
         role?: 'moderator' | 'team';
+        index?: number;
+        reason?: string;
+        openLoopId?: string | null;
         chatRetentionDays?: number;
         overlay?: {
           entryIds: string[];
@@ -401,7 +427,7 @@ export const openLoops = pgTable(
     check('open_loops_version_positive', sql`${table.version} > 0`),
     check(
       'open_loops_capture_origin',
-      sql`(${table.captureMethod} IN ('chat_command', 'ai_review') AND ${table.origin} = 'live_twitch') OR (${table.captureMethod} = 'dashboard' AND ${table.origin} IN ('manual_import', 'demo_fixture'))`,
+      sql`(${table.captureMethod} = 'chat_command' AND ${table.origin} = 'live_twitch') OR (${table.captureMethod} = 'ai_review' AND ${table.origin} IN ('live_twitch', 'manual_import')) OR (${table.captureMethod} = 'dashboard' AND ${table.origin} IN ('manual_import', 'demo_fixture'))`,
     ),
   ],
 );
@@ -1030,6 +1056,11 @@ export const catchupReplies = pgTable(
       .notNull()
       .references(() => channels.id, { onDelete: 'cascade' }),
     messageId: text('message_id').notNull(),
+    kind: text('kind')
+      .$type<'catchup' | 'promise'>()
+      .default('catchup')
+      .notNull(),
+    openLoopId: uuid('open_loop_id'),
     generation: integer('generation').notNull(),
     status: text('status')
       .$type<
@@ -1084,3 +1115,51 @@ export const demoDatasets = pgTable('demo_datasets', {
     .notNull(),
   updatedAt: updatedAt(),
 });
+
+export const microphoneCaptures = pgTable(
+  'microphone_captures',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    sourceEventId: text('source_event_id').notNull(),
+    transcript: text('transcript'),
+    drafts: jsonb('drafts').$type<CandidateDraft[]>(),
+    decisions: jsonb('decisions')
+      .$type<MicrophoneCapture['decisions']>()
+      .default({})
+      .notNull(),
+    model: text('model').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    foreignKey({
+      name: 'microphone_source_fk',
+      columns: [t.channelId, t.sourceEventId],
+      foreignColumns: [sourceEvents.channelId, sourceEvents.id],
+    }).onDelete('cascade'),
+    index('microphone_channel_expiry_idx').on(t.channelId, t.expiresAt),
+  ],
+);
+export const caseImports = pgTable(
+  'case_imports',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    sourceEventId: text('source_event_id').notNull(),
+    caseId: uuid('case_id').notNull(),
+    externalKey: text('external_key').notNull(),
+  },
+  (t) => [
+    unique('case_import_external_unique').on(t.channelId, t.externalKey),
+    foreignKey({
+      name: 'case_import_case_fk',
+      columns: [t.channelId, t.caseId],
+      foreignColumns: [cases.channelId, cases.id],
+    }).onDelete('cascade'),
+  ],
+);

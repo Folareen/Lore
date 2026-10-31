@@ -134,3 +134,79 @@ it('validates a successful transport response before returning application draft
     headers: { 'x-goog-api-key': 'mock-key' },
   });
 });
+function providerOutput(value: unknown) {
+  return new Response(
+    JSON.stringify({
+      candidates: [
+        {
+          finishReason: 'STOP',
+          content: { parts: [{ text: JSON.stringify(value) }] },
+        },
+      ],
+    }),
+  );
+}
+it('rejects fabricated or omitted public citations and never sends private fields in summary inputs', async () => {
+  const id = '00000000-0000-4000-8000-000000000001';
+  const publicSource = { id, title: 'Garden', body: 'The garden is open.' };
+  const result = {
+    title: 'Catch up',
+    body: 'Visit the garden.',
+    chatSummary: 'Garden time.',
+    sourceIds: [id],
+  };
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(providerOutput(result))
+    .mockResolvedValueOnce(
+      providerOutput({
+        ...result,
+        sourceIds: ['00000000-0000-4000-8000-000000000002'],
+      }),
+    );
+  vi.stubGlobal('fetch', fetcher);
+  expect(await new GeminiProvider().summarize([publicSource])).toEqual(result);
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.contents[0].parts[0].text).toContain(
+    JSON.stringify([publicSource]),
+  );
+  expect(body.systemInstruction.parts[0].text).toContain('UNTRUSTED DATA');
+  await expect(new GeminiProvider().summarize([publicSource])).rejects.toThrow(
+    'invalid_output',
+  );
+});
+it('requires microphone suggestions to quote their transcript and remain unconfirmed', async () => {
+  const transcript = source.text;
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(providerOutput({ transcript, suggestions: [draft] }))
+    .mockResolvedValueOnce(
+      providerOutput({
+        transcript,
+        suggestions: [{ ...draft, source_quote: 'Fabricated speech' }],
+      }),
+    )
+    .mockResolvedValueOnce(
+      providerOutput({
+        transcript,
+        suggestions: [{ ...draft, requires_human_approval: false }],
+      }),
+    );
+  vi.stubGlobal('fetch', fetcher);
+  expect(
+    (
+      await new GeminiProvider().listen(
+        Buffer.from('synthetic audio'),
+        source.id,
+      )
+    ).suggestions,
+  ).toEqual([draft]);
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.contents[0].parts[1].inlineData.mimeType).toBe('audio/wav');
+  await expect(
+    new GeminiProvider().listen(Buffer.from('audio'), source.id),
+  ).rejects.toThrow('invalid_output');
+  await expect(
+    new GeminiProvider().listen(Buffer.from('audio'), source.id),
+  ).rejects.toThrow('invalid_output');
+});

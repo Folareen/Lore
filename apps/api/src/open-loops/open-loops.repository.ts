@@ -29,6 +29,7 @@ import {
   memberships,
   openLoopHistory,
   openLoops,
+  publicEntries,
   sourceEvents,
 } from '../database/schema';
 import { parsePromiseCommand } from './promise-command';
@@ -298,6 +299,7 @@ export class OpenLoopsRepository {
     input: {
       channelId: string;
       candidateId: string;
+      origin?: 'live_twitch' | 'manual_import';
       sourceEventId: string;
       excerpt: string;
       wording: string;
@@ -310,7 +312,7 @@ export class OpenLoopsRepository {
       ...input,
       captureMethod: 'ai_review',
       captureKey: input.candidateId,
-      origin: 'live_twitch',
+      origin: input.origin ?? 'live_twitch',
     });
   }
   // Called only inside ingestion's channel-locked transaction after signature, consent and deletion checks.
@@ -333,7 +335,7 @@ export class OpenLoopsRepository {
         ),
       );
     if (existing) return;
-    await this.insert(tx, {
+    return this.insert(tx, {
       channelId,
       wording,
       sourceEventId,
@@ -413,12 +415,72 @@ export class OpenLoopsRepository {
           asc(openLoops.id),
         )
         .limit(20);
+      const [previous] = await tx
+        .select({ at: sourceEvents.occurredAt })
+        .from(sourceEvents)
+        .where(
+          and(
+            eq(sourceEvents.channelId, channelId),
+            eq(sourceEvents.type, 'stream.offline'),
+            isNotNull(sourceEvents.processedAt),
+            sql`${sourceEvents.payload} IS NOT NULL AND ${sourceEvents.expiresAt}>now()`,
+          ),
+        )
+        .orderBy(desc(sourceEvents.occurredAt))
+        .limit(1);
+      const since = previous?.at ?? new Date(Date.now() - 7 * 86400000);
+      const recent = await tx
+        .select({
+          id: openLoops.id,
+          wording: openLoops.wording,
+          status: openLoops.status,
+          updatedAt: openLoops.updatedAt,
+        })
+        .from(openLoops)
+        .where(
+          and(
+            eq(openLoops.channelId, channelId),
+            sql`${openLoops.updatedAt}>=${since}`,
+          ),
+        )
+        .orderBy(desc(openLoops.updatedAt), desc(openLoops.id))
+        .limit(21);
+      const community = await tx
+        .select({
+          id: publicEntries.id,
+          title: publicEntries.title,
+          body: publicEntries.body,
+          publishedAt: publicEntries.publishedAt,
+        })
+        .from(publicEntries)
+        .where(
+          and(
+            eq(publicEntries.channelId, channelId),
+            eq(publicEntries.status, 'published'),
+            sql`${publicEntries.publishedAt}>=${since}`,
+          ),
+        )
+        .orderBy(desc(publicEntries.publishedAt), desc(publicEntries.id))
+        .limit(11);
       return {
         channelId,
         generatedAt: new Date().toISOString(),
         activeCount: total.value,
         items,
         method: 'saved_open_loops' as const,
+        context: {
+          since: since.toISOString(),
+          basis: previous
+            ? ('previous_stream_end' as const)
+            : ('recent_seven_days' as const),
+          recentChanges: recent
+            .slice(0, 20)
+            .map((r) => ({ ...r, updatedAt: r.updatedAt.toISOString() })),
+          community: community
+            .slice(0, 10)
+            .map((r) => ({ ...r, publishedAt: r.publishedAt!.toISOString() })),
+          truncated: recent.length > 20 || community.length > 10,
+        },
       };
     });
   }

@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import { Plus, ShieldCheck, Trash2, Users, RefreshCw } from 'lucide-react';
 import {
@@ -24,6 +25,7 @@ export function Team() {
   const [removing, setRemoving] = useState<Membership | null>(null);
   const [revision, setRevision] = useState(0);
   const channelId = selected?.id;
+  useLiveRefresh(channelId ?? '', () => setRevision((value) => value + 1));
   const allowed = selected?.role === 'owner' && selected.connected;
   useEffect(() => {
     setLoadError('');

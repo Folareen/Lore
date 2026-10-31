@@ -1,6 +1,6 @@
 'use client';
 import { useDemo } from '../demo/demo-seed-context';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import {
@@ -116,6 +116,26 @@ export function WorkspaceProvider({
       ]),
     ),
   );
+  useEffect(() => {
+    if (preview) return;
+    const controller = new AbortController();
+    const changed = () => {
+      void apiRequest('/channels', z.array(channelResponseSchema), {
+        signal: controller.signal,
+      })
+        .then((rows) => {
+          if (!controller.signal.aborted) setChannels(rows);
+        })
+        .catch(() => {
+          /* The stream handles access loss; retain current metadata during transient outages. */
+        });
+    };
+    window.addEventListener('lore:workspace-consent', changed);
+    return () => {
+      controller.abort();
+      window.removeEventListener('lore:workspace-consent', changed);
+    };
+  }, [preview]);
   const selected = channels.find((channel) => channel.id === selectedId);
   const href: Workspace['href'] = (view) =>
     preview

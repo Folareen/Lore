@@ -2621,3 +2621,14 @@ body:has(.obs-root) > .skip-link {
     flex-shrink: 0;
   }
 }
+
+.source-choices {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+audio {
+  max-width: 100%;
+}

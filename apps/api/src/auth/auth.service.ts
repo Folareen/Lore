@@ -25,7 +25,7 @@ export class AuthService {
     @Inject(TwitchClient) private readonly twitch: TwitchClient,
     @Inject(TokenService) private readonly tokens: TokenService,
   ) {}
-  async beginLogin(expectedUserId?: string, chat = false) {
+  async beginLogin(expectedUserId?: string, chat = false, moderation = false) {
     this.twitch.configured();
     const state = randomToken();
     const browser = randomToken();
@@ -41,9 +41,21 @@ export class AuthService {
       expectedUserId,
       expiresAt: new Date(Date.now() + oauthMaxAge),
     });
+    const [existing] = expectedUserId
+      ? await this.infrastructure.db
+          .select({ scopes: oauthConnections.scopes })
+          .from(oauthConnections)
+          .where(eq(oauthConnections.userId, expectedUserId))
+      : [];
     return {
       browser,
-      url: this.twitch.authorizationUrl(state, Boolean(expectedUserId), chat),
+      url: this.twitch.authorizationUrl(
+        state,
+        Boolean(expectedUserId),
+        chat,
+        moderation,
+        existing?.scopes,
+      ),
     };
   }
   async completeLogin(

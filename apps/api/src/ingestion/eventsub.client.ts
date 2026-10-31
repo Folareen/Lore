@@ -165,6 +165,9 @@ export class EventsubClient {
       condition: {
         broadcaster_user_id: broadcasterId,
         ...(type.startsWith('channel.chat.') ? { user_id: broadcasterId } : {}),
+        ...(type.startsWith('channel.unban_request.')
+          ? { moderator_user_id: broadcasterId }
+          : {}),
       },
       transport: {
         method: 'webhook',

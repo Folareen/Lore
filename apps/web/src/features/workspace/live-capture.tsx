@@ -4,6 +4,7 @@ import { Radio } from 'lucide-react';
 import {
   ingestionStatusSchema,
   twitchEventTypes,
+  moderationEventTypes,
   type Channel,
   type IngestionStatus,
 } from '@lore/shared';
@@ -67,7 +68,15 @@ export function LiveCapture({ channel }: { channel: Channel }) {
   const enabled =
     status?.subscriptions.filter((sub) => sub.status === 'enabled').length || 0;
   const ready =
-    status?.requested && !status.error && enabled === twitchEventTypes.length;
+    status?.requested &&
+    !status.error &&
+    twitchEventTypes
+      .filter((type) => !moderationEventTypes.some((mod) => mod === type))
+      .every((type) =>
+        status.subscriptions.some(
+          (sub) => sub.type === type && sub.status === 'enabled',
+        ),
+      );
   return (
     <section className="panel">
       <div className="panel-title">
@@ -157,9 +166,9 @@ export function LiveCapture({ channel }: { channel: Channel }) {
                         </a>
                       )}
                       <p>
-                        {enabled} of {twitchEventTypes.length} event connections
-                        ready. {status.pending} deliveries waiting;{' '}
-                        {status.failed} failed.
+                        {enabled} event connections ready (6 core; up to 3
+                        optional moderation connections). {status.pending}{' '}
+                        deliveries waiting; {status.failed} failed.
                       </p>
                       {status.lastReceivedAt && (
                         <p>

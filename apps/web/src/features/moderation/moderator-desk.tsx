@@ -1,4 +1,5 @@
 'use client';
+import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { type CaseDetail, type ModerationDesk } from '@lore/shared';
@@ -60,6 +61,7 @@ function WorkflowDesk({ record }: { record?: CaseDetail }) {
   const channelId = selected!.id,
     editable = selected!.connected;
   const refresh = () => setRevision((r) => r + 1);
+  useLiveRefresh(channelId, () => setRevision((value) => value + 1));
   useEffect(() => {
     const c = new AbortController();
     setLoading(true);

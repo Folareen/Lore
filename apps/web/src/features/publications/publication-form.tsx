@@ -1,8 +1,10 @@
 'use client';
+import type { z } from 'zod';
 import { useEffect, useState } from 'react';
 import {
   publicationFieldsSchema,
   type ManagedPublication,
+  summaryDraftSchema,
   type PublicationFields,
   type OpenLoop,
 } from '@lore/shared';
@@ -12,20 +14,28 @@ import { publicationLabels } from './public-lore';
 import { WorkflowForm } from '../moderation/workflow-forms';
 export function PublicationForm({
   initial,
+  suggested,
   onSave,
   onCancel,
 }: {
   initial?: ManagedPublication;
+  suggested?: z.infer<typeof summaryDraftSchema>;
   onSave: (fields: PublicationFields) => Promise<void>;
   onCancel: () => void;
 }) {
   const api = usePublications(),
     { selected, loadLoops } = useWorkspace();
-  const [kind, setKind] = useState(initial?.kind ?? 'milestone'),
-    [title, setTitle] = useState(initial?.title ?? ''),
-    [body, setBody] = useState(initial?.body ?? ''),
-    [chatSummary, setChatSummary] = useState(initial?.chatSummary ?? ''),
-    [sources, setSources] = useState(new Set(initial?.sourceIds ?? []));
+  const [kind, setKind] = useState(
+      initial?.kind ?? (suggested ? 'summary' : 'milestone'),
+    ),
+    [title, setTitle] = useState(initial?.title ?? suggested?.title ?? ''),
+    [body, setBody] = useState(initial?.body ?? suggested?.body ?? ''),
+    [chatSummary, setChatSummary] = useState(
+      initial?.chatSummary ?? suggested?.chatSummary ?? '',
+    ),
+    [sources, setSources] = useState(
+      new Set(initial?.sourceIds ?? suggested?.sourceIds ?? []),
+    );
   const [choices, setChoices] = useState<ManagedPublication[]>([]),
     [cursor, setCursor] = useState<string | null>(null),
     [promises, setPromises] = useState<OpenLoop[]>([]),
@@ -67,6 +77,12 @@ export function PublicationForm({
         appeals and repair plans out of public copy. Saving creates a draft for
         human review.
       </p>
+      {suggested && (
+        <p className="notice">
+          Gemini draft · verify every claim and source. Saving does not publish
+          it.
+        </p>
+      )}
       <WorkflowForm
         label="Save community draft"
         onCancel={onCancel}

@@ -73,6 +73,20 @@ export class AuthController {
     });
     response.redirect(login.url);
   }
+  @Get('twitch/moderation')
+  @UseGuards(SessionGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async moderation(
+    @Req() request: AuthenticatedRequest,
+    @Res() response: Response,
+  ) {
+    const login = await this.auth.beginLogin(request.auth.user.id, false, true);
+    response.cookie('lore_oauth', login.browser, {
+      ...stateOptions,
+      maxAge: oauthMaxAge,
+    });
+    response.redirect(login.url);
+  }
   @Get('twitch/callback')
   async callback(
     @Query() query: unknown,

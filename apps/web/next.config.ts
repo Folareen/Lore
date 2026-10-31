@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'no-referrer' },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), payment=()',
+            value: 'camera=(), microphone=(self), geolocation=(), payment=()',
           },
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
           ...(process.env.APP_ORIGIN?.startsWith('https://')

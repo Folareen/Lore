@@ -63,6 +63,9 @@ export class EventsubWebhookController {
       subscription.transport.callback !== env.TWITCH_EVENTSUB_CALLBACK_URL ||
       (subscription.type.startsWith('channel.chat.') &&
         subscription.condition.user_id !==
+          subscription.condition.broadcaster_user_id) ||
+      (subscription.type.startsWith('channel.unban_request.') &&
+        subscription.condition.moderator_user_id !==
           subscription.condition.broadcaster_user_id)
     )
       throw new BadRequestException('EventSub subscription mismatch');

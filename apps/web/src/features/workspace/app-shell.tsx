@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { WorkspaceStream } from '../continuity/live-updates';
 import { OverlayProvider } from '../overlay/overlay-context';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
@@ -133,7 +134,10 @@ function Shell({
             </Link>
           </div>
         )}
-        <main id="main-content">{children}</main>
+        <main id="main-content">
+          <WorkspaceStream />
+          {children}
+        </main>
       </div>
     </div>
   );

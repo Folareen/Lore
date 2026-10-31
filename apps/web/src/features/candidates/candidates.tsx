@@ -1,4 +1,6 @@
 'use client';
+import { useLiveRefresh } from '../continuity/live-updates';
+import { MicrophonePanel } from '../continuity/microphone';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ClipboardCheck } from 'lucide-react';
@@ -58,6 +60,7 @@ function ReviewPanel() {
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
   const channelId = selected!.id;
+  useLiveRefresh(channelId, () => setRevision((value) => value + 1));
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -113,6 +116,7 @@ function ReviewPanel() {
   );
   return (
     <div className="content-stack">
+      <MicrophonePanel />
       <section className="panel content-stack" aria-label="Extraction settings">
         <div className="panel-title">
           <h2>Catch possible follow-ups</h2>

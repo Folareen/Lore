@@ -22,6 +22,7 @@ import {
   queueNames,
   sessionResponseSchema,
   twitchEventTypes,
+  moderationEventTypes,
   openLoopResponseSchema,
   openLoopHistorySchema,
   openLoopPageSchema,
@@ -781,7 +782,11 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
         .status,
     ).toBe(200);
     await eventually(
-      async () => remoteSubscriptions.size === twitchEventTypes.length,
+      async () =>
+        remoteSubscriptions.size ===
+        twitchEventTypes.filter(
+          (type) => !moderationEventTypes.some((mod) => mod === type),
+        ).length,
     );
     const status = ingestionStatusSchema.parse(
       await (await request(`/channels/${channelId}/ingestion`, owner)).json(),

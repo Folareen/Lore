@@ -1,3 +1,4 @@
+import { purgeChannel } from '../retention/channel-retention';
 import { overlayTokens } from '../database/schema';
 import {
   Inject,
@@ -99,6 +100,7 @@ export class TokenService
           })
           .where(eq(channels.ownerUserId, userId))
           .returning({ id: channels.id });
+        for (const channel of disconnected) await purgeChannel(tx, channel.id);
         if (disconnected.length)
           await tx
             .update(overlayTokens)

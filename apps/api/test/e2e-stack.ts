@@ -27,7 +27,7 @@ const webOrigin = 'http://127.0.0.1:4322';
 const children: ChildProcess[] = [];
 let stopping = false;
 let stage = 'create database';
-const mock = createServer((req, res) => {
+const mock = createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   if (req.url === '/oauth2/validate') {
     const id = req.headers.authorization?.replace('OAuth access-', '') ?? '';
@@ -38,6 +38,53 @@ const mock = createServer((req, res) => {
         login: `user${id}`,
         scopes: [],
         expires_in: 86400,
+      }),
+    );
+  }
+  if (req.url?.endsWith(':generateContent')) {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(Buffer.from(chunk));
+    const body = JSON.parse(Buffer.concat(chunks).toString());
+    const audio = body.contents[0].parts.some(
+      (p: { inlineData?: unknown }) => p.inlineData,
+    );
+    let result;
+    if (audio) {
+      const sourceId = body.systemInstruction.parts[0].text.match(
+        /Use only source ID (microphone:[^ ]+)/,
+      )[1];
+      result = {
+        transcript: 'I will complete the browser garden tour.',
+        suggestions: [
+          {
+            task_type: 'commitment',
+            summary: 'Complete the browser garden tour.',
+            source_record_ids: [sourceId],
+            source_quote: 'I will complete the browser garden tour.',
+            evidence_gaps: [],
+            uncertainties: ['Verify transcription.'],
+            suggested_next_step: 'Review with the streamer.',
+            requires_human_approval: true,
+          },
+        ],
+      };
+    } else {
+      const sources = JSON.parse(body.contents[0].parts[0].text.split('\n')[1]);
+      result = {
+        title: 'Browser Gemini summary',
+        body: 'The community garden is ready.',
+        chatSummary: 'The garden is ready.',
+        sourceIds: sources.map((s: { id: string }) => s.id),
+      };
+    }
+    return void res.end(
+      JSON.stringify({
+        candidates: [
+          {
+            finishReason: 'STOP',
+            content: { parts: [{ text: JSON.stringify(result) }] },
+          },
+        ],
       }),
     );
   }
@@ -156,7 +203,9 @@ async function main() {
     TWITCH_TEST_BASE_URL: `http://127.0.0.1:${address.port}`,
     TWITCH_EVENTSUB_SECRET: '',
     TWITCH_EVENTSUB_CALLBACK_URL: '',
-    GEMINI_API_KEY: '',
+    GEMINI_API_KEY: 'synthetic',
+    GEMINI_MODEL: 'test-model',
+    AI_TEST_BASE_URL: `http://127.0.0.1:${address.port}`,
     R2_ACCOUNT_ID: '',
     R2_BUCKET: '',
     R2_ACCESS_KEY_ID: '',

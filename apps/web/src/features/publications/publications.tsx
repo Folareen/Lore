@@ -1,9 +1,12 @@
 'use client';
+import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { SummaryGenerator } from '../continuity/summary-generator';
 import { z } from 'zod';
 import {
   createPublicationSchema,
+  summaryDraftSchema,
   editPublicationSchema,
   publicationActionSchema,
   publicationHistorySchema,
@@ -36,7 +39,10 @@ function PublishingDesk() {
     [revision, setRevision] = useState(0),
     [creating, setCreating] = useState(false),
     [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const [suggested, setSuggested] =
+    useState<z.infer<typeof summaryDraftSchema>>();
   const refresh = () => setRevision((v) => v + 1);
+  useLiveRefresh(channelId, () => setRevision((value) => value + 1));
   useEffect(() => {
     const c = new AbortController();
     setLoading(true);
@@ -103,11 +109,19 @@ function PublishingDesk() {
           them.
         </p>
       )}
+      <SummaryGenerator
+        onUse={(draft) => {
+          setSuggested(draft);
+          setRequestId(crypto.randomUUID());
+          setCreating(true);
+        }}
+      />
       <div className="button-row">
         <button
           className="button primary"
           disabled={!selected!.connected}
           onClick={() => {
+            setSuggested(undefined);
             setRequestId(crypto.randomUUID());
             setCreating(true);
           }}
@@ -133,6 +147,8 @@ function PublishingDesk() {
       </div>
       {creating && (
         <PublicationForm
+          key={requestId}
+          suggested={suggested}
           onCancel={() => setCreating(false)}
           onSave={async (fields) => {
             await api.create(

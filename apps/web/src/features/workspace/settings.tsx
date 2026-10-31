@@ -7,6 +7,7 @@ import { useWorkspace } from './workspace-context';
 import { Avatar } from '../../components/avatar';
 import { ConfirmDialog } from '../../components/confirm-dialog';
 import { RetentionStatus } from './retention-status';
+import { FeatureControls } from '../continuity/feature-controls';
 import { LiveCapture } from './live-capture';
 export function ChannelSettings() {
   const { selected, href } = useWorkspace();
@@ -113,6 +114,7 @@ function SettingsPanel({ channel }: { channel: Channel }) {
             them.
           </p>
         )}
+        <FeatureControls />
         <LiveCapture
           key={`${channel.id}-${channel.connected}`}
           channel={channel}
