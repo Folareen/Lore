@@ -18,6 +18,6 @@ export async function serverApi<T>(
   );
   if (response.status === 401) redirect('/login?expired=1');
   if (!response.ok)
-    throw new Error('Your workspace could not be loaded. Please try again.');
+    throw new Error('Your community could not be loaded. Please try again.');
   return schema.parse(await response.json());
 }

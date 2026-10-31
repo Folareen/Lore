@@ -158,21 +158,21 @@ test('mobile workspace navigation opens, closes with Escape and follows a destin
   await page.goto('/demo');
   const trigger = page.getByRole('button', { name: 'Open navigation' });
   await expect(
-    page.getByRole('navigation', { name: 'Workspace navigation' }),
+    page.getByRole('navigation', { name: 'Community navigation' }),
   ).toBeHidden();
   await trigger.click();
   await expect(
     page.getByRole('button', { name: 'Close navigation' }),
   ).toHaveAttribute('aria-expanded', 'true');
   await page
-    .getByRole('navigation', { name: 'Workspace navigation' })
+    .getByRole('navigation', { name: 'Community navigation' })
     .getByRole('link', { name: 'Account', exact: true })
     .focus();
   await page.keyboard.press('Escape');
   await expect(trigger).toBeFocused();
   await trigger.click();
   await page
-    .getByRole('navigation', { name: 'Workspace navigation' })
+    .getByRole('navigation', { name: 'Community navigation' })
     .getByRole('link', { name: 'Open loops', exact: true })
     .click();
   await expect(

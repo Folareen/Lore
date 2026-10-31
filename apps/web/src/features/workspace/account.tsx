@@ -57,7 +57,6 @@ export function Account() {
               <strong>{session.user.displayName}</strong>
               <small>@{session.user.login}</small>
             </div>
-            <span className="status purple">Twitch sign-in</span>
           </div>
           <div className="form-grid" style={{ marginTop: 26 }}>
             <div className="field">

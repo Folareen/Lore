@@ -60,8 +60,8 @@ export function LoginScreen({
           </span>
           <h1>Welcome in.</h1>
           <p>
-            Sign in with Twitch to open your workspace. First time? We’ll create
-            your Lore account.
+            Sign in with Twitch to open Lore. First time? We’ll create your Lore
+            account.
           </p>
           {expired && (
             <p className="notice">

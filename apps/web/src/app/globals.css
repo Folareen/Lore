@@ -759,13 +759,6 @@ svg {
   margin: 0 17px 34px;
   font-size: 35px;
 }
-.sidebar-label {
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  font-weight: 700;
-  color: var(--muted);
-  margin: 0 16px 11px;
-}
 .sidebar nav {
   display: flex;
   flex-direction: column;
@@ -833,15 +826,9 @@ svg {
   min-height: 91px;
   gap: 20px;
 }
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.breadcrumb span:last-child {
+.current-page {
   color: var(--text);
+  font-size: 12px;
 }
 .topbar-actions {
   display: flex;
@@ -1525,7 +1512,6 @@ svg {
     gap: 7px;
     font-size: 12px;
   }
-  .sidebar-label,
   .sidebar-note,
   .sidebar-account {
     display: none;
@@ -1794,16 +1780,6 @@ svg {
   .workspace-topbar {
     min-height: 75px;
     gap: 10px;
-  }
-  .breadcrumb {
-    font-size: 12px;
-    gap: 6px;
-  }
-  .breadcrumb > span:first-child {
-    display: none;
-  }
-  .breadcrumb > svg {
-    display: none;
   }
   .topbar-actions {
     gap: 7px;
@@ -3223,7 +3199,6 @@ details[open] > summary {
     font-size: 14px;
     min-height: 44px;
   }
-  .sidebar-label,
   .sidebar-account {
     display: none;
   }
@@ -3584,7 +3559,7 @@ details[open] > summary {
   }
 }
 @media (max-width: 600px) {
-  .workspace-topbar .breadcrumb {
+  .workspace-topbar .current-page {
     display: none;
   }
   .topbar-actions {
@@ -4487,7 +4462,7 @@ details[open] > summary {
     top: var(--workspace-mobile-nav);
     padding-inline: 25px;
   }
-  .workspace .breadcrumb {
+  .workspace .current-page {
     display: none;
   }
   .workspace .topbar-actions {

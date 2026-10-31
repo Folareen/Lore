@@ -13,7 +13,6 @@ import {
   Monitor,
   Menu,
   X,
-  ChevronRight,
   Home,
   Settings2,
   Users,
@@ -98,8 +97,7 @@ function Shell({
           )}{' '}
           Menu
         </button>
-        <p className="sidebar-label">Workspace</p>
-        <nav id={menuId} data-open={menuOpen} aria-label="Workspace navigation">
+        <nav id={menuId} data-open={menuOpen} aria-label="Community navigation">
           {navigation
             .filter(
               (item) =>
@@ -129,11 +127,7 @@ function Shell({
       </aside>
       <div className="workspace-content">
         <header className="workspace-topbar">
-          <div className="breadcrumb">
-            <span>Your workspace</span>
-            <ChevronRight size={13} />
-            <span>{title}</span>
-          </div>
+          <div className="current-page">{title}</div>
           <div className="topbar-actions">
             {channels.length > 0 && (
               <label className="channel-picker">
@@ -204,7 +198,7 @@ export function AppShell({
             <ModerationProvider>
               <CandidatesProvider>
                 <Suspense
-                  fallback={<p role="status">Loading your workspace…</p>}
+                  fallback={<p role="status">Loading your community…</p>}
                 >
                   <Shell view={view}>{children}</Shell>
                 </Suspense>

@@ -85,7 +85,7 @@ test('production CSP permits hydration, themes and the seeded command-to-brief/r
     'Simulated promise saved',
   );
   await page
-    .getByRole('navigation', { name: 'Workspace navigation' })
+    .getByRole('navigation', { name: 'Community navigation' })
     .getByRole('link', { name: 'Next-stream brief', exact: true })
     .click();
   await expect(
@@ -176,7 +176,7 @@ test('authenticated promise capture, retention and publication use real API data
   await page.getByRole('button', { name: 'Save promise', exact: true }).click();
   await expect(page.getByText('Promise saved and confirmed.')).toBeVisible();
   await page
-    .getByRole('navigation', { name: 'Workspace navigation' })
+    .getByRole('navigation', { name: 'Community navigation' })
     .getByRole('link', { name: 'Next-stream brief', exact: true })
     .click();
   await expect(
@@ -336,7 +336,7 @@ test('mobile demo remains usable in light/dark and a missing-token OBS canvas st
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await page
-    .getByRole('navigation', { name: 'Workspace navigation' })
+    .getByRole('navigation', { name: 'Community navigation' })
     .getByRole('link', { name: 'Account', exact: true })
     .focus();
   expect(
