@@ -440,11 +440,17 @@ test('the illustrative story loops, can be paused, and respects reduced motion',
   const chapters = story.getByRole('group', { name: 'Story chapters' });
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    const controls = await chapters.boundingBox();
-    const scene = await story.locator('.stage-scene').boundingBox();
-    expect(controls).not.toBeNull();
-    expect(scene).not.toBeNull();
-    expect(controls!.y + controls!.height).toBeLessThanOrEqual(scene!.y);
+    // Measure both in one frame while their shared entrance animation runs.
+    const { controlsBottom, sceneTop } = await story.evaluate((element) => {
+      const controls = element.querySelector('.chapter-nav');
+      const scene = element.querySelector('.stage-scene');
+      if (!controls || !scene) throw new Error('Story layout is missing');
+      return {
+        controlsBottom: controls.getBoundingClientRect().bottom,
+        sceneTop: scene.getBoundingClientRect().top,
+      };
+    });
+    expect(controlsBottom).toBeLessThanOrEqual(sceneTop);
     expect(
       await chapters.getByRole('button').evaluateAll((buttons) =>
         buttons.every((button) => {
