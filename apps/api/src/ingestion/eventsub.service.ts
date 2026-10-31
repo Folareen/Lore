@@ -1,6 +1,7 @@
 import {
   ConflictException,
   ForbiddenException,
+  HttpException,
   Inject,
   Injectable,
   Logger,
@@ -76,10 +77,17 @@ export class EventsubService
         let remote;
         try {
           remote = await this.client.list();
-        } catch {
+        } catch (error) {
           for (const channel of channels.filter((c) => c.captureRequested))
             await this.repository.error(channel.id, 'provider_unavailable');
-          this.logger.warn('EventSub reconciliation unavailable; will retry');
+          // Client HTTP exceptions contain fixed messages, never Twitch response bodies.
+          const reason =
+            error instanceof HttpException
+              ? error.message
+              : 'Unexpected subscription lookup failure';
+          this.logger.warn(
+            `EventSub reconciliation unavailable; will retry: ${reason}`,
+          );
           return;
         }
         for (const channel of channels) {

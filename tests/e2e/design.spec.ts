@@ -542,3 +542,28 @@ test('the illustrative story loops, can be paused, and respects reduced motion',
     )
     .toBe(true);
 });
+
+test('saved account themes hydrate with the correct selected control', async ({
+  page,
+}) => {
+  const hydrationWarnings: string[] = [];
+  page.on('console', (message) => {
+    if (/hydration|hydrated|data-scroll-behavior/i.test(message.text()))
+      hydrationWarnings.push(message.text());
+  });
+  await page.goto('/demo?view=account');
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-scroll-behavior',
+    'smooth',
+  );
+  const choices = page.getByRole('group', { name: 'Color theme' });
+  for (const theme of ['Dark', 'Light', 'System']) {
+    await choices.getByRole('button', { name: theme, exact: true }).click();
+    await page.reload();
+    await expect(
+      choices.getByRole('button', { name: theme, exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(choices.locator('[aria-pressed="true"]')).toHaveCount(1);
+  }
+  expect(hydrationWarnings).toEqual([]);
+});
