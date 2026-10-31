@@ -8,6 +8,7 @@ async function main() {
     process.exitCode = 1;
     return;
   }
+  const started = Date.now();
   try {
     // One small synthetic request; never reads channel data or prints provider content.
     const drafts = await new GeminiProvider().extract([
@@ -17,7 +18,7 @@ async function main() {
       },
     ]);
     console.log(
-      `Gemini connection and evidence validation passed (${env.GEMINI_MODEL}; ${drafts.length} suggestions).`,
+      `Gemini connection and evidence validation passed (${env.GEMINI_MODEL}; ${drafts.length} suggestions; ${((Date.now() - started) / 1000).toFixed(1)}s).`,
     );
   } catch (error) {
     console.error(

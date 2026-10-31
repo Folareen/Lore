@@ -3,12 +3,13 @@ export async function modelJson(
   url: string,
   headers: Record<string, string>,
   body: unknown,
+  timeoutMs = 45_000,
 ): Promise<unknown> {
   try {
     const response = await fetch(url, {
       method: 'POST',
       redirect: 'error',
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(body),
     });
