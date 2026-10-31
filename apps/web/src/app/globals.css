@@ -4071,3 +4071,104 @@ details[open] > summary {
     padding: 32px 24px;
   }
 }
+
+/* Keep marketing navigation available without covering content or anchored sections. */
+.landing {
+  --marketing-header-height: 88px;
+  padding-top: var(--marketing-header-height);
+}
+.marketing-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  min-height: var(--marketing-header-height);
+  height: var(--marketing-header-height);
+  background: var(--page);
+  box-shadow: var(--shadow);
+}
+.marketing-header-content {
+  position: relative;
+  width: 100%;
+  max-width: 1440px;
+  min-height: inherit;
+  padding-inline: 64px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+}
+.landing :is(main, section)[id] {
+  scroll-margin-top: calc(var(--marketing-header-height) + 20px);
+}
+.marketing-menu nav {
+  top: calc(100% - 4px);
+  right: 20px;
+  max-height: calc(100svh - var(--marketing-header-height) - 16px);
+  overflow-y: auto;
+}
+.how-page {
+  max-width: 1120px;
+  margin-inline: auto;
+}
+.how-intro {
+  max-width: none;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  align-items: center;
+  gap: 24px 48px;
+  padding-block: 56px 64px;
+}
+.how-intro h1 {
+  grid-row: span 2;
+  font-size: clamp(40px, 4.5vw, 68px);
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+.how-intro > p:not(.record-meta) {
+  font-size: 18px;
+  margin: 0;
+  align-self: end;
+}
+.how-intro > .button {
+  justify-self: start;
+  align-self: start;
+}
+.how-steps,
+.how-permissions {
+  max-width: none;
+}
+@media (max-width: 1100px) {
+  .marketing-header-content {
+    padding-inline: 35px;
+    gap: 20px;
+  }
+}
+@media (max-width: 850px) {
+  .how-intro {
+    grid-template-columns: 1fr;
+    max-width: 680px;
+    gap: 24px;
+  }
+  .how-intro h1 {
+    grid-row: auto;
+  }
+}
+@media (max-width: 600px) {
+  .landing {
+    --marketing-header-height: 76px;
+  }
+  .marketing-header-content {
+    padding-inline: 20px;
+    gap: 10px;
+  }
+  .how-intro {
+    padding-block: 32px 40px;
+  }
+  .how-intro h1 {
+    font-size: clamp(36px, 9vw, 48px);
+  }
+  .how-intro > p:not(.record-meta) {
+    font-size: 16px;
+  }
+}

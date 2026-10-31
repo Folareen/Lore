@@ -244,3 +244,63 @@ test('case detail and sign-in remain readable on phones and desktops', async ({
     });
   }
 });
+
+test('marketing headers stay fixed and tour layout and anchor navigation stay clear', async ({
+  page,
+}, info) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const path of ['/', '/how-it-works']) {
+      await page.goto(path);
+      const header = page.locator('.marketing-header');
+      const title = page.locator('main h1');
+      const initialHeader = await header.boundingBox();
+      const heading = await title.boundingBox();
+      expect(heading!.y).toBeGreaterThanOrEqual(initialHeader!.height);
+      await page.evaluate(() => scrollTo(0, 600));
+      await expect.poll(async () => (await header.boundingBox())!.y).toBe(0);
+      if (path === '/how-it-works') {
+        expect(
+          await title.evaluate((element) =>
+            parseFloat(getComputedStyle(element).fontSize),
+          ),
+        ).toBeLessThanOrEqual(68);
+        const steps = await page.locator('.how-steps').boundingBox();
+        const intro = await page.locator('.how-intro').boundingBox();
+        expect(Math.abs(steps!.x - intro!.x)).toBeLessThan(2);
+        await page.evaluate(() => scrollTo(0, 0));
+        await page.screenshot({
+          path: info.outputPath(`tour-${width}.png`),
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
+    }
+    if (width === 390) {
+      await page.getByLabel('Explore Lore', { exact: true }).click();
+      const menu = page.getByRole('navigation', {
+        name: 'Mobile site navigation',
+      });
+      await expect(menu).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(menu).toBeHidden();
+      await page.getByLabel('Explore Lore', { exact: true }).click();
+      await menu.getByRole('link', { name: 'Questions', exact: true }).click();
+      await expect(menu).toBeHidden();
+    } else {
+      await page
+        .getByRole('navigation', { name: 'Main navigation' })
+        .getByRole('link', { name: 'Questions', exact: true })
+        .click();
+    }
+    await expect(page).toHaveURL(/\/#questions$/);
+    await expect
+      .poll(async () => {
+        const section = await page.locator('#questions').boundingBox();
+        const header = await page.locator('.marketing-header').boundingBox();
+        return section!.y >= header!.height;
+      })
+      .toBe(true);
+  }
+});
