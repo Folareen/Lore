@@ -117,11 +117,9 @@ describe('Lore interface behavior', () => {
     render(<LandingStory />);
     const user = userEvent.setup();
     expect(screen.getByText('Confirmed promise')).toBeTruthy();
-    await user.click(
-      screen.getByRole('button', { name: /02 The follow-through/ }),
-    );
+    await user.click(screen.getByRole('button', { name: 'The payoff' }));
     expect(screen.getByText('Promise fulfilled')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /03 The lore/ }));
+    await user.click(screen.getByRole('button', { name: 'The lore' }));
     expect(screen.getByText('Approved community story')).toBeTruthy();
     expect(screen.getByText('Illustrative story')).toBeTruthy();
   });
