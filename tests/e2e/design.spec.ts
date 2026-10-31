@@ -217,6 +217,59 @@ test('narrow phones and tablets keep marketing and core tasks within the viewpor
   }
 });
 
+test('sign-in keeps its primary action in view on small phones', async ({
+  page,
+}, info) => {
+  await page.route('**/api/auth/status', (route) =>
+    route.fulfill({ json: { twitchConfigured: true } }),
+  );
+  for (const theme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: theme });
+    for (const viewport of [
+      { width: 320, height: 568 },
+      { width: 390, height: 660 },
+      { width: 768, height: 900 },
+      { width: 1440, height: 900 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto('/login');
+      const signIn = page.getByRole('link', {
+        name: 'Continue with Twitch',
+      });
+      await expect(signIn).toBeInViewport({ ratio: 1 });
+      await expect(signIn).toHaveAttribute('href', '/api/auth/twitch');
+      await page.evaluate(() => document.fonts.ready);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: info.outputPath(`login-${viewport.width}-${theme}.png`),
+        fullPage: true,
+      });
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 660 });
+  await page.goto('/login?error=signin');
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'That sign-in didn’t finish.' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Continue with Twitch' }),
+  ).toBeInViewport({ ratio: 1 });
+  await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('link', { name: 'Skip to content' }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Lore home' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('button', { name: 'Toggle light and dark mode' }),
+  ).toBeFocused();
+});
+
 test('case detail and sign-in remain readable on phones and desktops', async ({
   page,
 }, info) => {

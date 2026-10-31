@@ -652,10 +652,20 @@ svg {
   min-height: 100svh;
   display: grid;
   grid-template-columns: 1fr 1fr;
+  position: relative;
+}
+.auth-header {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 40px 48px 0 64px;
+  z-index: 1;
 }
 .auth-story {
   background: var(--purple-soft);
-  padding: 48px 64px;
+  padding: 150px 64px 48px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -664,7 +674,7 @@ svg {
 .auth-story h2 {
   font-size: clamp(28px, 4vw, 56px);
   max-width: none;
-  margin-top: 70px;
+  margin: 0;
 }
 .auth-story-last-line {
   white-space: nowrap;
@@ -685,30 +695,14 @@ svg {
   align-items: center;
   justify-content: center;
   padding: 60px;
-  position: relative;
-}
-.auth-form-side > .icon-button {
-  position: absolute;
-  top: 40px;
-  right: 40px;
 }
 .auth-form {
   max-width: 365px;
   width: 100%;
 }
-.auth-form .auth-symbol {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  color: var(--primary);
-  background: var(--purple-soft);
-  border-radius: 12px;
-  margin-bottom: 29px;
-}
 .auth-form h1 {
   font-size: 39px;
+  letter-spacing: -0.05em;
 }
 .auth-form > p {
   color: var(--muted);
@@ -723,9 +717,10 @@ svg {
 .auth-form .quiet-link {
   margin: 20px auto;
 }
-.auth-footnote {
-  font-size: 11px !important;
-  margin-top: 35px !important;
+.auth-form > .auth-footnote {
+  font-size: 13px;
+  line-height: 1.65;
+  margin-top: 32px;
 }
 .notice {
   padding: 14px 16px;
@@ -1474,8 +1469,11 @@ svg {
   .site-footer {
     flex-wrap: wrap;
   }
+  .auth-header {
+    padding: 32px 30px 0 35px;
+  }
   .auth-story {
-    padding: 35px;
+    padding: 130px 35px 35px;
   }
   .auth-form-side {
     padding: 45px 30px;
@@ -1705,42 +1703,41 @@ svg {
     display: flex;
     flex-direction: column;
   }
-  .auth-story {
-    padding: 25px;
-    min-height: 215px;
-    position: relative;
+  .auth-header {
+    position: static;
+    padding: max(20px, env(safe-area-inset-top)) 24px 12px;
   }
-  .auth-story h2 {
-    font-size: clamp(24px, 6vw, 33px);
-    margin-top: 30px;
-    position: relative;
-    z-index: 1;
+  .auth-story {
+    background: transparent;
+    padding: 12px 24px 16px;
   }
   .auth-story img {
-    position: absolute;
-    width: clamp(80px, 24vw, 140px);
-    right: 12px;
-    bottom: 12px;
-    height: auto;
-    margin: 0;
+    width: 188px;
+    height: 140px;
+    margin: 0 auto;
   }
+  .auth-story h2,
   .auth-story > p {
     display: none;
   }
   .auth-form-side {
-    padding: 55px 27px 45px;
+    padding: 8px 24px max(24px, env(safe-area-inset-bottom));
   }
-  .auth-form-side > .icon-button {
-    top: 16px;
-    right: 20px;
+  .auth-form {
+    text-align: center;
   }
   .auth-form h1 {
-    font-size: 32px;
+    font-size: 34px;
   }
-  .auth-symbol {
-    width: 45px !important;
-    height: 45px !important;
-    margin-bottom: 22px !important;
+  .auth-form > p {
+    margin-top: 12px;
+  }
+  .auth-form .quiet-link {
+    min-height: 44px;
+    margin: 8px auto;
+  }
+  .auth-form > .auth-footnote {
+    margin-top: 24px;
   }
   .sidebar {
     gap: 12px;
@@ -2677,13 +2674,6 @@ details[open] > summary {
 }
 .community-recap {
   border-radius: 12px;
-}
-.auth-form h1 {
-  letter-spacing: -0.05em;
-}
-.auth-footnote {
-  font-size: 13px !important;
-  line-height: 1.65;
 }
 
 /* Marketing: editorial type and concrete, illustrative product moments. */
