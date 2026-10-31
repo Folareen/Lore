@@ -24,6 +24,15 @@ export async function purgeChannel(tx: Tx, channelId: string) {
     sql`UPDATE ai_candidates a SET expires_at=LEAST(a.expires_at,s.expires_at) FROM source_events s WHERE a.channel_id=${channelId} AND s.channel_id=a.channel_id AND s.id=a.source_event_id AND a.expires_at>s.expires_at`,
   );
   await expireCandidates(tx, channelId);
+  await tx.execute(
+    sql`UPDATE microphone_captures m SET expires_at=LEAST(m.expires_at,m.created_at+c.chat_retention_days*interval '1 day') FROM channels c WHERE m.channel_id=c.id AND c.id=${channelId} AND m.expires_at>m.created_at+c.chat_retention_days*interval '1 day'`,
+  );
+  await tx.execute(
+    sql`UPDATE microphone_captures m SET transcript=NULL,drafts=NULL FROM channels c WHERE m.channel_id=c.id AND c.id=${channelId} AND m.transcript IS NOT NULL AND (m.expires_at<=now() OR NOT c.microphone_enabled OR c.disconnected_at IS NOT NULL)`,
+  );
+  await tx.execute(
+    sql`UPDATE source_events s SET payload=NULL WHERE s.channel_id=${channelId} AND s.type='microphone.transcript' AND s.payload IS NOT NULL AND NOT EXISTS (SELECT 1 FROM microphone_captures m WHERE m.channel_id=s.channel_id AND m.source_event_id=s.id AND m.transcript IS NOT NULL)`,
+  );
   // Durable confirmed evidence has no FK to ordinary delivery receipts and survives this pruning.
   await tx.execute(
     sql`DELETE FROM source_events WHERE channel_id=${channelId} AND created_at<now()-interval '30 days' AND payload IS NULL`,

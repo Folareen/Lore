@@ -693,7 +693,12 @@ export class PublicationsRepository {
           createdAt: catchupReplies.createdAt,
         })
         .from(catchupReplies)
-        .where(eq(catchupReplies.channelId, channelId))
+        .where(
+          and(
+            eq(catchupReplies.channelId, channelId),
+            eq(catchupReplies.kind, 'catchup'),
+          ),
+        )
         .orderBy(desc(catchupReplies.createdAt))
         .limit(10);
       return {
@@ -751,6 +756,41 @@ export class PublicationsRepository {
       .where(eq(channels.id, channel.id));
     return true;
   }
+  async recordPromiseConfirmation(
+    tx: CaseTx,
+    channel: typeof channels.$inferSelect,
+    message: z.infer<typeof chatSchema>,
+    occurredAt: Date,
+    openLoopId: string,
+  ) {
+    if (
+      !channel.promiseConfirmationsEnabled ||
+      !channel.promiseConfirmationsEnabledAt ||
+      occurredAt < channel.promiseConfirmationsEnabledAt ||
+      Date.now() - occurredAt.getTime() > 90000 ||
+      (channel.lastPromiseConfirmationAt &&
+        Date.now() - channel.lastPromiseConfirmationAt.getTime() < 15000)
+    )
+      return false;
+    const [saved] = await tx
+      .insert(catchupReplies)
+      .values({
+        channelId: channel.id,
+        messageId: message.message_id,
+        kind: 'promise',
+        openLoopId,
+        generation: channel.featuresGeneration,
+        expiresAt: new Date(occurredAt.getTime() + 90000),
+      })
+      .onConflictDoNothing()
+      .returning({ id: catchupReplies.id });
+    if (!saved) return false;
+    await tx
+      .update(channels)
+      .set({ lastPromiseConfirmationAt: new Date() })
+      .where(eq(channels.id, channel.id));
+    return true;
+  }
   async cancelQueuedReply(id: string) {
     await this.infrastructure.db
       .update(catchupReplies)
@@ -792,8 +832,11 @@ export class PublicationsRepository {
             .where(eq(oauthConnections.userId, channel.ownerUserId))
         : [];
       if (
-        !channel.catchupEnabled ||
-        channel.catchupGeneration !== row.generation ||
+        (row.kind === 'promise'
+          ? !channel.promiseConfirmationsEnabled ||
+            channel.featuresGeneration !== row.generation
+          : !channel.catchupEnabled ||
+            channel.catchupGeneration !== row.generation) ||
         !channel.captureRequested ||
         channel.disconnectedAt ||
         !connection ||
@@ -823,6 +866,37 @@ export class PublicationsRepository {
           .set({ status: 'cancelled', updatedAt: new Date() })
           .where(eq(catchupReplies.id, id));
         return null;
+      }
+      if (row.kind === 'promise') {
+        const [loop] = row.openLoopId
+          ? await tx
+              .select({ id: openLoops.id })
+              .from(openLoops)
+              .where(
+                and(
+                  eq(openLoops.channelId, channel.id),
+                  eq(openLoops.id, row.openLoopId),
+                  eq(openLoops.captureMethod, 'chat_command'),
+                  eq(openLoops.captureKey, row.messageId),
+                ),
+              )
+          : [];
+        if (!loop) {
+          await tx
+            .update(catchupReplies)
+            .set({ status: 'cancelled', updatedAt: new Date() })
+            .where(eq(catchupReplies.id, id));
+          return null;
+        }
+        await tx
+          .update(catchupReplies)
+          .set({ status: 'attempted', updatedAt: new Date() })
+          .where(eq(catchupReplies.id, id));
+        return {
+          broadcasterId: channel.twitchChannelId!,
+          message:
+            'Promise saved in Lore. The team can review it in the next-stream brief.',
+        };
       }
       const [summary] = await tx
         .select()

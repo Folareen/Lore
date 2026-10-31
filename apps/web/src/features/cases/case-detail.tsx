@@ -1,4 +1,5 @@
 'use client';
+import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -56,6 +57,7 @@ function CaseFile({ id }: { id: string }) {
   const [revision, setRevision] = useState(0);
   const [editing, setEditing] = useState(false);
   const channelId = selected!.id;
+  useLiveRefresh(channelId, () => setRevision((value) => value + 1));
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -102,9 +104,18 @@ function CaseFile({ id }: { id: string }) {
             PRIVATE MODERATION ·{' '}
             {record.origin === 'demo_fixture'
               ? 'DEMO FIXTURE'
-              : 'MANUAL IMPORT'}
+              : record.origin === 'live_twitch'
+                ? 'TWITCH EVENT IMPORT'
+                : 'MANUAL IMPORT'}
           </p>
           <h1>{record.title}</h1>
+          {record.origin === 'live_twitch' && (
+            <p className="notice">
+              Imported Twitch event · review the source evidence and record the
+              applicable channel rule and version before deciding. External
+              Twitch resolutions do not decide this Lore case.
+            </p>
+          )}
           <p>
             {record.subjectReference} ·{' '}
             <span className="status purple">{record.status}</span>

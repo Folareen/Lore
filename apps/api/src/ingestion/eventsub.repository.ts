@@ -1,3 +1,4 @@
+import { ModerationImportsService } from '../continuity/moderation-imports.service';
 import { expireCandidates } from '../ai/candidate-retention';
 import { purgeChannel } from '../retention/channel-retention';
 import { PublicationsRepository } from '../publications/publications.repository';
@@ -8,7 +9,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { and, count, eq, isNull, max, sql } from 'drizzle-orm';
-import { captureScopes, twitchEventTypeSchema } from '@lore/shared';
+import {
+  captureScopes,
+  moderationReadScopes,
+  moderationEventTypes,
+  twitchEventTypeSchema,
+} from '@lore/shared';
 import { InfrastructureService } from '../infrastructure.service';
 import {
   auditEvents,
@@ -33,6 +39,8 @@ type Transaction = Parameters<
 @Injectable()
 export class EventsubRepository {
   constructor(
+    @Inject(ModerationImportsService)
+    private readonly imports: ModerationImportsService,
     @Inject(PublicationsRepository)
     private readonly publications: PublicationsRepository,
     @Inject(InfrastructureService)
@@ -56,12 +64,12 @@ export class EventsubRepository {
     if (!channel) throw new NotFoundException('Channel not found');
     return channel;
   }
-  async missingScopes(userId: string) {
+  async missingScopes(userId: string, moderation = false) {
     const [connection] = await this.infrastructure.db
       .select()
       .from(oauthConnections)
       .where(eq(oauthConnections.userId, userId));
-    return captureScopes.filter(
+    return (moderation ? moderationReadScopes : captureScopes).filter(
       (scope) =>
         !connection ||
         connection.revokedAt ||
@@ -199,6 +207,26 @@ export class EventsubRepository {
       .from(twitchSubscriptions)
       .where(eq(twitchSubscriptions.channelId, channelId));
   }
+  private async canImport(
+    tx: Transaction,
+    channel: typeof channels.$inferSelect,
+  ) {
+    if (
+      !channel.moderationImportsEnabled ||
+      !channel.moderationImportsEnabledAt ||
+      !channel.ownerUserId
+    )
+      return false;
+    const [connection] = await tx
+      .select()
+      .from(oauthConnections)
+      .where(eq(oauthConnections.userId, channel.ownerUserId));
+    return Boolean(
+      connection &&
+      !connection.revokedAt &&
+      moderationReadScopes.every((scope) => connection.scopes.includes(scope)),
+    );
+  }
   // Channel lock serializes deletes, deliveries, stop/disconnect and worker writes.
   async receive(
     sub: Subscription,
@@ -222,7 +250,11 @@ export class EventsubRepository {
         !channel ||
         !channel.connectedAt ||
         channel.disconnectedAt ||
-        !channel.captureRequested
+        !channel.captureRequested ||
+        (moderationEventTypes.some((type) => type === sub.type) &&
+          (!(await this.canImport(tx, channel)) ||
+            (kind === 'notification' &&
+              occurredAt < channel.moderationImportsEnabledAt!)))
       )
         return false;
       if (kind === 'webhook_callback_verification') {
@@ -432,6 +464,13 @@ export class EventsubRepository {
         const type = twitchEventTypeSchema.parse(event.type);
         const schema = eventSchemas[type];
         schema.parse(event.payload);
+        if (
+          moderationEventTypes.some((t) => t === type) &&
+          (await this.canImport(tx, channel)) &&
+          event.receivedAt >= channel.moderationImportsEnabledAt! &&
+          event.occurredAt >= channel.moderationImportsEnabledAt!
+        )
+          await this.imports.ingest(tx, channel, event);
         if (type === 'channel.chat.message') {
           const message = chatSchema.parse(event.payload);
           if (await this.isDeleted(tx, channel.id, message, event.occurredAt))
@@ -466,12 +505,23 @@ export class EventsubRepository {
                 event.occurredAt,
               ),
             );
-            await this.openLoops.captureCommand(
+            const capturedLoop = await this.openLoops.captureCommand(
               tx,
               channel.id,
               event.id,
               message,
             );
+            if (
+              capturedLoop &&
+              (await this.publications.recordPromiseConfirmation(
+                tx,
+                channel,
+                message,
+                event.occurredAt,
+                capturedLoop,
+              ))
+            )
+              catchupQueued = true;
           }
         }
       }

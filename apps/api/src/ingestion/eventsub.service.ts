@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import {
   captureScopes,
+  moderationEventTypes,
   twitchEventTypes,
   twitchEventTypeSchema,
 } from '@lore/shared';
@@ -101,6 +102,15 @@ export class EventsubService
                 );
               }
             }
+            const importReady =
+              channel.moderationImportsEnabled &&
+              channel.ownerUserId &&
+              !(await this.repository.missingScopes(channel.ownerUserId, true))
+                .length;
+            const desiredTypes = twitchEventTypes.filter(
+              (type) =>
+                !moderationEventTypes.some((t) => t === type) || importReady,
+            );
             const known = await this.repository.knownSubscriptions(channel.id);
             const owned = remote.filter(
               (sub) =>
@@ -110,7 +120,10 @@ export class EventsubService
                     channel.twitchChannelId &&
                   twitchEventTypeSchema.safeParse(sub.type).success &&
                   (!sub.type.startsWith('channel.chat.') ||
-                    sub.condition.user_id === channel.twitchChannelId)) ||
+                    sub.condition.user_id === channel.twitchChannelId) &&
+                  (!sub.type.startsWith('channel.unban_request.') ||
+                    sub.condition.moderator_user_id ===
+                      channel.twitchChannelId)) ||
                   known.some((local) => local.id === sub.id)),
             );
             for (const local of known)
@@ -122,6 +135,7 @@ export class EventsubService
                 sub.transport.callback === env.TWITCH_EVENTSUB_CALLBACK_URL;
               if (
                 !desired ||
+                !desiredTypes.some((type) => type === sub.type) ||
                 !currentTransport ||
                 sub.version !== '1' ||
                 !['enabled', 'webhook_callback_verification_pending'].includes(
@@ -137,7 +151,7 @@ export class EventsubService
               }
             }
             if (desired && channel.twitchChannelId) {
-              for (const type of twitchEventTypes)
+              for (const type of desiredTypes)
                 if (!active.has(type)) {
                   const result = await this.client.create(
                     type,

@@ -143,3 +143,14 @@ TEST_DATABASE_URL=postgresql://lore:lore_local@127.0.0.1:55432/lore pnpm test:e2
 ```
 
 On Linux CI, use `pnpm exec playwright install --with-deps chromium`. If the bundled browser does not support your OS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to an installed Chrome executable. The suite builds into ignored `.next-e2e`, keeps the existing development server separate, and cleans its temporary database/queues on shutdown. Traces/screenshots contain synthetic test data and stay in ignored `test-results`; CI retains failed-run artifacts for three days. CI runs format, lint, production dependency audit, types, unit/UI tests, API integration tests, build and browser journeys. Live Twitch permissions/EventSub delivery, real R2 access and live OBS capture still require their configured accounts.
+
+## Additional channel capabilities
+
+In **Settings → Additional channel capabilities**, each owner-controlled opt-in starts off:
+
+- **Moderation event imports:** start live capture, then authorize `channel:moderate` and `moderator:read:unban_requests` using the separate Twitch link. Enable imports; subscription reconciliation runs within 30 seconds. Future bans/timeouts and unban requests create private cases. Review the event evidence and supply a rule snapshot before deciding. Lore executes no Twitch moderation actions. See [Twitch subscriptions](https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/#channelunban_requestresolve).
+- **Promise confirmations:** authorize chat replies in Community publishing and start capture before enabling. Accepted authorized `!promise` commands receive fixed wording, with a 15-second channel cooldown and 90-second expiry.
+- **Public summary AI:** use the existing `GEMINI_API_KEY`; choose published sources in Community publishing, generate, edit and save a draft, then explicitly approve publication. Private cases and raw chat are never inputs to this public workflow.
+- **Microphone suggestions:** use the same Gemini key. Open Candidates → Microphone follow-ups on HTTPS or localhost, explicitly record up to 30 seconds, preview locally and submit. Lore stores transcripts, not audio. Verify transcription before confirming a suggestion. Unconfirmed transcripts follow current chat retention; opt-out scrubs them. Confirmed promises retain separate source evidence. Google may use free-tier inputs/outputs to improve products; choose appropriate content.
+
+No extra provider key or paid model is introduced. New AI calls share `AI_DAILY_CALL_LIMIT`; this does not override Google's free-tier quotas. Live workspace SSE uses the existing session and streams only invalidations; reverse proxies must preserve streaming and avoid buffering `/api/channels/:id/stream`. See [product scope](docs/product-overview.md) for behavior and remaining live verification.

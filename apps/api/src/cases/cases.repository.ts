@@ -378,6 +378,10 @@ export class CasesRepository {
       )
         return;
       this.assertEditable(record, input.expectedVersion);
+      if (record.origin === 'live_twitch' && record.ruleVersion === 'unknown')
+        throw new ConflictException(
+          'Record the applicable rule and version before deciding an imported case',
+        );
       if (Boolean(input.aiRunId) !== Boolean(input.aiDisposition))
         throw new ConflictException('Choose how this AI draft was reviewed');
       if (input.aiRunId) {

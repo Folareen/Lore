@@ -15,6 +15,7 @@ export const subscriptionSchema = z.object({
   condition: z.object({
     broadcaster_user_id: userId,
     user_id: userId.optional(),
+    moderator_user_id: userId.optional(),
   }),
   transport: z.object({ method: z.literal('webhook'), callback: z.url() }),
 });
@@ -55,4 +56,33 @@ export const eventSchemas = {
     started_at: z.iso.datetime({ offset: true }),
   }),
   'stream.offline': broadcaster,
+  'channel.ban': broadcaster.extend({
+    user_id: userId,
+    user_login: z.string().max(100),
+    moderator_user_id: userId,
+    reason: z.string().max(4000),
+    banned_at: z.iso.datetime({ offset: true }),
+    ends_at: z.string().nullable(),
+    is_permanent: z.boolean(),
+  }),
+  'channel.unban_request.create': broadcaster.extend({
+    id,
+    user_id: userId,
+    user_login: z.string().max(100),
+    text: z.string().max(4000),
+    created_at: z.iso.datetime({ offset: true }),
+  }),
+  'channel.unban_request.resolve': broadcaster.extend({
+    id,
+    user_id: userId,
+    user_login: z.string().max(100),
+    moderator_user_id: userId.nullish(),
+    moderator_id: userId.nullish(),
+    resolution_text: z
+      .string()
+      .max(4000)
+      .nullish()
+      .transform((value) => value ?? ''),
+    status: z.enum(['approved', 'denied', 'canceled']),
+  }),
 } as const;

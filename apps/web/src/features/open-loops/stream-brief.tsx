@@ -1,4 +1,5 @@
 'use client';
+import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ListChecks, RefreshCw } from 'lucide-react';
@@ -12,7 +13,7 @@ export function StreamBriefScreen() {
         <div>
           <p className="eyebrow">BEFORE YOU HIT GO LIVE</p>
           <h1>Pick up the thread.</h1>
-          <p>Your next-stream rundown, built from saved promises.</p>
+          <p>Saved promises and source-linked changes for your next stream.</p>
         </div>
         <Link className="button secondary" href={href('streamer')}>
           Manage open loops
@@ -38,6 +39,7 @@ function Brief({ channelId }: { channelId: string }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
+  useLiveRefresh(channelId, () => setRevision((value) => value + 1));
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -94,6 +96,67 @@ function Brief({ channelId }: { channelId: string }) {
             {brief.activeCount === 1 ? 'promise' : 'promises'} · Updated{' '}
             {new Date(brief.generatedAt).toLocaleString()}
           </p>
+          {brief.context && (
+            <section className="panel content-stack">
+              <h2>
+                Since{' '}
+                {brief.context.basis === 'previous_stream_end'
+                  ? 'the last stream ended'
+                  : 'seven days ago'}
+              </h2>
+              <p className="muted">
+                From {new Date(brief.context.since).toLocaleString()}. Only
+                retained stream events can establish a previous-stream boundary.
+              </p>
+              <h3>Promise changes</h3>
+              {brief.context.recentChanges.length ? (
+                <ul>
+                  {brief.context.recentChanges.map((item) => (
+                    <li key={item.id}>
+                      <Link
+                        href={`${href('streamer')}${preview ? '&' : '?'}loop=${item.id}#loop-${item.id}`}
+                      >
+                        {item.wording}
+                      </Link>{' '}
+                      · {openLoopLabels[item.status]} ·{' '}
+                      {new Date(item.updatedAt).toLocaleString()}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No saved promise changes in this period.</p>
+              )}
+              <h3>Published community developments</h3>
+              {brief.context.community.length ? (
+                <ul>
+                  {brief.context.community.map((item) => (
+                    <li key={item.id}>
+                      <Link
+                        href={
+                          preview
+                            ? `${href('community')}&entry=${item.id}`
+                            : `${href('community')}/entries/${item.id}`
+                        }
+                      >
+                        {item.title}
+                      </Link>
+                      <p className="case-prose">{item.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>
+                  No currently published community developments in this period.
+                </p>
+              )}
+              {brief.context.truncated && (
+                <p className="notice">
+                  Showing up to 20 promise changes and 10 public developments.
+                  Open the source pages for more.
+                </p>
+              )}
+            </section>
+          )}
           {brief.items.length === 0 ? (
             <div className="empty-state">
               <ListChecks size={28} />

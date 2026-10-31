@@ -1,3 +1,4 @@
+import { ContinuityModule } from '../continuity/continuity.module';
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { queueNames } from '@lore/shared';
@@ -15,6 +16,7 @@ import { EventsubService } from './eventsub.service';
 import { IngestionRecovery, IngestionWorker } from './ingestion.worker';
 @Module({
   imports: [
+    ContinuityModule,
     AuthModule,
     PublicationsModule,
     BullModule.registerQueue({ name: catchupQueue }),

@@ -1,4 +1,5 @@
 'use client';
+import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Bookmark, RefreshCw } from 'lucide-react';
@@ -67,6 +68,7 @@ function LoopsPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [revision, setRevision] = useState(0);
+  useLiveRefresh(channelId, () => setRevision((value) => value + 1));
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { briefContextSchema } from './continuity';
 import { openLoopStatusSchema, recordOriginSchema } from './workflow';
 
 export const createOpenLoopSchema = z.strictObject({
@@ -56,6 +57,7 @@ export const streamBriefSchema = z.strictObject({
   activeCount: z.number().int().nonnegative(),
   items: z.array(openLoopResponseSchema),
   method: z.literal('saved_open_loops'),
+  context: briefContextSchema.optional(),
 });
 export const openLoopLabels = {
   candidate: 'Needs review',

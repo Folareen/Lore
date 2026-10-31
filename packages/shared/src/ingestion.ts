@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { moderationEventTypes } from './continuity';
 
 export const twitchEventTypes = [
   'channel.chat.message',
@@ -7,6 +8,7 @@ export const twitchEventTypes = [
   'channel.chat.clear_user_messages',
   'stream.online',
   'stream.offline',
+  ...moderationEventTypes,
 ] as const;
 export const twitchEventTypeSchema = z.enum(twitchEventTypes);
 export type TwitchEventType = z.infer<typeof twitchEventTypeSchema>;

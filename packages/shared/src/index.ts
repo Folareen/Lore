@@ -29,3 +29,4 @@ export * from './demo';
 export * from './demo/seed';
 
 export * from './promise-command';
+export * from './continuity';

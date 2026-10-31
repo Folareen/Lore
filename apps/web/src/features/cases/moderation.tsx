@@ -1,4 +1,5 @@
 'use client';
+import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -58,6 +59,7 @@ function CasesList() {
   const [creating, setCreating] = useState(false);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const channelId = selected!.id;
+  useLiveRefresh(channelId, () => setRevision((value) => value + 1));
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);

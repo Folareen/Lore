@@ -172,7 +172,10 @@ test('authenticated promise capture, retention and publication use real API data
     .getByRole('link', { name: 'Next-stream brief', exact: true })
     .click();
   await expect(
-    page.getByText('Authenticated browser commitment.', { exact: true }),
+    page.getByRole('heading', {
+      name: 'Authenticated browser commitment.',
+      exact: true,
+    }),
   ).toBeVisible();
   await page
     .getByRole('link', { name: 'Channel settings', exact: true })
@@ -325,4 +328,224 @@ test('mobile demo remains usable in light/dark and a missing-token OBS canvas st
       .locator('body')
       .evaluate((e) => getComputedStyle(e).backgroundColor),
   ).toBe('rgba(0, 0, 0, 0)');
+});
+test('owner opts in, reviews a Gemini public draft and saves it without automatic publication', async ({
+  page,
+  context,
+}) => {
+  await signIn(context);
+  const auth = await (await page.request.get('/api/auth/session')).json();
+  const headers = {
+    Origin: 'http://127.0.0.1:4322',
+    'X-CSRF-Token': auth.csrfToken,
+  };
+  const sourceResponse = await page.request.post(
+    `/api/channels/${channelId}/publications`,
+    {
+      headers,
+      data: {
+        requestId: crypto.randomUUID(),
+        kind: 'milestone',
+        title: 'Browser public garden source',
+        body: 'The garden is ready for visitors.',
+        chatSummary: '',
+        sourceIds: [],
+        promiseId: null,
+      },
+    },
+  );
+  expect(sourceResponse.status()).toBe(200);
+  const source = await sourceResponse.json();
+  expect(
+    (
+      await page.request.post(
+        `/api/channels/${channelId}/publications/${source.id}/review`,
+        {
+          headers,
+          data: {
+            expectedVersion: source.version,
+            action: 'publish',
+            reason: 'Approved synthetic browser source.',
+          },
+        },
+      )
+    ).status(),
+  ).toBe(200);
+  await page.goto('/app/settings');
+  await page
+    .getByText('Additional channel capabilities', { exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Enable gemini public summary drafts' })
+    .click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Enable capability' })
+    .click();
+  await expect(
+    page.getByRole('button', { name: 'Disable gemini public summary drafts' }),
+  ).toBeVisible();
+  await page.goto('/app/publications');
+  await page
+    .getByText('Draft a catch-up summary with Gemini', { exact: true })
+    .click();
+  await page
+    .getByRole('checkbox', {
+      name: 'Browser public garden source',
+      exact: true,
+    })
+    .check();
+  await page.getByRole('button', { name: 'Generate summary draft' }).click();
+  await expect(
+    page.getByText('Gemini draft · not published', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Use as editable draft' }).click();
+  await expect(page.getByLabel('Public title', { exact: true })).toHaveValue(
+    'Browser Gemini summary',
+  );
+  await page
+    .getByLabel('Public title', { exact: true })
+    .fill('Human-edited browser Gemini summary');
+  await page
+    .getByRole('button', { name: 'Save community draft', exact: true })
+    .click();
+  const article = page.getByRole('article').filter({
+    has: page.getByRole('heading', {
+      name: 'Human-edited browser Gemini summary',
+      exact: true,
+    }),
+  });
+  await expect(article.getByText('draft', { exact: true })).toBeVisible();
+  const feed = await (
+    await page.request.get('/api/public/channels/browser-test')
+  ).json();
+  expect(JSON.stringify(feed)).not.toContain(
+    'Human-edited browser Gemini summary',
+  );
+});
+test('records a synthetic clip after explicit consent, previews audio and confirms an unverified microphone suggestion', async ({
+  page,
+  context,
+}) => {
+  await signIn(context);
+  await context.grantPermissions(['microphone']);
+  // Generate local synthetic audio so this test does not depend on macOS device permissions.
+  // MediaRecorder, browser WAV conversion, multipart transport and the API remain real.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+      configurable: true,
+      value: async () => {
+        const audio = new AudioContext();
+        const oscillator = audio.createOscillator();
+        const destination = audio.createMediaStreamDestination();
+        oscillator.connect(destination);
+        oscillator.start();
+        await audio.resume();
+        return destination.stream;
+      },
+    });
+  });
+
+  await page.goto('/app/settings');
+  await page
+    .getByText('Additional channel capabilities', { exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Enable microphone follow-up suggestions' })
+    .click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Enable capability' })
+    .click();
+  await expect(
+    page.getByRole('button', {
+      name: 'Disable microphone follow-up suggestions',
+    }),
+  ).toBeVisible();
+  await page.goto('/app/candidates');
+  await page.getByText('Microphone follow-ups', { exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Start recording', exact: true })
+    .click();
+  await expect(
+    page.getByRole('button', { name: 'Stop recording', exact: true }),
+  ).toBeVisible();
+  await page.waitForTimeout(400);
+  await page
+    .getByRole('button', { name: 'Stop recording', exact: true })
+    .click();
+  await expect(page.getByLabel('Recorded clip preview')).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Transcribe and find suggestions' })
+    .click();
+  await expect(
+    page.getByText('I will complete the browser garden tour.', { exact: true }),
+  ).toHaveCount(2);
+  await page
+    .getByLabel('Confirmed wording', { exact: true })
+    .fill('Human-confirmed microphone garden tour.');
+  await page
+    .getByRole('button', { name: 'Review microphone suggestion' })
+    .click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Save confirmed promise' })
+    .click();
+  await expect(
+    page.getByRole('link', { name: 'Open the brief', exact: true }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Open the brief', exact: true }).click();
+  await expect(
+    page.getByRole('heading', {
+      name: 'Human-confirmed microphone garden tour.',
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+test('production SSE refreshes clean views and preserves edits when another client changes the channel', async ({
+  page,
+  context,
+}) => {
+  await signIn(context);
+  await page.goto('/app/brief');
+  await expect(
+    page.getByText('Live updates connected', { exact: true }),
+  ).toBeVisible();
+  const auth = await (await page.request.get('/api/auth/session')).json();
+  const headers = {
+    Origin: 'http://127.0.0.1:4322',
+    'X-CSRF-Token': auth.csrfToken,
+  };
+  const create = async (wording: string) => {
+    expect(
+      (
+        await page.request.post(`/api/channels/${channelId}/open-loops`, {
+          headers,
+          data: { requestId: crypto.randomUUID(), wording },
+        })
+      ).status(),
+    ).toBe(200);
+  };
+  await create('Promise from another client.');
+  await expect(
+    page.getByRole('heading', {
+      name: 'Promise from another client.',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.goto('/app/publications');
+  await expect(
+    page.getByText('Live updates connected', { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'New community draft', exact: true })
+    .click();
+  await page
+    .getByLabel('Public title', { exact: true })
+    .fill('Preserve my unsaved title');
+  await create('Another client mutation while editing.');
+  await expect(page.getByText(/Your edits have been preserved/)).toBeVisible();
+  await expect(page.getByLabel('Public title', { exact: true })).toHaveValue(
+    'Preserve my unsaved title',
+  );
 });
