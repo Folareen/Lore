@@ -100,6 +100,7 @@ test('landing content, optional memory game, FAQ and tour work on mobile', async
   await expect(
     page.getByRole('button', { name: 'Turn card 1', exact: true }),
   ).toBeEnabled();
+  await page.evaluate(() => scrollTo(0, 0));
   await page.screenshot({
     path: info.outputPath('landing-mobile.png'),
     fullPage: true,
@@ -346,12 +347,18 @@ test('demo uses the real workspace, fixed headers and keyboard-accessible custom
       animations: 'disabled',
     });
     await page.keyboard.press('End');
+    await expect(
+      page.getByRole('option', { name: 'Decided', exact: true }),
+    ).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(filter).toHaveText('Decided');
     await expect(filter).toBeFocused();
     await expect(list).toBeHidden();
     await filter.click();
     await page.keyboard.press('Home');
+    await expect(
+      page.getByRole('option', { name: 'All cases', exact: true }),
+    ).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(filter).toHaveText('Decided');
     await expect(filter).toBeFocused();
@@ -410,4 +417,102 @@ test('the memory game supports a self-paced peek, matching and a completed round
   await expect(game.getByText('4 / 4 pairs')).toBeVisible();
   await game.getByRole('button', { name: 'New round' }).click();
   await expect(game.getByText('0 / 4 pairs')).toBeVisible();
+});
+
+test('the illustrative story loops, can be paused, and respects reduced motion', async ({
+  page,
+}, info) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+  const header = page.locator('.marketing-header');
+  await expect(header.locator('.desktop-demo-link')).toBeHidden();
+  await page.getByLabel('Explore Lore', { exact: true }).click();
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Mobile site navigation' })
+      .getByRole('link', { name: 'Try the demo', exact: true }),
+  ).toHaveAttribute('href', '/demo');
+  await page.keyboard.press('Escape');
+  const story = page.getByRole('region', {
+    name: 'An illustrative Lore story',
+  });
+  const image = story.locator('.hero-illustration img');
+  await expect
+    .poll(() =>
+      image.evaluate((element) =>
+        element
+          .getAnimations()
+          .some(
+            (animation) =>
+              animation.playState === 'running' &&
+              animation.effect?.getTiming().iterations === Infinity,
+          ),
+      ),
+    )
+    .toBe(true);
+  const initial = await image.evaluate(
+    (element) => getComputedStyle(element).transform,
+  );
+  await expect
+    .poll(() =>
+      image.evaluate((element) => getComputedStyle(element).transform),
+    )
+    .not.toBe(initial);
+  await story.getByRole('button', { name: 'Pause story animation' }).click();
+  await expect(story).toHaveAttribute('data-motion', 'paused');
+  const moving = story.locator(
+    '.memory-note, .hero-illustration img, .story-receipt, .receipt-icon svg',
+  );
+  await expect
+    .poll(() =>
+      moving.evaluateAll((elements) =>
+        elements.every((element) =>
+          element
+            .getAnimations()
+            .every((animation) => animation.playState === 'paused'),
+        ),
+      ),
+    )
+    .toBe(true);
+  await story.getByRole('button', { name: /The follow-through/ }).click();
+  await expect(
+    story.getByRole('heading', { name: 'Promise fulfilled' }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      story
+        .locator('.memory-note')
+        .evaluate((element) =>
+          element
+            .getAnimations()
+            .every((animation) => animation.playState === 'paused'),
+        ),
+    )
+    .toBe(true);
+  await story.screenshot({
+    path: info.outputPath('story-paused-mobile.png'),
+    animations: 'disabled',
+  });
+  await story.getByRole('button', { name: 'Resume story animation' }).click();
+  await expect
+    .poll(() =>
+      image.evaluate((element) =>
+        element
+          .getAnimations()
+          .some((animation) => animation.playState === 'running'),
+      ),
+    )
+    .toBe(true);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(story.locator('.story-motion-control')).toBeHidden();
+  await expect
+    .poll(() =>
+      moving.evaluateAll((elements) =>
+        elements.every(
+          (element) => getComputedStyle(element).animationName === 'none',
+        ),
+      ),
+    )
+    .toBe(true);
 });

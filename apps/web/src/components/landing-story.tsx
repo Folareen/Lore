@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Check, CornerDownRight } from 'lucide-react';
+import { Check, CornerDownRight, Pause, Play } from 'lucide-react';
 import { Avatar } from './avatar';
 const chapters = [
   {
@@ -34,10 +34,30 @@ const chapters = [
 ];
 export function LandingStory() {
   const [chapter, setChapter] = useState(0);
+  const [paused, setPaused] = useState(false);
   const story = chapters[chapter];
   return (
-    <section className="story-stage" aria-label="An illustrative Lore story">
+    <section
+      className="story-stage"
+      data-motion={paused ? 'paused' : 'playing'}
+      aria-label="An illustrative Lore story"
+    >
       <div className="stage-top">
+        <button
+          className="story-motion-control"
+          onClick={() => setPaused((value) => !value)}
+          aria-label={
+            paused ? 'Resume story animation' : 'Pause story animation'
+          }
+          aria-pressed={paused}
+        >
+          {paused ? (
+            <Play size={15} aria-hidden="true" />
+          ) : (
+            <Pause size={15} aria-hidden="true" />
+          )}
+          {paused ? 'Play' : 'Pause'}
+        </button>
         <span className="sample-label">Illustrative story</span>
       </div>
       <div className="stage-scene">

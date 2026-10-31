@@ -35,14 +35,16 @@ export default function Home() {
               viewers into the story.
             </p>
             <p className="muted">Shared memory for your Twitch community.</p>
-            <Link href="/login" className="button primary">
-              <TwitchMark size={18} />
-              Start with Twitch
-              <ArrowUpRight size={18} aria-hidden="true" />
-            </Link>
-            <Link className="quiet-link" href="/how-it-works">
-              Take a look around <ArrowRight size={15} aria-hidden="true" />
-            </Link>
+            <div className="hero-actions">
+              <Link href="/login" className="button primary">
+                <TwitchMark size={18} />
+                Start with Twitch
+                <ArrowUpRight size={18} aria-hidden="true" />
+              </Link>
+              <Link className="quiet-link" href="/how-it-works">
+                Take a look around <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            </div>
           </div>
         </section>
         <LandingStory />

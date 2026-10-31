@@ -18,7 +18,10 @@ export function MarketingHeader() {
           <Link className="text-link login-link" href="/login">
             Sign in
           </Link>
-          <Link className="button primary compact" href="/demo">
+          <Link
+            className="button primary compact desktop-demo-link"
+            href="/demo"
+          >
             Try the demo <ArrowUpRight size={16} aria-hidden="true" />
           </Link>
           <MarketingMenu />
