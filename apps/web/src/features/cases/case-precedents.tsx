@@ -77,7 +77,7 @@ export function CasePrecedents({
   const active = run && ['queued', 'processing'].includes(run.status);
   return (
     <section className="panel content-stack">
-      <h2>What can we learn from earlier calls?</h2>
+      <h2>Earlier cases & recommendations</h2>
       <p className="panel-description">
         Potential precedents come from decided cases in this channel. Similarity
         helps find context; it does not establish guilt or require the same
@@ -430,7 +430,7 @@ function DecisionForm({
         />
       </label>
       <label className="field">
-        Required follow-up (optional)
+        Follow-up (optional)
         <textarea
           value={followUp}
           onChange={(e) => setFollowUp(e.target.value)}

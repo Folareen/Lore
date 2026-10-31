@@ -159,7 +159,7 @@ test('authenticated promise capture, retention and publication use real API data
   page,
   context,
   browser,
-}) => {
+}, info) => {
   await signIn(context);
   await page.goto('/app/streamer');
   await page
@@ -230,6 +230,22 @@ test('authenticated promise capture, retention and publication use real API data
     ),
   ).toBeVisible();
   expect(await visitor.evaluate(() => '__loreInjected' in window)).toBe(false);
+  for (const width of [390, 1440]) {
+    await visitor.setViewportSize({ width, height: 900 });
+    await expect
+      .poll(() =>
+        visitor.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      )
+      .toBe(true);
+    await visitor.screenshot({
+      path: info.outputPath(`public-catchup-${width}.png`),
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+
   await article.getByRole('button', { name: 'Unpublish', exact: true }).click();
   await page
     .getByLabel('Publication review reason')
@@ -310,6 +326,7 @@ test('mobile demo remains usable in light/dark and a missing-token OBS canvas st
     .getByRole('button', { name: 'Toggle light and dark mode' })
     .click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.getByRole('button', { name: 'Open navigation' }).click();
   await page
     .getByRole('navigation', { name: 'Workspace navigation' })
     .getByRole('link', { name: 'Account', exact: true })

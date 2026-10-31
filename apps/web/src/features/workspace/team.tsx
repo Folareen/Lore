@@ -127,11 +127,8 @@ export function Team() {
       <div className="page-heading">
         <div>
           <p className="eyebrow">GOOD PEOPLE. SHARED CONTEXT.</p>
-          <h1>Your people, in the loop.</h1>
-          <p>
-            Give your trusted team a seat in{' '}
-            {selected?.displayName || 'your community'}.
-          </p>
+          <h1>Your team</h1>
+          <p>Manage access to {selected?.displayName || 'your community'}.</p>
         </div>
       </div>
       {!selected && (
@@ -150,12 +147,12 @@ export function Team() {
             <ShieldCheck size={30} />
             <h2>
               {selected.role !== 'owner'
-                ? 'This seat belongs to the owner.'
+                ? 'Only the owner can manage the team.'
                 : 'Reconnect to bring your team back.'}
             </h2>
             <p>
               {selected.role !== 'owner'
-                ? 'Only the channel owner can see and manage team grants. Your own role is shown on the overview.'
+                ? 'The owner adds people and assigns roles. You can see your role on the overview.'
                 : 'Team access is cleared when a channel is disconnected. Reconnect, then add your people again.'}
             </p>
             <Link href={href('settings')} className="button secondary">

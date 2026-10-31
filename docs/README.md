@@ -2,7 +2,6 @@
 
 Local setup and commands live in the [project README](../README.md).
 
-- [Product purpose, audience and implemented scope](product-overview.md)
 - [Design system](design-system.md)
 - [Frontend conventions](frontend.md)
 - [Backend conventions](backend.md)

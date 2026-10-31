@@ -21,8 +21,7 @@ export function OpenLoopsScreen({ focusId }: { focusId?: string }) {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">MAKE GOOD ON THE GOOD STUFF</p>
-          <h1>A little less unfinished.</h1>
+          <h1>Open loops</h1>
           <p>
             Promises, follow-ups, and the things your community is waiting for.
           </p>
@@ -60,7 +59,7 @@ function LoopsPanel({
   connected: boolean;
   focusId?: string;
 }) {
-  const { loadLoops, loadLoop, preview } = useWorkspace();
+  const { loadLoops, loadLoop } = useWorkspace();
   const [items, setItems] = useState<OpenLoop[]>([]);
   const [filter, setFilter] = useState<OpenLoopStatus | 'all'>('all');
   const [cursor, setCursor] = useState<string | null>(null);
@@ -150,10 +149,8 @@ function LoopsPanel({
       <section className="panel promise-guide">
         <Bookmark size={21} aria-hidden="true" />
         <p>
-          In Twitch chat, a broadcaster or moderator can use{' '}
-          <code>!promise your commitment</code>. Authorized commands are
-          confirmed immediately. Live capture needs a connected Twitch app.
-          {preview && ' This preview uses labeled fixtures.'}
+          With live capture enabled, broadcasters and Twitch moderators can use{' '}
+          <code>!promise your commitment</code> to save a confirmed promise.
         </p>
       </section>
       <div className="promise-toolbar">
@@ -192,7 +189,7 @@ function LoopsPanel({
       {!loading && !error && items.length === 0 && (
         <div className="empty-state">
           <Bookmark size={28} />
-          <h2>Nothing in this chapter yet.</h2>
+          <h2>No promises here yet.</h2>
           <p>
             {filter === 'candidate'
               ? 'AI suggestions live in Needs review until a person confirms them.'
@@ -352,51 +349,54 @@ function OpenLoopCard({
         )}
       </details>
       {next.length > 0 && (
-        <form
-          className="promise-transition"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (target === 'cancelled' && reason.trim()) setConfirm(true);
-            else void update();
-          }}
-        >
-          <div className="field">
-            <label htmlFor={`status-${loop.id}`}>Next status</label>
-            <select
-              id={`status-${loop.id}`}
-              value={target}
-              onChange={(event) =>
-                setTarget(event.target.value as OpenLoopStatus)
-              }
-              disabled={busy || disabled}
-            >
-              {next.map((status) => (
-                <option key={status} value={status}>
-                  {openLoopLabels[status]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor={`reason-${loop.id}`}>
-              {terminal ? 'Reason (required)' : 'Update note (optional)'}
-            </label>
-            <textarea
-              id={`reason-${loop.id}`}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              required={terminal}
-              maxLength={2000}
-              rows={2}
-              disabled={busy || disabled}
-            />
-          </div>
-          <div>
-            <button className="button secondary" disabled={busy || disabled}>
-              {busy ? 'Updating…' : 'Update promise'}
-            </button>
-          </div>
-        </form>
+        <details className="promise-update">
+          <summary>Change status</summary>
+          <form
+            className="promise-transition"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (target === 'cancelled' && reason.trim()) setConfirm(true);
+              else void update();
+            }}
+          >
+            <div className="field">
+              <label htmlFor={`status-${loop.id}`}>Next status</label>
+              <select
+                id={`status-${loop.id}`}
+                value={target}
+                onChange={(event) =>
+                  setTarget(event.target.value as OpenLoopStatus)
+                }
+                disabled={busy || disabled}
+              >
+                {next.map((status) => (
+                  <option key={status} value={status}>
+                    {openLoopLabels[status]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor={`reason-${loop.id}`}>
+                {terminal ? 'Reason (required)' : 'Update note (optional)'}
+              </label>
+              <textarea
+                id={`reason-${loop.id}`}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                required={terminal}
+                maxLength={2000}
+                rows={2}
+                disabled={busy || disabled}
+              />
+            </div>
+            <div>
+              <button className="button secondary" disabled={busy || disabled}>
+                {busy ? 'Updating…' : 'Update promise'}
+              </button>
+            </div>
+          </form>
+        </details>
       )}
       {error && (
         <p className="notice error" role="alert">

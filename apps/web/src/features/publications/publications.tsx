@@ -82,12 +82,8 @@ function PublishingDesk() {
     <div className="content-stack">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">A WARMER WELCOME</p>
-          <h1>The Lore you choose to share.</h1>
-          <p>
-            Community stories and newcomer context, with a human behind every
-            publish.
-          </p>
+          <h1>Community publishing</h1>
+          <p>Prepare stories and recaps, then review them before publishing.</p>
         </div>
         <Link
           className="button secondary"
@@ -168,7 +164,7 @@ function PublishingDesk() {
       {loading && <p role="status">Loading community entries…</p>}
       {!loading && !error && !rows.length && (
         <div className="panel">
-          <h2>Make a little room for the next viewer.</h2>
+          <h2>No community entries yet.</h2>
           <p>
             Start with a moment, a recurring chat reference, or a short catch-up
             summary.

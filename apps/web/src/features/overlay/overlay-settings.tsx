@@ -145,7 +145,7 @@ function OverlayDesk() {
       <div className="page-heading">
         <div>
           <p className="eyebrow">TAKE THE STORY LIVE</p>
-          <h1>A little context, on stream.</h1>
+          <h1>Stream overlay</h1>
           <p>Choose the Lore your audience sees in OBS.</p>
         </div>
         <Link className="button secondary" href={href('publications')}>

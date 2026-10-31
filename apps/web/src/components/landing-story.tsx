@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Check, CornerDownRight, MoveUpRight } from 'lucide-react';
+import { Check, CornerDownRight } from 'lucide-react';
 import { Avatar } from './avatar';
 const chapters = [
   {
@@ -70,12 +70,6 @@ export function LandingStory() {
           <h3>{story.status}</h3>
           <p>{story.detail}</p>
           <CornerDownRight size={24} />
-        </div>
-        <div className="chat-sticker" aria-hidden="true">
-          chat
-          <br />
-          remembers.
-          <MoveUpRight size={22} />
         </div>
       </div>
       <div className="chapter-nav" role="group" aria-label="Story chapters">

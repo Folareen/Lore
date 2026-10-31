@@ -17,7 +17,7 @@ export function ChannelSettings() {
         <div className="page-heading">
           <div>
             <h1>Channel settings</h1>
-            <p>A few preferences to make this space yours.</p>
+            <p>Capture, retention and channel access.</p>
           </div>
         </div>
         <div className="empty-state">
@@ -140,13 +140,11 @@ function SettingsPanel({ channel }: { channel: Channel }) {
         </section>
         <section className="panel">
           <div className="panel-title">
-            <h2>Keep the context. Set the limit.</h2>
+            <h2>Chat retention</h2>
           </div>
           <p className="panel-description">
-            Choose how long ordinary captured chat can stay. The default is
-            seven days; excerpts intentionally kept as evidence follow their own
-            retention policy. Shortening this setting permanently caps existing
-            chat deadlines.
+            Ordinary chat expires after this period. Shortening retention also
+            shortens existing deadlines. Retained evidence is kept separately.
           </p>
           <form onSubmit={save}>
             <div className="field">
@@ -169,9 +167,6 @@ function SettingsPanel({ channel }: { channel: Channel }) {
                   ),
                 )}
               </select>
-              <small>
-                Shorter is always okay. Longer retention isn’t available yet.
-              </small>
             </div>
             {owner && (
               <div className="save-row">

@@ -19,12 +19,8 @@ export function ModerationScreen() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">CONTEXT BEFORE THE CALL</p>
-          <h1>A fairer place to review.</h1>
-          <p>
-            Case files, retained evidence, and the reasoning behind each human
-            decision.
-          </p>
+          <h1>Moderation cases</h1>
+          <p>Review evidence, applicable rules and earlier decisions.</p>
         </div>
         <FolderOpen size={30} aria-hidden="true" />
       </div>

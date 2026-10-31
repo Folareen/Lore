@@ -27,11 +27,8 @@ export function CandidatesScreen() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">YOUR CALL, ALWAYS</p>
-          <h1>Worth following up?</h1>
-          <p>
-            Chat moves fast. Review the possibilities before keeping a promise.
-          </p>
+          <h1>Review suggestions</h1>
+          <p>Check the source before confirming a promise.</p>
         </div>
         <ClipboardCheck size={30} aria-hidden="true" />
       </div>
@@ -119,17 +116,15 @@ function ReviewPanel() {
       <MicrophonePanel />
       <section className="panel content-stack" aria-label="Extraction settings">
         <div className="panel-title">
-          <h2>Catch possible follow-ups</h2>
+          <h2>Chat suggestions</h2>
           <span className="status purple">
             {preview ? 'Demo fixture' : status?.enabled ? 'Enabled' : 'Off'}
           </span>
         </div>
         <p className="panel-description">
-          On Google’s free tier, inputs and outputs may be used to improve its
-          products. When enabled, retained chat from this channel is sent to
-          Google Gemini in small batches. Suggestions stay private to your team
-          and expire with the original chat. Confirming one keeps its source as
-          evidence.
+          Gemini reviews retained chat when enabled. Suggestions stay private
+          and need human confirmation. Google may use free-tier inputs and
+          outputs to improve its products.
         </p>
         {status && (
           <>

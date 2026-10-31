@@ -57,12 +57,11 @@ export function QuickCapture({
   return (
     <section className="panel">
       <div className="panel-title">
-        <h2>Catch it before it scrolls away.</h2>
+        <h2>Save a promise</h2>
         <Plus size={19} aria-hidden="true" />
       </div>
       <p className="panel-description">
-        Save an explicit commitment for your team. Your capture confirms it and
-        keeps its wording as a source excerpt.
+        Saving confirms this promise and keeps its wording as the source.
       </p>
       {disabled && (
         <p className="notice">

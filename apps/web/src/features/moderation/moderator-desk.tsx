@@ -18,11 +18,8 @@ export function ModeratorDeskScreen() {
       </Link>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">PRIVATE MODERATOR DESK</p>
-          <h1>Good context. Better handoffs.</h1>
-          <p>
-            Review the differences, follow through, and leave a clear next step.
-          </p>
+          <h1>Shift desk</h1>
+          <p>Handoffs, consistency reviews and follow-up actions.</p>
         </div>
       </div>
       {!selected ? (

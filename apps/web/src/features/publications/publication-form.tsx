@@ -71,11 +71,10 @@ export function PublicationForm({
   }, [channelId]);
   return (
     <div className="panel content-stack">
-      <h2>{initial ? 'Edit community draft' : 'A story worth sharing'}</h2>
+      <h2>{initial ? 'Edit community draft' : 'New community draft'}</h2>
       <p className="muted">
-        Write for someone who just arrived. Keep private cases, identities,
-        appeals and repair plans out of public copy. Saving creates a draft for
-        human review.
+        Write for someone new. Leave private case details out. Saving creates an
+        unpublished draft.
       </p>
       {suggested && (
         <p className="notice">

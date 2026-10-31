@@ -63,7 +63,7 @@ export function PublicShell({
         {children}
       </main>
       <footer className="community-footer">
-        A little context, a warmer welcome. <Link href="/">Made with Lore</Link>
+        Your community, caught up. <Link href="/">Made with Lore</Link>
       </footer>
     </div>
   );
@@ -161,7 +161,7 @@ export function PublicReader({
             <>
               <div className="community-heading">
                 <p className="eyebrow">COMMUNITY LORE</p>
-                <h1>A little context goes a long way.</h1>
+                <h1>The stories so far.</h1>
                 <p>
                   Milestones, inside references, and the stories worth bringing
                   along.

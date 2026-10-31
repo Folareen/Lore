@@ -239,7 +239,7 @@ describe('Lore interface behavior', () => {
       screen.queryByRole('button', { name: 'Disconnect channel' }),
     ).toBeNull();
     expect(
-      await screen.findByText('This seat belongs to the owner.'),
+      await screen.findByText('Only the owner can manage the team.'),
     ).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -324,9 +324,7 @@ describe('Lore interface behavior', () => {
     );
     const user = userEvent.setup();
     await screen.findByText('moss.jpeg');
-    expect(
-      screen.getByText(/Preview only. Changes reset on refresh/),
-    ).toBeTruthy();
+    expect(screen.getByText(/Try anything. Refresh to reset./)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Remove moss.jpeg' }));
     await user.click(
       within(screen.getByRole('dialog')).getByRole('button', {
