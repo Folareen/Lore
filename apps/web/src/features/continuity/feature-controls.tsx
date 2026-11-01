@@ -32,7 +32,7 @@ const features = [
     key: 'communityAssistantEnabled',
     title: 'Community Q&A assistant',
     summary:
-      'Help viewers explore published stories with a floating chat assistant.',
+      'Enabled by default. Help viewers explore published stories with a floating chat assistant.',
     description:
       'Allow visitors to send questions to Gemini for short, source-linked answers from published community stories only. Private chat, promises and moderation records are excluded. Answers are AI-generated, not approved announcements. Requests are limited per minute and per day. Google may use free-tier inputs and outputs to improve its products.',
   },

@@ -117,6 +117,34 @@ for (const width of [390, 1440]) {
       await expect(
         page.getByRole('heading', { name: 'Community stories', exact: true }),
       ).toBeVisible();
+      const communityUrl = page.url();
+      await page.getByRole('tab', { name: 'Inside references' }).click();
+      await expect(
+        page.getByRole('tab', { name: 'Inside references' }),
+      ).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('.reader-story')).toHaveCount(1);
+      await expect(page.locator('.reader-story')).toContainText(
+        'What is the moss club?',
+      );
+      await expect(page).toHaveURL(communityUrl);
+      await page.getByRole('tab', { name: 'Plans & promises' }).click();
+      await expect(page.locator('.reader-story')).toHaveCount(1);
+      await expect(page.locator('.reader-story')).toContainText(
+        'Finish the community island tour',
+      );
+      await expect(page).toHaveURL(communityUrl);
+      await page.getByRole('tab', { name: 'Stories', exact: true }).click();
+      await page.locator('.reader-footer').scrollIntoViewIfNeeded();
+      await expect
+        .poll(() =>
+          page
+            .locator('.reader-header')
+            .evaluate((header) =>
+              Math.round(header.getBoundingClientRect().top),
+            ),
+        )
+        .toBe(0);
+      await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({
         path: info.outputPath(`${width}-${theme}-public-feed.png`),
         fullPage: true,
@@ -228,3 +256,126 @@ test('demo community guide uses only local public fixtures', async ({
     .click();
   await expect(page.locator('.reader-article h1')).toBeVisible();
 });
+
+for (const width of [390, 1440]) {
+  test(`dialogs stay dark and small menus do not dim the page at ${width}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    for (const theme of ['light', 'dark']) {
+      await page.goto('/demo');
+      await page.evaluate(
+        (value) => localStorage.setItem('lore-theme', value),
+        theme,
+      );
+      await page.goto('/demo?view=candidates');
+      if (width < 851) {
+        const trigger = page.getByRole('button', { name: 'Open navigation' });
+        await expect(trigger).toHaveText('');
+        await trigger.click();
+        const navigation = page.getByRole('dialog', { name: 'Community menu' });
+        expect(
+          await navigation.evaluate(
+            (element) =>
+              getComputedStyle(element, '::backdrop').backgroundColor,
+          ),
+        ).toBe('rgba(8, 6, 12, 0.94)');
+        await page.keyboard.press('Escape');
+        await expect(trigger).toBeFocused();
+      }
+      await page
+        .getByRole('article')
+        .first()
+        .getByRole('button', { name: 'Review suggestion' })
+        .click();
+      const review = page.getByRole('dialog', {
+        name: 'Review suggestion',
+        exact: true,
+      });
+      expect(
+        await review.evaluate(
+          (element) => getComputedStyle(element, '::backdrop').backgroundColor,
+        ),
+      ).toBe('rgba(8, 6, 12, 0.94)');
+      await page.screenshot({
+        path: info.outputPath(`${width}-${theme}-dark-review.png`),
+        fullPage: true,
+      });
+      await page.keyboard.press('Escape');
+      await page.locator('.demo-tools summary').click();
+      expect(
+        await page
+          .locator('.demo-tools details')
+          .evaluate((element) => getComputedStyle(element, '::before').content),
+      ).toBe('none');
+      await page.keyboard.press('Escape');
+      await expect(
+        page.getByRole('navigation', { name: 'Demo tools', exact: true }),
+      ).not.toBeVisible();
+      await page.locator('.demo-tools summary').click();
+      await page
+        .getByRole('button', { name: 'Reset demo', exact: true })
+        .click();
+      const confirm = page.getByRole('dialog', { name: 'Reset your demo?' });
+      expect(
+        await confirm.evaluate(
+          (element) => getComputedStyle(element, '::backdrop').backgroundColor,
+        ),
+      ).toBe('rgba(8, 6, 12, 0.94)');
+      await confirm
+        .getByRole('button', { name: 'Cancel', exact: true })
+        .click();
+      await page.goto('/demo?view=publications');
+      await page
+        .getByRole('article')
+        .first()
+        .getByRole('button', { name: 'Manage story' })
+        .click();
+      const publication = page.getByRole('dialog', {
+        name: 'Manage public story',
+        exact: true,
+      });
+      await publication
+        .getByRole('button', { name: 'Edit as draft', exact: true })
+        .click();
+      await publication
+        .getByRole('combobox', { name: 'Entry type', exact: true })
+        .click();
+      await expect(publication.locator('.select-scrim')).toHaveCount(0);
+      await expect(publication.getByRole('listbox')).toBeVisible();
+      await page.screenshot({
+        path: info.outputPath(`${width}-${theme}-dark-select.png`),
+        fullPage: false,
+      });
+      await page
+        .getByRole('option', { name: 'Milestone', exact: true })
+        .click();
+      await expect(publication.locator('.select-scrim')).toHaveCount(0);
+      await expect(publication).toBeVisible();
+      await expect(
+        publication.getByRole('combobox', { name: 'Entry type', exact: true }),
+      ).toContainText('Milestone');
+      await publication
+        .getByRole('button', { name: 'Close review', exact: true })
+        .click();
+      if (width < 851) {
+        await page.goto('/');
+        await page.getByLabel('Explore Lore', { exact: true }).click();
+        expect(
+          await page
+            .locator('.marketing-menu')
+            .evaluate(
+              (element) => getComputedStyle(element, '::before').content,
+            ),
+        ).toBe('none');
+        await expect(
+          page.getByRole('navigation', { name: 'Mobile site navigation' }),
+        ).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(
+          page.getByRole('navigation', { name: 'Mobile site navigation' }),
+        ).not.toBeVisible();
+      }
+    }
+  });
+}

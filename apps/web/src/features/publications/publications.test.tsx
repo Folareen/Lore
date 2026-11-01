@@ -374,3 +374,75 @@ it('does not resurrect withdrawn text when an older public request finishes afte
   );
   expect(screen.getByRole('alert').textContent).toContain('not available');
 });
+
+it('switches community tabs through scoped public filters and paginates within the selected tab', async () => {
+  const source = previewPublicEntry(
+    previewPublications[0],
+    previewPublications,
+  );
+  const story = { ...source, kind: 'story' as const, title: 'Garden story' };
+  const reference = { ...source, kind: 'reference', title: 'Pond committee' };
+  const older = {
+    ...reference,
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    title: 'Older reference',
+  };
+  const channel = { slug: 'twitch-100', displayName: 'cozybyte' };
+  fetchMock.mockImplementation(async (input) => {
+    const url = new URL(String(input), 'http://localhost');
+    if (url.pathname.endsWith('/assistant'))
+      return Response.json({ enabled: false });
+    const kind = url.searchParams.get('kind');
+    const more = url.searchParams.has('cursor');
+    return Response.json({
+      channel,
+      items:
+        kind === 'reference'
+          ? [more ? older : reference]
+          : kind === 'commitment'
+            ? []
+            : [story],
+      nextCursor: kind === 'reference' && !more ? older.id : null,
+    });
+  });
+  render(
+    <PublicReader
+      initial={{
+        mode: 'feed',
+        data: { channel, items: [story], nextCursor: null },
+      }}
+      query="q=garden"
+    />,
+  );
+  await screen.findByRole('heading', { name: 'Garden story' });
+  const originalUrl = window.location.href;
+  await userEvent.click(screen.getByRole('tab', { name: 'Inside references' }));
+  await screen.findByRole('heading', { name: 'Pond committee' });
+  expect(screen.queryByRole('heading', { name: 'Garden story' })).toBeNull();
+  expect(window.location.href).toBe(originalUrl);
+  expect(
+    fetchMock.mock.calls.some(([url]) =>
+      String(url).includes('q=garden&kind=reference'),
+    ),
+  ).toBe(true);
+  await userEvent.click(
+    screen.getByRole('button', { name: 'More community stories' }),
+  );
+  await screen.findByRole('heading', { name: 'Older reference' });
+  expect(
+    screen.getByRole('link', { name: 'Older reference' }).getAttribute('href'),
+  ).toContain(`/entries/${older.id}`);
+  const tab = screen.getByRole('tab', { name: 'Inside references' });
+  tab.focus();
+  await userEvent.keyboard('{ArrowRight}');
+  await screen.findByRole('heading', { name: 'No plans or promises found' });
+  expect(
+    screen
+      .getByRole('tab', { name: 'Plans & promises' })
+      .getAttribute('aria-selected'),
+  ).toBe('true');
+  await userEvent.click(screen.getByRole('tab', { name: 'Stories' }));
+  await screen.findByRole('heading', { name: 'Garden story' });
+  await userEvent.click(screen.getByRole('tab', { name: 'Stories' }));
+  expect(screen.queryByRole('status')).toBeNull();
+});

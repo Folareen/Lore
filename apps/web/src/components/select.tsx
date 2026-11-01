@@ -87,7 +87,11 @@ export function Select({
       {name && (
         <input type="hidden" name={name} value={current} disabled={disabled} />
       )}
-      <Primitive.Portal>
+      <Primitive.Portal
+        container={
+          trigger.current?.closest<HTMLDialogElement>('dialog') ?? undefined
+        }
+      >
         <Primitive.Content
           className="select-content"
           position="popper"

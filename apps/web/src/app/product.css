@@ -138,9 +138,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.record-dialog::backdrop {
-  background: #100c18a6;
-}
 .record-dialog-header {
   position: sticky;
   top: 0;
@@ -1078,10 +1075,8 @@
   opacity: 1;
   visibility: visible;
 }
-.confirm-dialog::backdrop,
-.record-dialog::backdrop,
-.mobile-nav-dialog::backdrop {
-  background: rgb(10 8 14 / 86%);
+dialog::backdrop {
+  background: var(--dialog-scrim);
 }
 @media (max-width: 850px) {
   .workspace .workspace-topbar {
@@ -1366,5 +1361,368 @@
   }
   .assistant-compose textarea {
     font-size: 16px;
+  }
+}
+
+/* Public directory: real communities with something approved to share. */
+.discover-page {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 56px 0 0;
+}
+.discover-intro {
+  max-width: 720px;
+  margin-bottom: 32px;
+}
+.discover-shell .discover-page h1 {
+  font-size: clamp(34px, 4.5vw, 52px);
+  line-height: 1.12;
+  letter-spacing: -1.5px;
+  margin: 0 0 18px;
+}
+.discover-intro p,
+.discover-page > p {
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.7;
+  margin: 0;
+}
+.discover-search {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 44px;
+}
+.discover-search > .field {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.discover-search-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.discover-search-input svg {
+  position: absolute;
+  left: 16px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.discover-search-input input {
+  width: 100%;
+  padding-left: 46px;
+  min-height: 48px;
+}
+.discover-search .button {
+  min-height: 48px;
+}
+.discover-results-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.discover-shell .discover-results-heading h2 {
+  font-size: 21px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.discover-results-heading > a {
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.discover-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.discover-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 0;
+}
+.discover-card > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.discover-card > header > div {
+  min-width: 0;
+}
+.discover-shell .discover-card h3 {
+  font-size: 20px;
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+.discover-card h3 a:hover {
+  color: var(--purple-ink);
+}
+.discover-card > header p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+.discover-preview {
+  flex: 1;
+}
+.discover-preview-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 14px;
+}
+.discover-preview-label time {
+  font-size: 12px;
+}
+.discover-shell .discover-preview h4 {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+.discover-preview > p:last-child {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.discover-card > nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 24px;
+}
+.discover-card > nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.discover-card > nav a:first-child {
+  color: var(--purple-ink);
+}
+.discover-empty {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+}
+.discover-empty > svg {
+  margin: 0 auto 16px;
+  color: var(--muted);
+}
+.discover-shell .discover-empty h3 {
+  font-size: 23px;
+  margin: 0 0 12px;
+}
+.discover-empty p {
+  max-width: 480px;
+  margin: 0 auto 24px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.discover-pagination {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+.discover-owner-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  flex-wrap: wrap;
+  padding: 24px;
+  background: var(--raised);
+  border-radius: 10px;
+  margin-top: 48px;
+  font-size: 14px;
+}
+.discover-owner-note p {
+  margin: 0;
+  color: var(--muted);
+}
+.discover-owner-note a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.reader-footer {
+  flex-wrap: wrap;
+}
+@media (max-width: 1000px) {
+  .discover-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .discover-page {
+    padding-top: 32px;
+  }
+  .discover-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .discover-intro {
+    margin-bottom: 24px;
+  }
+  .discover-intro p {
+    font-size: 16px;
+  }
+  .discover-search {
+    margin-bottom: 32px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .discover-search input {
+    font-size: 16px;
+  }
+  .discover-search .button {
+    align-self: flex-end;
+  }
+  .discover-card {
+    padding: 22px;
+  }
+  .discover-owner-note {
+    padding: 20px;
+    margin-top: 32px;
+  }
+}
+
+.reader-header .reader-discover-nav {
+  gap: 6px;
+}
+@media (max-width: 760px) {
+  .reader-header .reader-discover-nav {
+    width: 32px;
+    justify-content: center;
+  }
+  .reader-discover-nav > span {
+    display: none;
+  }
+  .reader-header nav {
+    gap: 8px;
+  }
+  .reader-shell .reader-header {
+    column-gap: 8px;
+  }
+}
+@media (max-width: 360px) {
+  .reader-header .brand {
+    width: 32px;
+  }
+  .reader-header .brand > span {
+    display: none;
+  }
+}
+
+/* Compact mobile workspace navigation. */
+.workspace .mobile-nav-toggle {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 10px;
+  justify-content: center;
+}
+
+/* Community identity and navigation stay in view while reading. */
+.reader-shell .reader-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--page);
+  box-shadow: 0 1px 0 var(--raised);
+}
+.reader-shell [id] {
+  scroll-margin-top: 150px;
+}
+.reader-shell .reader-community-hero {
+  margin-top: 8px;
+  padding: 32px;
+  border-radius: 20px;
+  background: linear-gradient(115deg, var(--purple-soft), var(--surface));
+  align-items: flex-end;
+}
+.reader-community-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.reader-community-identity .avatar {
+  flex-shrink: 0;
+}
+.reader-community-tabs .section-tab-list {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  margin: 24px 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  border-bottom: 1px solid var(--raised);
+}
+.reader-community-tabs .section-tab-list [role='tab'] {
+  white-space: nowrap;
+  padding: 12px 0;
+  font-size: 14px;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+}
+.reader-community-tabs .section-tab-list [role='tab'][aria-selected='true'] {
+  color: var(--purple-ink);
+  border-bottom-color: var(--primary);
+  background: transparent;
+  box-shadow: none;
+}
+.reader-shell .reader-feed-title {
+  font-size: 22px;
+  margin: 32px 0 16px;
+}
+.reader-start h2 a {
+  color: var(--text);
+}
+@media (max-width: 760px) {
+  .reader-shell .reader-community-hero {
+    padding: 24px;
+    align-items: flex-start;
+  }
+  .reader-community-identity {
+    gap: 12px;
+  }
+  .reader-community-identity .avatar {
+    width: 56px;
+    height: 56px;
+  }
+  .reader-community-tabs .section-tab-list {
+    gap: 20px;
+  }
+  .reader-shell .reader-story > p {
+    -webkit-line-clamp: 2;
   }
 }

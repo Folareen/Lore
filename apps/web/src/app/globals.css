@@ -18,6 +18,7 @@
   --danger-soft: #f9e4e5;
   --shadow: 0 5px 20px #30243408;
   --radius: 12px;
+  --dialog-scrim: rgb(8 6 12 / 94%);
   color-scheme: light;
 }
 [data-theme='dark'] {
@@ -1307,9 +1308,6 @@ svg {
   width: calc(100% - 40px);
   box-shadow: 0 25px 80px #0003;
   margin: auto;
-}
-.confirm-dialog::backdrop {
-  background: #15101c80;
 }
 .confirm-dialog h2 {
   font-size: 25px;
@@ -4770,9 +4768,6 @@ details[open] > summary {
 .mobile-nav-dialog[open] {
   display: flex;
   flex-direction: column;
-}
-.mobile-nav-dialog::backdrop {
-  background: #15101c99;
 }
 .mobile-nav-dialog-header {
   display: flex;

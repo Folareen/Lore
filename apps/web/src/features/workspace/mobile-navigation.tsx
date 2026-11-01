@@ -56,7 +56,7 @@ export function MobileNavigation({
           setOpen(true);
         }}
       >
-        <Menu size={19} aria-hidden="true" /> Menu
+        <Menu size={21} aria-hidden="true" />
       </button>
       <dialog
         ref={dialog}

@@ -159,6 +159,12 @@ Extraction, microphone and recap calls share `AI_DAILY_CALL_LIMIT`; this does no
 
 ### Public community Q&A
 
-Owners can enable **Community Q&A assistant** in Channel settings → Features. It is off by default and uses only published stories from that channel; publishing a viewer-safe introduction and inside references helps it answer newcomers. Visitors need no login. AI answers link to public sources and are not approved announcements. Questions go to Google Gemini; do not enter personal information. Conversations stay in page memory and clear on navigation; questions are not stored by Lore.
+**Community Q&A assistant** is enabled by default; owners can turn it off in Channel settings → Features. It uses only published stories from that channel; publishing a viewer-safe introduction and inside references helps it answer newcomers. Visitors need no login. AI answers link to public sources and are not approved announcements. Questions go to Google Gemini; do not enter personal information. Conversations stay in page memory and clear on navigation; questions are not stored by Lore.
 
 `GEMINI_COMMUNITY_MODEL` defaults to `gemini-3.5-flash-lite`, separately from the generation model used for team workflows. Each request sends up to six 1,600-character public excerpts and two preceding questions, with a 700-token output cap and minimal thinking. Duplicate questions reuse a 15-minute cache bound to the current source snapshot. Public Q&A has separate Redis budgets: 12 new calls/minute/channel, `COMMUNITY_AI_DAILY_LIMIT` (default 100)/UTC day/channel and `COMMUNITY_AI_GLOBAL_DAILY_LIMIT` (default 500)/UTC day/instance. Failures consume reservations. Redis outages fail closed. These application limits do not change Google billing or quota. Model availability and pricing: [Google’s Flash-Lite documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite).
+
+The community assistant default migration enables existing channels without a recorded owner choice; explicit owner opt-outs remain disabled. Gemini configuration is still required.
+
+### Discover communities
+
+`/discover` is a public directory of connected channels with published Lore stories. Search by channel name or slug (an optional leading `@` is accepted), browse pages of communities, then open a channel’s stories or catch-up. Cards show a preview of the latest approved public story and a published-story count. Draft-only, disconnected and demo fixture channels are excluded. This searches communities already sharing on Lore; it does not search all Twitch channels or make Twitch/Gemini calls. No extra configuration or migration is required.

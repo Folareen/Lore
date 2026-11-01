@@ -213,6 +213,28 @@ async function main() {
     "INSERT INTO channels(id,slug,twitch_channel_id,owner_user_id,display_name,origin,connected_at)VALUES($1,'browser-test','100','00000000-0000-4000-8000-000000009101','Browser test','live_twitch',now())",
     [channel],
   );
+  // Synthetic directory communities use separate owners without sessions or private data.
+  for (let index = 1; index <= 14; index++) {
+    const slug = `discovery-fixture-${String(index).padStart(2, '0')}`;
+    const twitch = String(950000 + index);
+    const identity = await pool.query(
+      'INSERT INTO users(twitch_user_id,login,display_name) VALUES($1,$2,$2) RETURNING id',
+      [twitch, slug],
+    );
+    const result = await pool.query(
+      "INSERT INTO channels(slug,display_name,origin,connected_at,owner_user_id,twitch_channel_id) VALUES($1,$2,'live_twitch',now(),$3,$4) RETURNING id",
+      [
+        slug,
+        `Discovery fixture ${String(index).padStart(2, '0')}`,
+        identity.rows[0].id,
+        twitch,
+      ],
+    );
+    await pool.query(
+      "INSERT INTO public_entries(channel_id,request_id,input_fingerprint,kind,title,body,chat_summary,status,approved_by_twitch_user_id,published_at) VALUES($1,gen_random_uuid(),'directory-fixture','story','Meet the garden crew','A synthetic public introduction: viewers name the plants and build the garden together.','','published','100',now())",
+      [result.rows[0].id],
+    );
+  }
   for (const [n, role] of [
     [2, 'moderator'],
     [3, 'team'],
