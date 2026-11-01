@@ -1570,7 +1570,7 @@ svg {
     gap: 10px;
   }
   .header-actions .login-link {
-    display: none;
+    display: inline-flex;
   }
   .header-actions .button {
     font-size: 12px;
@@ -4581,9 +4581,10 @@ details[open] > summary {
 }
 .hero-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 20px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
   margin-top: 8px;
 }
 .intro-aside .button {
@@ -4686,12 +4687,6 @@ details[open] > summary {
   }
 }
 @media (max-width: 850px) {
-  .marketing-header .desktop-demo-link {
-    display: none;
-  }
-  .marketing-menu nav .menu-demo-link {
-    margin-top: 8px;
-  }
   .landing-intro {
     grid-template-columns: minmax(0, 1fr);
     gap: 36px;
@@ -4721,7 +4716,7 @@ details[open] > summary {
   }
   .hero-actions {
     margin-top: 8px;
-    gap: 20px;
+    gap: 12px;
   }
   .stage-top {
     padding: 16px 20px;
@@ -4754,10 +4749,6 @@ details[open] > summary {
     ) {
     animation: none;
   }
-}
-.marketing-menu nav .menu-demo-link:hover {
-  background: var(--primary-hover);
-  color: var(--on-primary);
 }
 
 /* Native modal navigation keeps narrow-screen tasks separate from the page. */

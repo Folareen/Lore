@@ -30,14 +30,7 @@ export function MarketingMenu() {
         <Link href="/#questions" onClick={close}>
           Questions
         </Link>
-        <Link href="/login" onClick={close}>
-          Sign in with Twitch
-        </Link>
-        <Link
-          href="/demo"
-          className="button primary menu-demo-link"
-          onClick={close}
-        >
+        <Link href="/demo" onClick={close}>
           Try the demo
         </Link>
       </nav>

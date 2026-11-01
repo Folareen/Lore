@@ -108,8 +108,10 @@ test('landing content, optional memory game, FAQ and tour work on mobile', async
     fullPage: true,
     animations: 'disabled',
   });
+  await page.getByLabel('Explore Lore', { exact: true }).click();
   await page
-    .getByRole('link', { name: 'Take a look around', exact: true })
+    .getByRole('navigation', { name: 'Mobile site navigation' })
+    .getByRole('link', { name: 'How it works', exact: true })
     .click();
   await expect(page).toHaveURL(/\/how-it-works$/);
   await expect(
@@ -504,7 +506,20 @@ test('the illustrative story loops, can be paused, and respects reduced motion',
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
   const header = page.locator('.marketing-header');
-  await expect(header.locator('.desktop-demo-link')).toBeHidden();
+  await expect(
+    header.getByRole('link', { name: 'Sign in', exact: true }),
+  ).toBeVisible();
+  await expect(
+    header.getByRole('link', { name: 'Sign in', exact: true }),
+  ).toHaveClass(/primary/);
+  await expect(
+    header.getByRole('link', { name: 'Try the demo', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .locator('.hero-actions')
+      .getByRole('link', { name: 'Try the demo', exact: true }),
+  ).toHaveAttribute('href', '/demo');
   await page.getByLabel('Explore Lore', { exact: true }).click();
   await expect(
     page
