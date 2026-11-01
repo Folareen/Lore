@@ -179,7 +179,7 @@ for (const width of [390, 1440]) {
     ]);
     await page.goto('/app/settings');
     await page.getByRole('tab', { name: 'Features', exact: true }).click();
-    await expect(page.getByRole('switch')).toHaveCount(4);
+    await expect(page.getByRole('switch')).toHaveCount(5);
     await page.screenshot({
       path: info.outputPath(`${width}-live-settings.png`),
       fullPage: true,
@@ -191,3 +191,40 @@ for (const width of [390, 1440]) {
       .toBe(true);
   });
 }
+
+test('demo community guide uses only local public fixtures', async ({
+  page,
+}, info) => {
+  const calls: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/assistant')) calls.push(request.url());
+  });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/demo?view=community');
+  await page
+    .getByRole('button', { name: 'Ask about the community', exact: true })
+    .click();
+  const panel = page.getByRole('dialog', { name: /Ask about cozybyte/ });
+  await expect(panel.getByText('Demo · sample stories only')).toBeVisible();
+  await panel.getByRole('textbox').fill('Tell me about the garden tour');
+  await panel.getByRole('button', { name: 'Send question' }).click();
+  await expect(
+    panel.getByRole('navigation', { name: 'Answer sources' }),
+  ).toBeVisible();
+  expect(calls).toEqual([]);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
+  await page.screenshot({
+    path: info.outputPath('demo-guide-320.png'),
+    fullPage: true,
+  });
+  await panel
+    .getByRole('navigation', { name: 'Answer sources' })
+    .getByRole('link')
+    .first()
+    .click();
+  await expect(page.locator('.reader-article h1')).toBeVisible();
+});

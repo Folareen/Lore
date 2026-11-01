@@ -1,4 +1,5 @@
 'use client';
+import { CommunityAssistant } from './community-assistant';
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -72,6 +73,12 @@ export function CommunityPreview() {
             }).toString(),
           );
         }}
+      />
+      <CommunityAssistant
+        key={JSON.stringify(feed.items)}
+        slug={feed.channel.slug}
+        name={feed.channel.displayName}
+        demoSources={feed.items}
       />
     </PublicShell>
   );

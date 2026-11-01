@@ -29,6 +29,14 @@ const features = [
       'Use selected published stories to draft editable recaps with Gemini. Private chat and cases are excluded. Every draft needs human approval before publication.',
   },
   {
+    key: 'communityAssistantEnabled',
+    title: 'Community Q&A assistant',
+    summary:
+      'Help viewers explore published stories with a floating chat assistant.',
+    description:
+      'Allow visitors to send questions to Gemini for short, source-linked answers from published community stories only. Private chat, promises and moderation records are excluded. Answers are AI-generated, not approved announcements. Requests are limited per minute and per day. Google may use free-tier inputs and outputs to improve its products.',
+  },
+  {
     key: 'microphoneEnabled',
     title: 'Microphone follow-up suggestions',
     summary: 'Record and explicitly submit a short clip to suggest a promise.',
@@ -144,6 +152,7 @@ export function FeatureControls({
                           )}
                         {[
                           'publicSummaryAiEnabled',
+                          'communityAssistantEnabled',
                           'microphoneEnabled',
                         ].includes(feature.key) &&
                           !settings.aiConfigured && (
@@ -202,9 +211,11 @@ export function FeatureControls({
                   {error}
                 </p>
               )}
-              {['publicSummaryAiEnabled', 'microphoneEnabled'].includes(
-                confirm.key,
-              ) && (
+              {[
+                'publicSummaryAiEnabled',
+                'microphoneEnabled',
+                'communityAssistantEnabled',
+              ].includes(confirm.key) && (
                 <p>
                   Google may use free-tier AI inputs and outputs to improve its
                   products.

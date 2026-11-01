@@ -1,0 +1,1 @@
+ALTER TABLE "channels" ADD COLUMN "community_assistant_enabled" boolean DEFAULT false NOT NULL;

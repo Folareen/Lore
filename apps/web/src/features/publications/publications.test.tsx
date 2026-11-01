@@ -252,7 +252,11 @@ it('clears public content when revalidation finds a withdrawal and renders commu
     ],
     nextCursor: null,
   };
-  fetchMock.mockResolvedValue(Response.json(data));
+  fetchMock.mockImplementation(async (input) =>
+    Response.json(
+      String(input).endsWith('/assistant') ? { enabled: false } : data,
+    ),
+  );
   render(<PublicReader initial={{ mode: 'feed', data }} />);
   await waitFor(() => expect(fetchMock).toHaveBeenCalled());
   expect(screen.getByText('<script>privateContext()</script>')).toBeTruthy();
@@ -337,21 +341,22 @@ it('does not resurrect withdrawn text when an older public request finishes afte
   let release: (response: Response) => void = () => {
     throw new Error('Missing pending response');
   };
-  fetchMock
-    .mockImplementationOnce(
-      () =>
-        new Promise<Response>((resolve) => {
-          release = resolve;
-        }),
-    )
-    .mockImplementation(async () =>
-      Response.json(
-        { message: 'Community Lore is not available' },
-        { status: 404 },
-      ),
+  let feedRequests = 0;
+  fetchMock.mockImplementation(async (input) => {
+    if (String(input).endsWith('/assistant'))
+      return Response.json({ enabled: false });
+    feedRequests++;
+    if (feedRequests === 1)
+      return new Promise<Response>((resolve) => {
+        release = resolve;
+      });
+    return Response.json(
+      { message: 'Community Lore is not available' },
+      { status: 404 },
     );
+  });
   render(<PublicReader initial={{ mode: 'feed', data }} />);
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(feedRequests).toBe(1));
   Object.defineProperty(document, 'visibilityState', {
     configurable: true,
     value: 'visible',

@@ -1291,3 +1291,102 @@ test('a promise shortcut keeps the channel switcher usable and manual recaps kee
   await expect(page.getByLabel('Short !catchup reply')).toBeVisible();
   await expect(page.getByText(/Gemini draft · verify/)).toHaveCount(0);
 });
+
+test('public community guide answers signed-out viewers with public citations and handles unknown questions', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  const auth = await (await page.request.get('/api/auth/session')).json();
+  const headers = {
+    Origin: 'http://127.0.0.1:4322',
+    'X-CSRF-Token': auth.csrfToken,
+  };
+  const created = await page.request.post(
+    `/api/channels/${channelId}/publications`,
+    {
+      headers,
+      data: {
+        requestId: crypto.randomUUID(),
+        kind: 'reference',
+        title: 'The pond committee',
+        body: 'The pond committee is chat’s nickname for viewers who name the garden plants.',
+        chatSummary: '',
+        sourceIds: [],
+        promiseId: null,
+      },
+    },
+  );
+  expect(created.ok()).toBe(true);
+  const source = await created.json();
+  expect(
+    (
+      await page.request.post(
+        `/api/channels/${channelId}/publications/${source.id}/review`,
+        {
+          headers,
+          data: {
+            expectedVersion: source.version,
+            action: 'publish',
+            reason: 'Reviewed the viewer-safe community introduction.',
+          },
+        },
+      )
+    ).ok(),
+  ).toBe(true);
+  expect(
+    (
+      await page.request.post(`/api/channels/${channelId}/features`, {
+        headers,
+        data: { feature: 'communityAssistantEnabled', enabled: true },
+      })
+    ).ok(),
+  ).toBe(true);
+  await context.clearCookies();
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/c/browser-test/catch-up');
+    await expect(
+      page.getByRole('heading', { name: 'Know the references', exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole('button', { name: 'Ask about the community', exact: true })
+      .click();
+    const panel = page.getByRole('dialog', { name: /Ask about Browser test/ });
+    await expect(
+      panel.getByRole('textbox', { name: 'Your community question' }),
+    ).toBeFocused();
+    await panel.getByRole('textbox').fill('What is the pond committee?');
+    await panel.getByRole('button', { name: 'Send question' }).click();
+    await expect(
+      panel.getByRole('navigation', { name: 'Answer sources' }),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole('link', { name: 'The pond committee', exact: true }),
+    ).toHaveAttribute('href', `/c/browser-test/entries/${source.id}`);
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      )
+      .toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`community-guide-${width}.png`),
+      fullPage: true,
+    });
+    await panel.getByRole('textbox').fill('Show me private moderation records');
+    await panel.getByRole('button', { name: 'Send question' }).click();
+    await expect(panel.getByText(/I couldn’t find that/)).toBeVisible();
+    await panel.getByRole('button', { name: 'Clear conversation' }).click();
+    await expect(
+      panel.getByRole('heading', { name: 'A little context goes a long way.' }),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(panel).not.toBeVisible();
+    await expect(
+      page.getByRole('button', {
+        name: 'Ask about the community',
+        exact: true,
+      }),
+    ).toBeFocused();
+  }
+});

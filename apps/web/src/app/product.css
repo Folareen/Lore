@@ -1129,3 +1129,242 @@
   margin: 0;
   font-size: 13px;
 }
+
+/* Viewer orientation and the public-only community guide. */
+.reader-start {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 28px;
+  background: var(--purple-soft);
+  border-radius: 12px;
+  margin-bottom: 28px;
+}
+.reader-start > div {
+  min-width: 0;
+  flex: 1;
+}
+.reader-shell .reader-start h2 {
+  font-size: 23px;
+  margin: 10px 0;
+}
+.reader-start > div > p:not(.reader-date) {
+  font-size: 15px;
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0 0 10px;
+}
+.reader-start .button {
+  flex-shrink: 0;
+}
+.reader-jump-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.reader-jump-links a {
+  padding: 10px 14px;
+  background: var(--raised);
+  border-radius: 6px;
+  font-size: 13px;
+}
+.reader-topic-section {
+  margin-top: 36px;
+  scroll-margin-top: 24px;
+}
+.reader-section-heading p {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 8px 0 0;
+  line-height: 1.6;
+}
+.reader-browse-all {
+  margin-top: 28px;
+}
+.reader-shell .reader-footer {
+  padding-bottom: 100px;
+}
+.community-assistant {
+  position: fixed;
+  z-index: 70;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  right: 24px;
+}
+.assistant-trigger {
+  box-shadow: var(--shadow);
+  gap: 10px;
+  font-size: 14px;
+}
+.assistant-panel {
+  position: absolute;
+  bottom: 60px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  height: min(620px, calc(100dvh - 110px));
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 60px #0004;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.assistant-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background: var(--raised);
+}
+.assistant-heading > div {
+  flex: 1;
+  min-width: 0;
+}
+.reader-shell .assistant-heading h2 {
+  font-size: 16px;
+  line-height: 1.4;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.assistant-heading p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.assistant-heading .icon-action {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 8px;
+}
+.assistant-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.assistant-welcome {
+  padding-top: 12px;
+}
+.assistant-welcome > svg {
+  color: var(--purple-ink);
+}
+.reader-shell .assistant-welcome h3 {
+  font-size: 20px;
+  margin: 14px 0 8px;
+}
+.assistant-welcome > p {
+  color: var(--muted);
+  margin: 0 0 20px;
+}
+.assistant-starters {
+  display: grid;
+  gap: 8px;
+}
+.assistant-starters button {
+  background: var(--raised);
+  color: var(--text);
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.assistant-starters button:hover {
+  background: var(--purple-soft);
+}
+.assistant-question {
+  background: var(--purple-soft);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 0 0 14px 24px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.assistant-answer {
+  margin-bottom: 24px;
+}
+.assistant-answer > p {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.assistant-answer nav {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.assistant-answer nav > span {
+  color: var(--muted);
+}
+.assistant-answer nav a {
+  padding: 8px 10px;
+  background: var(--raised);
+  border-radius: 6px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.assistant-compose {
+  padding: 12px 16px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 8px;
+  background: var(--raised);
+}
+.assistant-compose textarea {
+  min-height: 64px;
+  resize: none;
+  font-size: 14px;
+  background: var(--surface);
+  padding: 10px 12px;
+}
+.assistant-compose .button {
+  align-self: end;
+  width: 44px;
+  min-height: 44px;
+  padding: 10px;
+}
+.assistant-compose > p {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 2px 0 0;
+}
+@media (max-width: 600px) {
+  .reader-start {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 22px;
+  }
+  .community-assistant {
+    right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .assistant-panel {
+    position: fixed;
+    inset: auto 12px calc(76px + env(safe-area-inset-bottom));
+    width: auto;
+    max-width: none;
+    height: min(620px, calc(100dvh - 100px - env(safe-area-inset-bottom)));
+  }
+  .assistant-trigger {
+    min-height: 48px;
+  }
+  .assistant-compose textarea {
+    font-size: 16px;
+  }
+}

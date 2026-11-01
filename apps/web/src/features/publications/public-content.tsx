@@ -113,6 +113,36 @@ export function CommunityContent({
       </div>
     );
   const entries = view.mode === 'feed' ? view.data.items : view.data.recent;
+  const featured =
+    view.mode === 'feed' &&
+    !new URLSearchParams(query).get('q') &&
+    !new URLSearchParams(query).get('kind')
+      ? entries.find((entry) => entry.kind === 'summary')
+      : undefined;
+  const sections = [
+    {
+      id: 'community-plans',
+      title: 'Plans & promises',
+      description:
+        'What the community has shared about what comes next. Check the dates for context.',
+      items: entries.filter((entry) => entry.kind === 'commitment'),
+    },
+    {
+      id: 'community-references',
+      title: 'Know the references',
+      description:
+        'The words, jokes and shared moments you might hear in chat.',
+      items: entries.filter((entry) => entry.kind === 'reference'),
+    },
+    {
+      id: 'community-stories',
+      title: 'Stories you may have missed',
+      description: 'A few moments to bring you into the conversation.',
+      items: entries.filter(
+        (entry) => entry.kind !== 'commitment' && entry.kind !== 'reference',
+      ),
+    },
+  ];
   return (
     <div className="reader-content">
       <div className="reader-intro">
@@ -134,9 +164,40 @@ export function CommunityContent({
           </Link>
         )}
       </div>
+      {view.mode === 'catchup' && (
+        <nav className="reader-jump-links" aria-label="In this catch-up">
+          {view.data.summary && <a href="#latest-catchup">Latest recap</a>}
+          {sections
+            .filter((section) => section.items.length)
+            .map((section) => (
+              <a key={section.id} href={`#${section.id}`}>
+                {section.title}
+              </a>
+            ))}
+        </nav>
+      )}
+      {featured && (
+        <aside className="reader-start">
+          <div>
+            <span className="reader-kind">
+              New here? Start with the latest recap
+            </span>
+            <h2>{featured.title}</h2>
+            <p>{featured.body}</p>
+            <PublishedAt entry={featured} />
+          </div>
+          <Link
+            href={catchupHref}
+            className="button secondary"
+            prefetch={false}
+          >
+            Read the catch-up <ArrowRight size={16} />
+          </Link>
+        </aside>
+      )}
       {view.mode === 'catchup' &&
         (view.data.summary ? (
-          <article className="reader-recap">
+          <article className="reader-recap" id="latest-catchup">
             <div className="reader-recap-heading">
               <span className="reader-kind">Latest catch-up</span>
               <PublishedAt entry={view.data.summary} />
@@ -182,14 +243,7 @@ export function CommunityContent({
           </label>
           <button className="button secondary">Search</button>
         </form>
-      ) : (
-        <div className="reader-section-heading">
-          <h2>More from the community</h2>
-          <Link href={feedHref} prefetch={false}>
-            All stories <ArrowRight size={16} />
-          </Link>
-        </div>
-      )}
+      ) : null}
       {!entries.length && (
         <div className="reader-empty">
           <BookOpen size={28} />
@@ -203,11 +257,48 @@ export function CommunityContent({
           </p>
         </div>
       )}
-      <div className="reader-grid">
-        {entries.map((entry) => (
-          <EntryCard key={entry.id} entry={entry} href={link(entry.id)} />
-        ))}
-      </div>
+      {view.mode === 'feed' ? (
+        <div className="reader-grid">
+          {entries
+            .filter((entry) => entry.id !== featured?.id)
+            .map((entry) => (
+              <EntryCard key={entry.id} entry={entry} href={link(entry.id)} />
+            ))}
+        </div>
+      ) : (
+        sections
+          .filter((section) => section.items.length)
+          .map((section) => (
+            <section
+              className="reader-topic-section"
+              id={section.id}
+              key={section.id}
+            >
+              <div className="reader-section-heading">
+                <div>
+                  <h2>{section.title}</h2>
+                  <p>{section.description}</p>
+                </div>
+              </div>
+              <div className="reader-grid">
+                {section.items.map((entry) => (
+                  <EntryCard
+                    key={entry.id}
+                    entry={entry}
+                    href={link(entry.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+      )}
+      {view.mode === 'catchup' && (
+        <div className="reader-browse-all">
+          <Link href={feedHref} className="button secondary" prefetch={false}>
+            Explore all community stories <ArrowRight size={16} />
+          </Link>
+        </div>
+      )}
       {view.mode === 'feed' && view.data.nextCursor && (
         <button
           className="button secondary reader-more"

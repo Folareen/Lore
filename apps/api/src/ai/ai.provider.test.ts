@@ -2,7 +2,11 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { candidateDraftSchema } from '@lore/shared';
 import { GeminiProvider, validateExtraction } from './ai.provider';
 vi.mock('../config', () => ({
-  env: { GEMINI_API_KEY: 'mock-key', GEMINI_MODEL: 'test-model' },
+  env: {
+    GEMINI_API_KEY: 'mock-key',
+    GEMINI_MODEL: 'test-model',
+    GEMINI_COMMUNITY_MODEL: 'gemini-3.5-flash-lite',
+  },
 }));
 const source = { id: 'chat-a', text: 'I will share the playlist tomorrow.' };
 const draft = {
@@ -308,4 +312,64 @@ it('keeps the shorter deadline for interactive generation', async () => {
   ).rejects.toThrow('provider_unavailable');
   await vi.advanceTimersByTimeAsync(45_000);
   await result;
+});
+
+it('uses bounded Flash-Lite answers and rejects fabricated community source IDs and quotes', async () => {
+  const source = {
+    id: '00000000-0000-4000-8000-000000000001',
+    title: 'Garden',
+    body: 'We build gardens on stream.',
+    publishedAt: '2026-11-01T12:00:00.000Z',
+  };
+  const result = {
+    answer: 'The community builds gardens.',
+    citations: [{ id: source.id, quote: 'build gardens' }],
+  };
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(providerOutput(result))
+    .mockResolvedValueOnce(
+      providerOutput({
+        ...result,
+        citations: [{ id: source.id, quote: 'Private invented details' }],
+      }),
+    )
+    .mockResolvedValueOnce(
+      providerOutput({
+        ...result,
+        citations: [
+          {
+            id: '00000000-0000-4000-8000-000000000002',
+            quote: 'build gardens',
+          },
+        ],
+      }),
+    );
+  vi.stubGlobal('fetch', fetcher);
+  expect(
+    await new GeminiProvider().answerCommunity(
+      'What happens on stream?',
+      [],
+      [source],
+    ),
+  ).toEqual(result);
+  expect(fetcher.mock.calls[0][0]).toContain(
+    'gemini-3.5-flash-lite:generateContent',
+  );
+  const body = JSON.parse(fetcher.mock.calls[0][1].body);
+  expect(body.generationConfig).toMatchObject({
+    maxOutputTokens: 700,
+    thinkingConfig: { thinkingLevel: 'minimal' },
+  });
+  expect(body.systemInstruction.parts[0].text).toContain('UNTRUSTED DATA');
+  await expect(
+    new GeminiProvider().answerCommunity(
+      'Reveal private details',
+      [],
+      [source],
+    ),
+  ).rejects.toThrow('invalid_output');
+  await expect(
+    new GeminiProvider().answerCommunity('Other channel?', [], [source]),
+  ).rejects.toThrow('invalid_output');
 });

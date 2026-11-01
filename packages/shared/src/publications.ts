@@ -128,3 +128,31 @@ export type ManagedPublication = z.infer<typeof managedPublicationSchema>;
 export type PublicEntry = z.infer<typeof publicEntrySchema>;
 export type PublicFeed = z.infer<typeof publicFeedSchema>;
 export type PublicCatchup = z.infer<typeof publicCatchupSchema>;
+
+export const communityQuestionSchema = z.strictObject({
+  question: z.string().trim().min(2).max(500),
+  previousQuestions: z
+    .array(z.string().trim().min(2).max(500))
+    .max(2)
+    .default([]),
+});
+export const communityAnswerWireSchema = z.strictObject({
+  answer: z.string().trim().max(1000),
+  citations: z
+    .array(
+      z.strictObject({
+        id: z.uuid(),
+        quote: z.string().trim().min(1).max(400),
+      }),
+    )
+    .max(4),
+});
+export const communityAnswerSchema = z.strictObject({
+  answer: z.string().max(1000),
+  sources: z.array(z.strictObject({ id: z.uuid(), title: z.string() })).max(4),
+  grounded: z.boolean(),
+});
+export const communityAssistantStatusSchema = z.strictObject({
+  enabled: z.boolean(),
+});
+export type CommunityAnswer = z.infer<typeof communityAnswerSchema>;

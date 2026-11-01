@@ -23,6 +23,7 @@ const settings = {
   moderationImportsEnabled: false,
   promiseConfirmationsEnabled: false,
   publicSummaryAiEnabled: true,
+  communityAssistantEnabled: false,
   microphoneEnabled: true,
   missingModerationScopes: ['channel:moderate'],
   chatReady: true,

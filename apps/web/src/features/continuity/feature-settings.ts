@@ -40,6 +40,7 @@ export function useFeatureSettings(active: boolean) {
       | 'moderationImportsEnabled'
       | 'promiseConfirmationsEnabled'
       | 'publicSummaryAiEnabled'
+      | 'communityAssistantEnabled'
       | 'microphoneEnabled',
     enabled: boolean,
   ) {

@@ -19,6 +19,7 @@ export {
   publicationLabels,
 } from './public-content';
 import { CommunityContent, type PublicView } from './public-content';
+import { CommunityAssistant } from './community-assistant';
 export function PublicReader({
   initial,
   query = '',
@@ -149,6 +150,13 @@ export function PublicReader({
                 }
               : undefined
           }
+        />
+      )}
+      {view && (
+        <CommunityAssistant
+          key={JSON.stringify(view.data)}
+          slug={slug}
+          name={view.data.channel.displayName}
         />
       )}
     </div>
