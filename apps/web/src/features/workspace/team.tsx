@@ -3,7 +3,15 @@ import { Select } from '../../components/select';
 import Link from 'next/link';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
-import { Plus, ShieldCheck, Trash2, Users, RefreshCw } from 'lucide-react';
+import {
+  Check,
+  ChevronRight,
+  Link2,
+  Plus,
+  Trash2,
+  Users,
+  RefreshCw,
+} from 'lucide-react';
 import {
   grantMembershipSchema,
   type Membership,
@@ -12,9 +20,24 @@ import {
 import { useWorkspace } from './workspace-context';
 import { Avatar } from '../../components/avatar';
 import { ConfirmDialog } from '../../components/confirm-dialog';
+const roleLabels = {
+  owner: 'Owner',
+  moderator: 'Moderator',
+  team: 'Team member',
+};
 export function Team() {
-  const { selected, session, preview, href, loadMembers, grant, remove } =
-    useWorkspace();
+  const {
+    channels,
+    selectChannel,
+    connect,
+    selected,
+    session,
+    preview,
+    href,
+    loadMembers,
+    grant,
+    remove,
+  } = useWorkspace();
   const [members, setMembers] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -28,6 +51,22 @@ export function Team() {
   const channelId = selected?.id;
   useLiveRefresh(channelId ?? '', () => setRevision((value) => value + 1));
   const allowed = selected?.role === 'owner' && selected.connected;
+  const ownChannel = channels.find((channel) => channel.role === 'owner');
+  async function connectOwnChannel() {
+    setBusy(true);
+    setError('');
+    try {
+      await connect();
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Could not connect your channel.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   useEffect(() => {
     setLoadError('');
     if (!channelId || !allowed) {
@@ -124,50 +163,99 @@ export function Team() {
     }
   }
   return (
-    <>
+    <div className="content-stack team-page">
       <div className="page-heading">
         <div>
-          <h1>Your team</h1>
-          <p>Manage access to {selected?.displayName || 'your community'}.</p>
+          <h1>Teams</h1>
+          <p>Switch communities and see your role in each team.</p>
         </div>
+        {!ownChannel?.connected && (
+          <button
+            className="button secondary"
+            disabled={busy}
+            onClick={() => void connectOwnChannel()}
+          >
+            <Link2 size={16} aria-hidden="true" />
+            {busy
+              ? 'Connecting…'
+              : ownChannel
+                ? 'Reconnect your channel'
+                : 'Connect your channel'}
+          </button>
+        )}
       </div>
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      {channels.length > 0 && (
+        <section className="panel team-directory" aria-label="Your teams">
+          {channels.map((channel) => (
+            <button
+              key={channel.id}
+              className={`channel-row ${selected?.id === channel.id ? 'selected' : ''}`}
+              aria-label={`Select ${channel.displayName} team`}
+              aria-pressed={selected?.id === channel.id}
+              onClick={() => selectChannel(channel.id)}
+            >
+              <Avatar name={channel.displayName} size={40} />
+              <div className="channel-info">
+                <strong>{channel.displayName}</strong>
+                <small>
+                  {roleLabels[channel.role]}
+                  {!channel.connected && ' · Disconnected'}
+                </small>
+              </div>
+              {selected?.id === channel.id ? (
+                <Check size={18} aria-hidden="true" />
+              ) : (
+                <ChevronRight size={18} aria-hidden="true" />
+              )}
+            </button>
+          ))}
+          <p className="section-footnote">
+            To join another team, share your Twitch user ID from{' '}
+            <Link className="text-link" href={href('account')}>
+              Account
+            </Link>{' '}
+            with its owner.
+          </p>
+        </section>
+      )}
       {!selected && (
         <div className="empty-state">
           <Users size={30} />
-          <h2>A channel comes first.</h2>
-          <p>Connect your channel before bringing your team into Lore.</p>
-          <Link href={href('overview')} className="button primary">
-            Go to your channels
-          </Link>
+          <h2>No teams yet</h2>
+          <p>
+            Connect your own channel, or share your Twitch user ID from{' '}
+            <Link className="text-link" href={href('account')}>
+              Account
+            </Link>{' '}
+            with another channel’s owner.
+          </p>
         </div>
       )}
       {selected && !allowed && (
         <div className="panel">
-          <div className="empty-state">
-            <ShieldCheck size={30} />
-            <h2>
-              {selected.role !== 'owner'
-                ? 'Only the owner can manage the team.'
-                : 'Reconnect to bring your team back.'}
-            </h2>
-            <p>
-              {selected.role !== 'owner'
-                ? 'The owner adds people and assigns roles. You can see your role on the overview.'
-                : 'Team access is cleared when a channel is disconnected. Reconnect, then add your people again.'}
-            </p>
-            <Link href={href('settings')} className="button secondary">
-              Channel settings
-            </Link>
-          </div>
+          <h2>{selected.displayName} team</h2>
+          <p className="team-access-description">
+            {selected.role !== 'owner'
+              ? `You’re a ${roleLabels[selected.role].toLowerCase()} here. Only the channel owner can add people or change roles.`
+              : 'Team access is cleared when a channel is disconnected. Reconnect, then add your people again.'}
+          </p>
+          <Link
+            href={href(selected.role === 'owner' ? 'settings' : 'overview')}
+            className="button secondary"
+          >
+            {selected.role === 'owner'
+              ? 'Channel settings'
+              : 'Open channel overview'}
+          </Link>
         </div>
       )}
       {selected && allowed && (
         <div className="content-stack">
-          {error && (
-            <p className="notice error" role="alert">
-              {error}
-            </p>
-          )}
           {success && (
             <p className="inline-success" role="status">
               {success}
@@ -175,7 +263,7 @@ export function Team() {
           )}
           <section className="panel">
             <div className="panel-title">
-              <h2>People with access</h2>
+              <h2>{selected.displayName} team</h2>
               <span className="count-tag">
                 {members.length + 1} {members.length ? 'people' : 'person'}
               </span>
@@ -302,8 +390,8 @@ export function Team() {
               <div>
                 <strong>Moderator</strong>
                 <p>
-                  Trusted with private moderation context as those workflows
-                  become available.
+                  Review private moderation cases and help manage community
+                  stories.
                 </p>
               </div>
               <div>
@@ -334,6 +422,6 @@ export function Team() {
           </p>
         </ConfirmDialog>
       )}
-    </>
+    </div>
   );
 }

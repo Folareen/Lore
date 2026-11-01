@@ -163,6 +163,102 @@ test('demo evidence, precedent and human decision remain connected across naviga
     page.getByRole('heading', { name: 'Previously, in our corner of chat…' }),
   ).toBeVisible();
 });
+test('one account can switch between teams with three different roles', async ({
+  page,
+  context,
+  browser,
+}, info) => {
+  await signIn(context, 'moderator');
+  const rosterRequests: string[] = [];
+  page.on('request', (request) => {
+    if (/\/channels\/[^/]+\/members$/.test(new URL(request.url()).pathname))
+      rosterRequests.push(request.url());
+  });
+  await page.goto('/app/team');
+  await expect(page.getByText(/You’re a moderator here/)).toBeVisible();
+  expect(rosterRequests).toEqual([]);
+  await page
+    .getByRole('button', { name: 'Connect your channel', exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'user200 team', exact: true }),
+  ).toBeVisible();
+  const otherOwner = await browser.newContext({
+    baseURL: 'http://127.0.0.1:4322',
+  });
+  try {
+    await signIn(otherOwner, 'team');
+    const auth = await (
+      await otherOwner.request.get('/api/auth/session')
+    ).json();
+    const headers = {
+      'X-CSRF-Token': auth.csrfToken,
+      Origin: 'http://127.0.0.1:4322',
+    };
+    const connected = await otherOwner.request.post('/api/channels/connect', {
+      headers,
+      data: {},
+    });
+    expect(connected.ok()).toBe(true);
+    const third = await connected.json();
+    const granted = await otherOwner.request.post(
+      `/api/channels/${third.id}/members`,
+      { headers, data: { twitchUserId: '200', role: 'team' } },
+    );
+    expect(granted.ok()).toBe(true);
+    for (const width of [390, 1440]) {
+      await page.emulateMedia({
+        colorScheme: width === 390 ? 'dark' : 'light',
+      });
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/app/team');
+      const teams = page.getByRole('region', { name: 'Your teams' });
+      await expect(teams.getByText('Owner', { exact: true })).toBeVisible();
+      await expect(teams.getByText('Moderator', { exact: true })).toBeVisible();
+      await expect(
+        teams.getByText('Team member', { exact: true }),
+      ).toBeVisible();
+      await teams
+        .getByRole('button', { name: 'Select user200 team', exact: true })
+        .click();
+      await expect(
+        page.getByRole('button', { name: 'Add to team' }),
+      ).toBeVisible();
+      await teams
+        .getByRole('button', { name: 'Select user300 team', exact: true })
+        .click();
+      await expect(page.getByText(/You’re a team member here/)).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Add to team' }),
+      ).toHaveCount(0);
+      await teams
+        .getByRole('button', { name: 'Select Browser test team', exact: true })
+        .click();
+      await expect(page.getByText(/You’re a moderator here/)).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Add to team' }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('combobox', { name: 'Selected channel' }),
+      ).toContainText('Browser test');
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: info.outputPath(`teams-${width}.png`),
+        fullPage: true,
+      });
+    }
+    expect(
+      (await page.request.get(`/api/channels/${channelId}/members`)).status(),
+    ).toBe(404);
+  } finally {
+    await otherOwner.close();
+  }
+});
+
 test('team rows keep names readable and controls usable', async ({
   page,
   context,
@@ -737,7 +833,9 @@ test('production SSE refreshes clean views and preserves edits when another clie
     .getByLabel('Public title', { exact: true })
     .fill('Preserve my unsaved title');
   await create('Another client mutation while editing.');
-  await expect(page.getByText(/Your edits have been preserved/)).toBeVisible();
+  await expect(
+    page.getByText('New channel updates', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel('Public title', { exact: true })).toHaveValue(
     'Preserve my unsaved title',
   );

@@ -1161,6 +1161,21 @@ svg {
   flex-direction: column;
   gap: 9px;
 }
+.team-directory .channel-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+}
+.team-directory .channel-row:first-child {
+  margin-top: 0;
+}
+.team-directory .channel-row > svg {
+  display: block;
+}
+.team-access-description {
+  color: var(--muted);
+  margin-block: 12px 20px;
+  max-width: 65ch;
+}
 .member-row {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) 180px 44px;

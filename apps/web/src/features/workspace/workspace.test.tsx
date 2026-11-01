@@ -241,9 +241,76 @@ describe('Lore interface behavior', () => {
       screen.queryByRole('button', { name: 'Disconnect channel' }),
     ).toBeNull();
     expect(
-      await screen.findByText('Only the owner can manage the team.'),
+      await screen.findByText(
+        /Only the channel owner can add people or change roles/,
+      ),
     ).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('shows all teams and switches between owner, moderator and team-member views', async () => {
+    const memberChannel: Channel = {
+      ...previewChannels[1],
+      id: '00000000-0000-4000-8000-000000000003',
+      displayName: 'pixelclub',
+      role: 'team',
+    };
+    workspace(<Team />, [...previewChannels, memberChannel], true);
+    const user = userEvent.setup();
+    await screen.findByText('moss.jpeg');
+    const directory = screen.getByRole('region', { name: 'Your teams' });
+    expect(within(directory).getByText('Owner')).toBeTruthy();
+    expect(within(directory).getByText('Moderator')).toBeTruthy();
+    expect(within(directory).getByText('Team member')).toBeTruthy();
+    await user.click(
+      within(directory).getByRole('button', {
+        name: 'Select thelatecafe team',
+      }),
+    );
+    expect(screen.getByText(/You’re a moderator here/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add to team' })).toBeNull();
+    await user.click(
+      within(directory).getByRole('button', { name: 'Select pixelclub team' }),
+    );
+    expect(screen.getByText(/You’re a team member here/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add to team' })).toBeNull();
+    await user.click(
+      within(directory).getByRole('button', { name: 'Select cozybyte team' }),
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Add to team' }),
+    ).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('lets an existing moderator connect their own channel without losing the other membership', async () => {
+    fetchMock.mockImplementation(async (url) =>
+      response(
+        String(url).endsWith('/connect') ? previewChannels[0] : previewPeople,
+      ),
+    );
+    workspace(<Team />, [previewChannels[1]]);
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole('button', { name: 'Connect your channel' }),
+    );
+    expect(
+      await screen.findByRole('heading', { name: 'cozybyte team' }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Select thelatecafe team' }),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: 'Select cozybyte team' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(
+      fetchMock.mock.calls.find(([url]) =>
+        String(url).endsWith('/connect'),
+      )?.[1],
+    ).toMatchObject({
+      method: 'POST',
+      headers: { 'X-CSRF-Token': previewSession.csrfToken },
+    });
   });
   it('adds a team member and refetches the authorized member list', async () => {
     let added = false;
