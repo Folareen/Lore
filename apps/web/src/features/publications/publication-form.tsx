@@ -16,18 +16,22 @@ import { WorkflowForm } from '../moderation/workflow-forms';
 export function PublicationForm({
   initial,
   suggested,
+  sourcePromiseId,
+  initialKind = 'milestone',
   onSave,
   onCancel,
 }: {
+  sourcePromiseId?: string;
+  initialKind?: PublicationFields['kind'];
   initial?: ManagedPublication;
   suggested?: z.infer<typeof summaryDraftSchema>;
   onSave: (fields: PublicationFields) => Promise<void>;
   onCancel: () => void;
 }) {
   const api = usePublications(),
-    { selected, loadLoops } = useWorkspace();
+    { selected, loadLoops, loadLoop } = useWorkspace();
   const [kind, setKind] = useState(
-      initial?.kind ?? (suggested ? 'summary' : 'milestone'),
+      initial?.kind ?? (suggested ? 'summary' : initialKind),
     ),
     [title, setTitle] = useState(initial?.title ?? suggested?.title ?? ''),
     [body, setBody] = useState(initial?.body ?? suggested?.body ?? ''),
@@ -41,7 +45,9 @@ export function PublicationForm({
     [cursor, setCursor] = useState<string | null>(null),
     [promises, setPromises] = useState<OpenLoop[]>([]),
     [promiseCursor, setPromiseCursor] = useState<string | null>(null),
-    [promiseId, setPromiseId] = useState(initial?.promiseId ?? ''),
+    [promiseId, setPromiseId] = useState(
+      initial?.promiseId ?? sourcePromiseId ?? '',
+    ),
     [error, setError] = useState(''),
     [loading, setLoading] = useState(true);
   const channelId = selected!.id;
@@ -51,7 +57,14 @@ export function PublicationForm({
       api.list(channelId, { status: 'published' }, c.signal),
       loadLoops(channelId, {}, c.signal),
     ])
-      .then(([page, loops]) => {
+      .then(async ([page, loops]) => {
+        if (
+          sourcePromiseId &&
+          !loops.items.some((p) => p.id === sourcePromiseId)
+        ) {
+          const promise = await loadLoop(channelId, sourcePromiseId, c.signal);
+          loops = { ...loops, items: [promise, ...loops.items] };
+        }
         if (!c.signal.aborted) {
           setChoices(page.items);
           setCursor(page.nextCursor);
@@ -71,8 +84,8 @@ export function PublicationForm({
     return () => c.abort();
   }, [channelId]);
   return (
-    <div className="panel content-stack">
-      <h2>{initial ? 'Edit community draft' : 'New community draft'}</h2>
+    <div className="panel content-stack" id="publication-draft">
+      <h2>{initial ? 'Edit draft' : 'New story draft'}</h2>
       <p className="muted">
         Write for someone new. Leave private case details out. Saving creates an
         unpublished draft.
@@ -99,6 +112,80 @@ export function PublicationForm({
           )
         }
       >
+        <details
+          className="draft-promise-source"
+          open={Boolean(sourcePromiseId) || undefined}
+        >
+          <summary>Start from a promise (optional)</summary>
+          <div className="content-stack">
+            <p className="muted">
+              Use the wording as a starting point, then edit it for viewers.
+              Team-only evidence stays private.
+            </p>
+            <label className="field">
+              Confirmed promise (optional)
+              <Select value={promiseId} onValueChange={(e) => setPromiseId(e)}>
+                <option value="">No promise source</option>
+                {promiseId !== '' &&
+                  !promises.some((p) => p.id === promiseId) && (
+                    <option value={promiseId}>
+                      Previously selected promise
+                    </option>
+                  )}
+                {promises.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.wording}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <button
+              type="button"
+              className="button secondary"
+              disabled={!promises.some((p) => p.id === promiseId)}
+              onClick={() => {
+                const p = promises.find((p) => p.id === promiseId);
+                if (p) {
+                  setKind('commitment');
+                  setTitle(p.wording.slice(0, 180));
+                  setBody(
+                    `${p.wording}\n\nUpdate: ${p.status.replaceAll('_', ' ')}`,
+                  );
+                }
+              }}
+            >
+              Use promise wording as a draft
+            </button>
+            {promiseCursor && (
+              <button
+                type="button"
+                className="button secondary"
+                disabled={loading}
+                onClick={() => {
+                  setLoading(true);
+                  void loadLoops(channelId, { cursor: promiseCursor })
+                    .then((p) => {
+                      setPromises((s) => [
+                        ...s,
+                        ...p.items.filter((p) => p.status !== 'candidate'),
+                      ]);
+                      setPromiseCursor(p.nextCursor);
+                    })
+                    .catch((e: unknown) =>
+                      setError(
+                        e instanceof Error
+                          ? e.message
+                          : 'Could not load promises.',
+                      ),
+                    )
+                    .finally(() => setLoading(false));
+                }}
+              >
+                More promise choices
+              </button>
+            )}
+          </div>
+        </details>
         <label className="field">
           Entry type
           <Select
@@ -150,12 +237,11 @@ export function PublicationForm({
           </label>
         )}
         <details className="candidate-source">
-          <summary>Approved public sources & promise draft</summary>
+          <summary>Published sources (optional)</summary>
           <div className="content-stack">
             <p className="muted">
-              Public citations can only point to published entries from this
-              channel. A confirmed promise is a private drafting aid; its source
-              ID and team evidence never appear publicly.
+              Cite published stories that support this draft. These are the only
+              sources visitors can follow.
             </p>
             {loading && <p role="status">Loading source choices…</p>}
             {sources.size > 0 && (
@@ -218,68 +304,6 @@ export function PublicationForm({
                 }}
               >
                 More published source choices
-              </button>
-            )}
-            <label className="field">
-              Confirmed promise (optional)
-              <Select value={promiseId} onValueChange={(e) => setPromiseId(e)}>
-                <option value="">No promise source</option>
-                {promiseId !== '' &&
-                  !promises.some((p) => p.id === promiseId) && (
-                    <option value={promiseId}>
-                      Previously selected promise
-                    </option>
-                  )}
-                {promises.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.wording}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={!promises.some((p) => p.id === promiseId)}
-              onClick={() => {
-                const p = promises.find((p) => p.id === promiseId);
-                if (p) {
-                  setKind('commitment');
-                  setTitle(p.wording.slice(0, 180));
-                  setBody(
-                    `${p.wording}\n\nUpdate: ${p.status.replaceAll('_', ' ')}`,
-                  );
-                }
-              }}
-            >
-              Use promise wording as a draft
-            </button>
-            {promiseCursor && (
-              <button
-                type="button"
-                className="button secondary"
-                disabled={loading}
-                onClick={() => {
-                  setLoading(true);
-                  void loadLoops(channelId, { cursor: promiseCursor })
-                    .then((p) => {
-                      setPromises((s) => [
-                        ...s,
-                        ...p.items.filter((p) => p.status !== 'candidate'),
-                      ]);
-                      setPromiseCursor(p.nextCursor);
-                    })
-                    .catch((e: unknown) =>
-                      setError(
-                        e instanceof Error
-                          ? e.message
-                          : 'Could not load promises.',
-                      ),
-                    )
-                    .finally(() => setLoading(false));
-                }}
-              >
-                More promise choices
               </button>
             )}
           </div>

@@ -22,6 +22,7 @@ import {
 } from '../../lib/preview-publications';
 import { previewChannels, previewSession } from '../../lib/preview-data';
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 vi.mock('next/link', () => ({
@@ -63,8 +64,8 @@ async function draft(
   user: ReturnType<typeof userEvent.setup>,
   title = 'Our next community moment',
 ) {
-  await screen.findByRole('button', { name: 'New community draft' });
-  await user.click(screen.getByRole('button', { name: 'New community draft' }));
+  await screen.findByRole('button', { name: 'New story' });
+  await user.click(screen.getByRole('button', { name: 'New story' }));
   await user.type(screen.getByLabelText('Public title'), title);
   await user.type(
     screen.getByLabelText('Public story'),
@@ -159,7 +160,7 @@ it('withdraws published sources and dependent newcomer summaries when a public s
   const user = userEvent.setup();
   const source = previewPublications[0];
   const card = await screen.findByRole('article', { name: source.title });
-  await user.click(within(card).getByRole('button', { name: 'Edit to draft' }));
+  await user.click(within(card).getByRole('button', { name: 'Edit as draft' }));
   await user.clear(screen.getByLabelText('Public story'));
   await user.type(
     screen.getByLabelText('Public story'),
@@ -193,6 +194,7 @@ it('requires reasoned deletion and removes the entry from visitor views', async 
   const user = userEvent.setup();
   const source = previewPublications[1];
   const card = await screen.findByRole('article', { name: source.title });
+  await user.click(within(card).getByText('More actions'));
   await user.click(within(card).getByRole('button', { name: 'Delete entry' }));
   await user.type(
     screen.getByLabelText('Publication review reason'),
@@ -212,8 +214,11 @@ it('requires reasoned deletion and removes the entry from visitor views', async 
 });
 it('shows the exact short catch-up wording and keeps chat sending disabled in the fixture preview', async () => {
   setup();
+  expect(
+    await screen.findByText(previewPublications[2].chatSummary),
+  ).toBeTruthy();
+  await userEvent.click(screen.getByRole('tab', { name: 'Twitch replies' }));
   await screen.findByRole('heading', { name: '!catchup in Twitch chat' });
-  expect(screen.getByText(previewPublications[2].chatSummary)).toBeTruthy();
   expect(
     screen
       .getByRole('button', { name: 'Enable !catchup replies' })

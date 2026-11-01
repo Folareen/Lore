@@ -157,7 +157,7 @@ it('starts all three surfaces from the supplied seeded snapshot and keeps naviga
     screen.getByRole('heading', { name: 'The next stream remembers.' }),
   ).toBeTruthy();
   expect(
-    screen.getByRole('link', { name: 'Open loops' }).getAttribute('href'),
+    screen.getByRole('link', { name: 'Promises' }).getAttribute('href'),
   ).toBe('/demo?view=streamer');
   await change(user, 'brief');
   await screen.findByText('Seed snapshot marker');

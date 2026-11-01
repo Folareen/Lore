@@ -28,7 +28,7 @@ export function CandidatesScreen() {
     <>
       <div className="page-heading">
         <div>
-          <h1>Review suggestions</h1>
+          <h1>Suggestions</h1>
           <p>Check the source before confirming a promise.</p>
         </div>
         <ClipboardCheck size={30} aria-hidden="true" />
@@ -114,112 +114,119 @@ function ReviewPanel() {
   );
   return (
     <div className="content-stack">
-      <MicrophonePanel />
-      <section className="panel content-stack" aria-label="Extraction settings">
-        <div className="panel-title">
-          <h2>Chat suggestions</h2>
-          <span className="status purple">
-            {preview ? 'Demo fixture' : status?.enabled ? 'Enabled' : 'Off'}
-          </span>
-        </div>
-        <p className="panel-description">
-          Gemini reviews retained chat when enabled. Suggestions stay private
-          and need human confirmation. Google may use free-tier inputs and
-          outputs to improve its products.
-        </p>
-        {status && (
-          <>
-            <p className="muted">
-              {status.model} · {status.dailyUsed}/{status.dailyLimit} calls
-              today (UTC)
-            </p>
-            {!status.configured && (
-              <p className="notice">
-                Add GEMINI_API_KEY to the API’s local .env and restart the API
-                to enable extraction.
+      <details className="task-disclosure" id="chat-suggestions">
+        <summary>Find suggestions in chat</summary>
+        <section
+          className="panel content-stack"
+          aria-label="Extraction settings"
+        >
+          <div className="panel-title">
+            <h2>Chat suggestions</h2>
+            <span className="status purple">
+              {preview ? 'Demo fixture' : status?.enabled ? 'Enabled' : 'Off'}
+            </span>
+          </div>
+          <p className="panel-description">
+            Gemini reviews retained chat when enabled. Suggestions stay private
+            and need human confirmation. Google may use free-tier inputs and
+            outputs to improve its products.
+          </p>
+          {status && (
+            <>
+              <p className="muted">
+                {status.model} · {status.dailyUsed}/{status.dailyLimit} calls
+                today (UTC)
               </p>
-            )}
-            {preview ? (
-              <p className="notice">
-                These are sample suggestions. No chat or credentials are sent to
-                a provider.
-              </p>
-            ) : (
-              <div className="button-row">
-                {selected?.role === 'owner' ? (
+              {!status.configured && (
+                <p className="notice">
+                  Gemini is unavailable for this Lore instance. Its AI
+                  configuration needs attention.
+                </p>
+              )}
+              {preview ? (
+                <p className="notice">
+                  These are sample suggestions. No chat or credentials are sent
+                  to a provider.
+                </p>
+              ) : (
+                <div className="button-row">
+                  {selected?.role === 'owner' ? (
+                    <button
+                      className="button secondary"
+                      disabled={
+                        busy ||
+                        (!status.enabled &&
+                          (!status.configured || !selected.connected))
+                      }
+                      onClick={() =>
+                        void action(() => enable(channelId, !status.enabled))
+                      }
+                    >
+                      {status.enabled
+                        ? 'Disable chat suggestions'
+                        : 'Enable chat suggestions'}
+                    </button>
+                  ) : (
+                    <p className="muted">
+                      Only the channel owner can enable chat suggestions.
+                    </p>
+                  )}
                   <button
-                    className="button secondary"
+                    className="button primary"
                     disabled={
                       busy ||
-                      (!status.enabled &&
-                        (!status.configured || !selected.connected))
+                      !selected?.connected ||
+                      !status.enabled ||
+                      !status.configured ||
+                      active ||
+                      status.dailyUsed >= status.dailyLimit
                     }
-                    onClick={() =>
-                      void action(() => enable(channelId, !status.enabled))
-                    }
+                    onClick={() => void action(() => analyze(channelId))}
                   >
-                    {status.enabled
-                      ? 'Disable extraction'
-                      : 'Enable Gemini for this channel'}
+                    {active ? 'Analyzing chat…' : 'Analyze new chat'}
                   </button>
-                ) : (
-                  <p className="muted">
-                    Only the channel owner can change extraction consent.
-                  </p>
-                )}
-                <button
-                  className="button primary"
-                  disabled={
-                    busy ||
-                    !selected?.connected ||
-                    !status.enabled ||
-                    !status.configured ||
-                    active ||
-                    status.dailyUsed >= status.dailyLimit
-                  }
-                  onClick={() => void action(() => analyze(channelId))}
-                >
-                  {active ? 'Analyzing chat…' : 'Analyze new chat'}
-                </button>
-              </div>
-            )}
-            {!!status.recentRuns.length && (
-              <details>
-                <summary>Recent extractions</summary>
-                <ul className="extraction-runs">
-                  {status.recentRuns.map((run) => (
-                    <li key={run.id}>
-                      <span>
-                        {new Date(run.createdAt).toLocaleString()} ·{' '}
-                        {run.status} · {run.attempts} calls
-                        {run.error ? ` · ${failureLabels[run.error]}` : ''}
-                      </span>
-                      {run.status === 'failed' && (
-                        <button
-                          className="button secondary"
-                          disabled={
-                            busy ||
-                            !status.enabled ||
-                            !selected?.connected ||
-                            active ||
-                            status.dailyUsed >= status.dailyLimit
-                          }
-                          onClick={() =>
-                            void action(() => analyze(channelId, run.id))
-                          }
-                        >
-                          Retry extraction
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </>
-        )}
-      </section>
-      <div className="button-row">
+                </div>
+              )}
+              {!!status.recentRuns.length && (
+                <details>
+                  <summary>Analysis history</summary>
+                  <ul className="extraction-runs">
+                    {status.recentRuns.map((run) => (
+                      <li key={run.id}>
+                        <span>
+                          {new Date(run.createdAt).toLocaleString()} ·{' '}
+                          {run.status} · {run.attempts}{' '}
+                          {run.attempts === 1 ? 'call' : 'calls'}
+                          {run.error ? ` · ${failureLabels[run.error]}` : ''}
+                        </span>
+                        {run.status === 'failed' && (
+                          <button
+                            className="button secondary"
+                            disabled={
+                              busy ||
+                              !status.enabled ||
+                              !selected?.connected ||
+                              active ||
+                              status.dailyUsed >= status.dailyLimit
+                            }
+                            onClick={() =>
+                              void action(() => analyze(channelId, run.id))
+                            }
+                          >
+                            Retry analysis
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </>
+          )}
+        </section>
+      </details>
+      <MicrophonePanel />
+      <div className="list-toolbar">
         <label className="field">
           Show
           <Select
@@ -249,18 +256,18 @@ function ReviewPanel() {
           {error}
         </p>
       )}
-      {loading && <p role="status">Loading candidates…</p>}
+      {loading && <p role="status">Loading suggestions…</p>}
       {!loading && !items.length && !error && (
         <div className="empty-state">
           <ClipboardCheck size={28} aria-hidden="true" />
           <h2>
             {filter === 'pending'
               ? 'Nothing waiting on your call.'
-              : 'No candidates here yet.'}
+              : 'No suggestions here yet.'}
           </h2>
           <p>
             {filter === 'pending'
-              ? 'New suggestions appear here after enabled extraction finds a possible follow-up. Nothing enters your brief automatically.'
+              ? 'Open Find suggestions in chat to analyze retained messages, or record a microphone follow-up. Review each suggestion before it becomes a promise.'
               : 'Reviewed items keep the human decision; drafts disappear when their source expires.'}
           </p>
         </div>

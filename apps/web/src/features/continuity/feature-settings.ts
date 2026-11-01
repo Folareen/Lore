@@ -58,8 +58,13 @@ export function useFeatureSettings(active: boolean) {
           },
         ),
       );
+      window.dispatchEvent(
+        new CustomEvent('lore:workspace-consent', { detail: selected.id }),
+      );
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not change consent.');
+      return false;
     } finally {
       setBusy(false);
     }

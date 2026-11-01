@@ -31,12 +31,12 @@ import { ThemeToggle } from '../../components/theme-control';
 import { WorkspaceProvider, useWorkspace } from './workspace-context';
 const navigation = [
   { view: 'overview', title: 'Overview', icon: Home },
-  { view: 'streamer', title: 'Open loops', icon: Bookmark },
-  { view: 'overlay', title: 'Stream overlay', icon: Monitor },
-  { view: 'publications', title: 'Community publishing', icon: BookOpen },
-  { view: 'moderation', title: 'Moderation cases', icon: ShieldCheck },
-  { view: 'candidates', title: 'Needs review', icon: ClipboardCheck },
   { view: 'brief', title: 'Next-stream brief', icon: ListChecks },
+  { view: 'streamer', title: 'Promises', icon: Bookmark },
+  { view: 'candidates', title: 'Suggestions', icon: ClipboardCheck },
+  { view: 'publications', title: 'Public stories', icon: BookOpen },
+  { view: 'overlay', title: 'Stream overlay', icon: Monitor },
+  { view: 'moderation', title: 'Moderation cases', icon: ShieldCheck },
   { view: 'settings', title: 'Channel settings', icon: Settings2 },
   { view: 'team', title: 'Teams', icon: Users },
   { view: 'account', title: 'Account', icon: UserRound },
@@ -77,6 +77,11 @@ function Shell({
       <Link
         key={item}
         href={href(item)}
+        className={
+          ['publications', 'moderation', 'settings'].includes(item)
+            ? 'nav-break'
+            : undefined
+        }
         aria-current={current === item ? 'page' : undefined}
       >
         <Icon size={19} />
@@ -91,13 +96,17 @@ function Shell({
           {links}
         </MobileNavigation>
         <nav aria-label="Community navigation">{links}</nav>
-        <div className="sidebar-account">
+        <Link
+          href={href('account')}
+          className="sidebar-account"
+          aria-label="Your account"
+        >
           <Avatar name={session.user.login} size={35} />
           <div>
             <strong>{session.user.displayName}</strong>
-            <small>{preview ? 'Demo fixture' : 'Twitch account'}</small>
+            <small>{preview ? 'Demo account' : 'Your account'}</small>
           </div>
-        </div>
+        </Link>
       </aside>
       <div className="workspace-content">
         <header className="workspace-topbar">
@@ -120,7 +129,9 @@ function Shell({
               </label>
             )}
             <ThemeToggle />
-            <Avatar name={session.user.login} size={34} />
+            <Link href={href('account')} aria-label="Open your account">
+              <Avatar name={session.user.login} size={34} />
+            </Link>
           </div>
         </header>
         <main id="main-content">

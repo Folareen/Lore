@@ -9,19 +9,19 @@ const features = [
     key: 'moderationImportsEnabled',
     title: 'Import moderation events',
     description:
-      'Import future bans, timeouts and unban requests as private, open review cases with retained event evidence. Rules not supplied by Twitch are explicitly marked unknown. Imported resolutions never make a Lore decision or execute a Twitch action.',
+      'Create private review cases from new Twitch bans, timeouts and appeals. Imports keep event evidence, mark unknown rules and never decide a case or take a Twitch action.',
   },
   {
     key: 'promiseConfirmationsEnabled',
     title: 'Confirm !promise in chat',
     description:
-      'After saving an authorized command, send: “Promise saved in Lore. The team can review it in the next-stream brief.” Replies stay in the source channel, expire after 90 seconds and have a 15-second channel cooldown. An ambiguous send is not replayed.',
+      'Acknowledge an accepted !promise in its Twitch channel as the broadcaster. Replies have a 15-second cooldown and expire after 90 seconds. Uncertain deliveries are not repeated.',
   },
   {
     key: 'publicSummaryAiEnabled',
     title: 'Gemini public summary drafts',
     description:
-      'Allow the team to send selected, already-published community entries to Gemini for editable recap drafts. Private cases and raw chat are excluded. Every draft still needs human publication approval.',
+      'Use selected published stories to draft editable recaps with Gemini. Private chat and cases are excluded. Every draft needs human approval before publication.',
   },
   {
     key: 'microphoneEnabled',
@@ -30,23 +30,31 @@ const features = [
       'Allow team members to explicitly record and submit clips up to 30 seconds to Gemini. Raw audio is not stored by Lore. Unverified transcripts and unconfirmed suggestions follow current channel chat retention; confirming preserves a separate source excerpt. Nobody is recorded automatically.',
   },
 ] as const;
-export function FeatureControls() {
+type FeatureKey = (typeof features)[number]['key'];
+export function FeatureControls({
+  only,
+  expanded = false,
+}: {
+  only?: FeatureKey[];
+  expanded?: boolean;
+}) {
   const { selected, preview, href } = useWorkspace();
-  const [open, setOpen] = useState(false),
+  const [open, setOpen] = useState(expanded),
     [confirm, setConfirm] = useState<(typeof features)[number]>();
   const { settings, error, busy, configure, refresh } =
     useFeatureSettings(open);
   return (
     <details
-      className="panel content-stack"
+      className="panel content-stack feature-controls"
+      open={expanded || undefined}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary>Additional channel capabilities</summary>
+      <summary>{only ? 'Feature permissions' : 'Optional features'}</summary>
       {open && (
         <>
           <p>
-            Each capability is off until the owner enables it. Google may use
-            free-tier AI inputs and outputs to improve its products.
+            Choose which optional features your team can use. Each is off until
+            the owner enables it.
           </p>
           {preview ? (
             <p className="notice">
@@ -70,59 +78,62 @@ export function FeatureControls() {
                 <p role="status">Loading feature consent…</p>
               )}
               {settings &&
-                features.map((feature) => (
-                  <section key={feature.key} className="content-stack">
-                    <h3>
-                      {feature.title} · {settings[feature.key] ? 'On' : 'Off'}
-                    </h3>
-                    <p>{feature.description}</p>
-                    {feature.key === 'moderationImportsEnabled' &&
-                      settings.missingModerationScopes.length > 0 && (
-                        <p className="notice">
-                          Additional Twitch permissions required.{' '}
-                          {selected?.role === 'owner' && (
-                            <a href="/api/auth/twitch/moderation">
-                              Authorize moderation event access
-                            </a>
-                          )}
-                        </p>
-                      )}
-                    {feature.key === 'promiseConfirmationsEnabled' &&
-                      !settings.chatReady && (
-                        <p className="notice">
-                          Start live capture and{' '}
-                          <Link href={href('publications')}>
-                            authorize chat replies in Community publishing
-                          </Link>{' '}
-                          first.
-                        </p>
-                      )}
-                    {['publicSummaryAiEnabled', 'microphoneEnabled'].includes(
-                      feature.key,
-                    ) &&
-                      !settings.aiConfigured && (
-                        <p className="notice">
-                          Configure GEMINI_API_KEY first.
-                        </p>
-                      )}
-                    <button
-                      className="button secondary"
-                      disabled={
-                        busy ||
-                        selected?.role !== 'owner' ||
-                        (!selected.connected && !settings[feature.key])
-                      }
-                      onClick={() =>
-                        settings[feature.key]
-                          ? void configure(feature.key, false)
-                          : setConfirm(feature)
-                      }
-                    >
-                      {settings[feature.key] ? 'Disable' : 'Enable'}{' '}
-                      {feature.title.toLowerCase()}
-                    </button>
-                  </section>
-                ))}
+                features
+                  .filter((feature) => !only || only.includes(feature.key))
+                  .map((feature) => (
+                    <section key={feature.key} className="content-stack">
+                      <h3>
+                        {feature.title} · {settings[feature.key] ? 'On' : 'Off'}
+                      </h3>
+                      <p>{feature.description}</p>
+                      {feature.key === 'moderationImportsEnabled' &&
+                        settings.missingModerationScopes.length > 0 && (
+                          <p className="notice">
+                            Additional Twitch permissions required.{' '}
+                            {selected?.role === 'owner' && (
+                              <a href="/api/auth/twitch/moderation">
+                                Authorize moderation event access
+                              </a>
+                            )}
+                          </p>
+                        )}
+                      {feature.key === 'promiseConfirmationsEnabled' &&
+                        !settings.chatReady && (
+                          <p className="notice">
+                            Start live capture and{' '}
+                            <Link href={href('publications')}>
+                              authorize chat replies in Public stories
+                            </Link>{' '}
+                            first.
+                          </p>
+                        )}
+                      {['publicSummaryAiEnabled', 'microphoneEnabled'].includes(
+                        feature.key,
+                      ) &&
+                        !settings.aiConfigured && (
+                          <p className="notice">
+                            Gemini is unavailable. Check this Lore instance’s AI
+                            configuration.
+                          </p>
+                        )}
+                      <button
+                        className="button secondary"
+                        disabled={
+                          busy ||
+                          selected?.role !== 'owner' ||
+                          (!selected.connected && !settings[feature.key])
+                        }
+                        onClick={() =>
+                          settings[feature.key]
+                            ? void configure(feature.key, false)
+                            : setConfirm(feature)
+                        }
+                      >
+                        {settings[feature.key] ? 'Disable' : 'Enable'}{' '}
+                        {feature.title.toLowerCase()}
+                      </button>
+                    </section>
+                  ))}
               {selected?.role !== 'owner' && (
                 <p className="muted">
                   Only the channel owner can change these opt-ins.
@@ -132,20 +143,29 @@ export function FeatureControls() {
           )}
           {confirm && (
             <ConfirmDialog
+              tone="primary"
               title={`Enable ${confirm.title.toLowerCase()}?`}
               confirmLabel="Enable capability"
               busy={busy}
               onCancel={() => setConfirm(undefined)}
               onConfirm={async () => {
-                await configure(confirm.key, true);
-                setConfirm(undefined);
+                if (await configure(confirm.key, true)) setConfirm(undefined);
               }}
             >
               <p>{confirm.description}</p>
-              <p>
-                Google may use free-tier AI inputs and outputs to improve its
-                products. Review this before enabling AI capabilities.
-              </p>
+              {error && (
+                <p role="alert" className="notice error">
+                  {error}
+                </p>
+              )}
+              {['publicSummaryAiEnabled', 'microphoneEnabled'].includes(
+                confirm.key,
+              ) && (
+                <p>
+                  Google may use free-tier AI inputs and outputs to improve its
+                  products.
+                </p>
+              )}
             </ConfirmDialog>
           )}
         </>

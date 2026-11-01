@@ -96,7 +96,7 @@ export function DemoHome() {
           </p>
           <div className="button-row">
             <Link className="button primary" href={href('streamer')}>
-              Start with open loops
+              Start with promises
             </Link>
             <Link className="button secondary" href="/demo?view=chat">
               Simulate !promise / !catchup
@@ -125,14 +125,14 @@ export function DemoHome() {
           <h2>Let newcomers join the story.</h2>
           <p>
             Read the approved garden recap and public commitment. Withdraw a
-            source in Community publishing and see its dependent recap
-            disappear. Private moderation details stay out of the visitor view.
+            source in Public stories and see its dependent recap disappear.
+            Private moderation details stay out of the visitor view.
           </p>
           <div className="button-row">
             <Link className="button secondary" href={href('community')}>
               Catch up as a newcomer
             </Link>
-            <Link href={href('publications')}>Community publishing →</Link>
+            <Link href={href('publications')}>Public stories →</Link>
             <Link href={href('overlay')}>Preview the OBS selection →</Link>
           </div>
         </li>

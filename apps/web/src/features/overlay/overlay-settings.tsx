@@ -149,7 +149,7 @@ function OverlayDesk() {
           <p>Choose the Lore your audience sees in OBS.</p>
         </div>
         <Link className="button secondary" href={href('publications')}>
-          Community publishing &amp; !catchup
+          Public stories &amp; !catchup
         </Link>
       </div>
       {preview && (
@@ -399,6 +399,7 @@ function OverlayDesk() {
       )}
       {confirm && (
         <ConfirmDialog
+          tone={confirm === 'save' ? 'primary' : 'danger'}
           title={
             confirm === 'save'
               ? 'Approve this overlay selection?'

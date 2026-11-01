@@ -1,4 +1,5 @@
 'use client';
+import { SectionTabs } from '../../components/section-tabs';
 import { Select } from '../../components/select';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -35,6 +36,7 @@ export function ChannelSettings() {
 }
 function SettingsPanel({ channel }: { channel: Channel }) {
   const { saveRetention, disconnect, connect } = useWorkspace();
+  const [tab, setTab] = useState('connection');
   const [days, setDays] = useState(channel.chatRetentionDays);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -95,7 +97,7 @@ function SettingsPanel({ channel }: { channel: Channel }) {
     <>
       <div className="page-heading">
         <div>
-          <h1>Make it your space.</h1>
+          <h1>Channel settings</h1>
           <p>Connection and privacy preferences for {channel.displayName}.</p>
         </div>
         <span className="status purple">
@@ -114,104 +116,145 @@ function SettingsPanel({ channel }: { channel: Channel }) {
             them.
           </p>
         )}
-        <FeatureControls />
-        <LiveCapture
-          key={`${channel.id}-${channel.connected}`}
-          channel={channel}
+        <SectionTabs
+          label="Channel settings"
+          value={tab}
+          onValueChange={setTab}
+          tabs={[
+            {
+              value: 'connection',
+              label: 'Twitch & capture',
+              content: (
+                <div className="content-stack">
+                  <LiveCapture
+                    key={`${channel.id}-${channel.connected}`}
+                    channel={channel}
+                  />
+                  <section className="panel">
+                    <div className="panel-title">
+                      <h2>Twitch connection</h2>
+                      <Link2 size={19} />
+                    </div>
+                    <div className="connection-row">
+                      <div className="connection-identity">
+                        <Avatar name={channel.displayName} size={48} />
+                        <div>
+                          <strong>{channel.displayName}</strong>
+                          <small>
+                            Twitch user ID {channel.twitchChannelId}
+                          </small>
+                        </div>
+                      </div>
+                      <span
+                        className={`status ${channel.connected ? '' : 'neutral'}`}
+                      >
+                        <i />
+                        {channel.connected ? 'Connected' : 'Disconnected'}
+                      </span>
+                    </div>
+                  </section>
+                </div>
+              ),
+            },
+            {
+              value: 'features',
+              label: 'Features',
+              content: <FeatureControls expanded />,
+            },
+            {
+              value: 'privacy',
+              label: 'Privacy & data',
+              content: (
+                <div className="content-stack">
+                  <section className="panel">
+                    <div className="panel-title">
+                      <h2>Chat retention</h2>
+                    </div>
+                    <p className="panel-description">
+                      Ordinary chat expires after this period. Shortening
+                      retention also shortens existing deadlines. Retained
+                      evidence is kept separately.
+                    </p>
+                    <form onSubmit={save}>
+                      <div className="field">
+                        <label htmlFor="retention">
+                          Ordinary chat retention
+                        </label>
+                        <Select
+                          id="retention"
+                          value={days}
+                          disabled={!owner || busy}
+                          onValueChange={(event) => {
+                            setDays(Number(event));
+                            setSaved(false);
+                          }}
+                        >
+                          {Array.from(
+                            { length: 7 },
+                            (_, index) => index + 1,
+                          ).map((value) => (
+                            <option key={value} value={value}>
+                              {value} {value === 1 ? 'day' : 'days'}
+                              {value === 7 ? ' · default' : ''}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      {owner && (
+                        <div className="save-row">
+                          <button
+                            className="button primary"
+                            disabled={
+                              busy || days === channel.chatRetentionDays
+                            }
+                          >
+                            {busy ? 'Saving…' : 'Save preferences'}
+                          </button>
+                          {saved && (
+                            <span className="inline-success" role="status">
+                              <Check size={15} />
+                              Preferences saved
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </form>
+                  </section>
+                  <RetentionStatus channel={channel} />
+                  {owner && (
+                    <section className="panel danger-section">
+                      <div>
+                        <h2>
+                          {channel.connected
+                            ? 'Disconnect this channel'
+                            : 'Pick up where you left off'}
+                        </h2>
+                        <p>
+                          {channel.connected
+                            ? 'Your records stay. Team access is removed, and your channel will be disconnected until you reconnect.'
+                            : 'Reconnect your Twitch channel to make this space active again. You’ll need to add your team back.'}
+                        </p>
+                      </div>
+                      <button
+                        className={`button ${channel.connected ? 'danger' : 'primary'}`}
+                        disabled={busy}
+                        onClick={() =>
+                          channel.connected
+                            ? setConfirm(true)
+                            : void reconnect()
+                        }
+                      >
+                        {channel.connected
+                          ? 'Disconnect channel'
+                          : reconnectLabel}
+                      </button>
+                    </section>
+                  )}
+                </div>
+              ),
+            },
+          ]}
         />
-        <section className="panel">
-          <div className="panel-title">
-            <h2>Twitch connection</h2>
-            <Link2 size={19} />
-          </div>
-          <div className="connection-row">
-            <div className="connection-identity">
-              <Avatar name={channel.displayName} size={48} />
-              <div>
-                <strong>{channel.displayName}</strong>
-                <small>Twitch user ID {channel.twitchChannelId}</small>
-              </div>
-            </div>
-            <span className={`status ${channel.connected ? '' : 'neutral'}`}>
-              <i />
-              {channel.connected ? 'Connected' : 'Disconnected'}
-            </span>
-          </div>
-        </section>
-        <section className="panel">
-          <div className="panel-title">
-            <h2>Chat retention</h2>
-          </div>
-          <p className="panel-description">
-            Ordinary chat expires after this period. Shortening retention also
-            shortens existing deadlines. Retained evidence is kept separately.
-          </p>
-          <form onSubmit={save}>
-            <div className="field">
-              <label htmlFor="retention">Ordinary chat retention</label>
-              <Select
-                id="retention"
-                value={days}
-                disabled={!owner || busy}
-                onValueChange={(event) => {
-                  setDays(Number(event));
-                  setSaved(false);
-                }}
-              >
-                {Array.from({ length: 7 }, (_, index) => index + 1).map(
-                  (value) => (
-                    <option key={value} value={value}>
-                      {value} {value === 1 ? 'day' : 'days'}
-                      {value === 7 ? ' · default' : ''}
-                    </option>
-                  ),
-                )}
-              </Select>
-            </div>
-            {owner && (
-              <div className="save-row">
-                <button
-                  className="button primary"
-                  disabled={busy || days === channel.chatRetentionDays}
-                >
-                  {busy ? 'Saving…' : 'Save preferences'}
-                </button>
-                {saved && (
-                  <span className="inline-success" role="status">
-                    <Check size={15} />
-                    Preferences saved
-                  </span>
-                )}
-              </div>
-            )}
-          </form>
-        </section>
-        <RetentionStatus channel={channel} />
-        {owner && (
-          <section className="panel danger-section">
-            <div>
-              <h2>
-                {channel.connected
-                  ? 'Disconnect this channel'
-                  : 'Pick up where you left off'}
-              </h2>
-              <p>
-                {channel.connected
-                  ? 'Your records stay. Team access is removed, and your channel will be disconnected until you reconnect.'
-                  : 'Reconnect your Twitch channel to make this space active again. You’ll need to add your team back.'}
-              </p>
-            </div>
-            <button
-              className={`button ${channel.connected ? 'danger' : 'primary'}`}
-              disabled={busy}
-              onClick={() =>
-                channel.connected ? setConfirm(true) : void reconnect()
-              }
-            >
-              {channel.connected ? 'Disconnect channel' : reconnectLabel}
-            </button>
-          </section>
-        )}
       </div>
       {confirm && (
         <ConfirmDialog
@@ -227,8 +270,8 @@ function SettingsPanel({ channel }: { channel: Channel }) {
           </p>
           <p>
             Public pages are hidden while disconnected. Reconnecting restores
-            previously published entries. Withdraw or delete entries in
-            Community publishing to revoke their publication.
+            previously published entries. Withdraw or delete entries in Public
+            stories to revoke their publication.
           </p>
         </ConfirmDialog>
       )}

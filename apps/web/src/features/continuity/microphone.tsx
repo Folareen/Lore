@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { FeatureControls } from './feature-controls';
 import { z } from 'zod';
 import { microphoneCaptureSchema, type MicrophoneCapture } from '@lore/shared';
 import { apiRequest } from '../../lib/api';
@@ -41,7 +42,7 @@ export function MicrophonePanel() {
   return selected ? <MicrophoneCapturePanel key={selected.id} /> : null;
 }
 function MicrophoneCapturePanel() {
-  const { selected, session, preview, href } = useWorkspace();
+  const { selected, session, preview } = useWorkspace();
   const [open, setOpen] = useState(false),
     [phase, setPhase] = useState<
       'idle' | 'permission' | 'recording' | 'encoding' | 'sending'
@@ -264,13 +265,7 @@ function MicrophoneCapturePanel() {
                 </p>
               )}
               {!settings?.microphoneEnabled && (
-                <p className="notice">
-                  The owner must enable microphone suggestions in{' '}
-                  <Link href={href('settings')}>
-                    Additional channel capabilities
-                  </Link>
-                  .
-                </p>
+                <FeatureControls only={['microphoneEnabled']} expanded />
               )}
               <div className="button-row">
                 <button
@@ -511,6 +506,7 @@ function VoiceSuggestion({
       )}
       {confirm && (
         <ConfirmDialog
+          tone="primary"
           title="Confirm this microphone suggestion?"
           confirmLabel="Save confirmed promise"
           busy={busy}

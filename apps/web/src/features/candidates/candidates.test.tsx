@@ -150,10 +150,11 @@ it('explains missing server credentials and owner-only consent without offering 
         }),
   );
   setup(false, true, 'moderator');
+  await userEvent.click(screen.getByText('Find suggestions in chat'));
   await screen.findByText(
-    'Only the channel owner can change extraction consent.',
+    'Only the channel owner can enable chat suggestions.',
   );
-  expect(screen.getByText(/Add GEMINI_API_KEY/)).toBeTruthy();
+  expect(screen.getByText(/configuration needs attention/)).toBeTruthy();
   expect(
     (
       screen.getByRole('button', {
@@ -224,7 +225,7 @@ it('preserves review edits while refreshed suggestions keep the same version', a
   );
   await user.click(screen.getByRole('button', { name: 'Refresh' }));
   await waitFor(() =>
-    expect(screen.queryByText('Loading candidates…')).toBeNull(),
+    expect(screen.queryByText('Loading suggestions…')).toBeNull(),
   );
   expect(
     (screen.getByLabelText('Promise wording') as HTMLTextAreaElement).value,

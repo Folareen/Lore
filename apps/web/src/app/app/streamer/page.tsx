@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { OpenLoopsScreen } from '../../../features/open-loops/open-loops';
-export const metadata = { title: 'Open loops · Lore' };
+export const metadata = { title: 'Promises · Lore' };
 export default async function StreamerPage({
   searchParams,
 }: {

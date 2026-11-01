@@ -43,6 +43,8 @@ for (const width of [390, 1440]) {
           .toBe(true);
         if (
           [
+            'overview',
+            'candidates',
             'streamer',
             'publications',
             'community',
@@ -174,10 +176,10 @@ test('mobile workspace navigation opens, closes with Escape and follows a destin
   await trigger.click();
   await page
     .getByRole('navigation', { name: 'Community navigation' })
-    .getByRole('link', { name: 'Open loops', exact: true })
+    .getByRole('link', { name: 'Promises', exact: true })
     .click();
   await expect(
-    page.getByRole('heading', { name: 'Open loops', exact: true }),
+    page.getByRole('heading', { name: 'Promises', exact: true }),
   ).toBeVisible();
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   const card = page.getByRole('article').first();
@@ -185,6 +187,7 @@ test('mobile workspace navigation opens, closes with Escape and follows a destin
   await card.getByText('Change status', { exact: true }).click();
   await chooseSelect(page, card.getByLabel('Next status'), 'fulfilled');
   await expect(card.getByLabel('Reason (required)')).toBeVisible();
+  await page.getByText('New promise', { exact: true }).click();
   const input = page.getByLabel('What did we promise?');
   expect(
     await input.evaluate((element) =>

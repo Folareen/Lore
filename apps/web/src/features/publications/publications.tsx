@@ -1,4 +1,7 @@
 'use client';
+import { SectionTabs } from '../../components/section-tabs';
+import { useSearchParams } from 'next/navigation';
+import { FeatureControls } from '../continuity/feature-controls';
 import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
@@ -13,6 +16,7 @@ import {
   publicationHistorySchema,
   catchupSettingsSchema,
   type ManagedPublication,
+  type PublicationFields,
 } from '@lore/shared';
 import { useWorkspace } from '../workspace/workspace-context';
 import { usePublications } from './publications-context';
@@ -20,16 +24,45 @@ import { PublicationForm } from './publication-form';
 import { publicationLabels } from './public-lore';
 import { ConfirmDialog } from '../../components/confirm-dialog';
 export function PublicationsScreen() {
-  const { selected } = useWorkspace();
+  const { selected, channels, selectChannel } = useWorkspace();
+  const params = useSearchParams();
+  const channelId = params.get('channel');
+  const [openedChannel, setOpenedChannel] = useState<string | null>(null);
+  useEffect(() => {
+    if (
+      channelId &&
+      openedChannel !== channelId &&
+      channels.some((channel) => channel.id === channelId)
+    ) {
+      if (selected?.id !== channelId) selectChannel(channelId);
+      setOpenedChannel(channelId);
+    }
+  }, [channelId, openedChannel, selected?.id, channels, selectChannel]);
+  if (channelId && !channels.some((channel) => channel.id === channelId))
+    return <p className="notice error">Channel unavailable.</p>;
+  if (channelId && openedChannel !== channelId && selected?.id !== channelId)
+    return <p role="status">Selecting channel…</p>;
+  const parsedPromise = z.uuid().safeParse(params.get('promise'));
+  const promiseId =
+    parsedPromise.success && (!channelId || selected?.id === channelId)
+      ? parsedPromise.data
+      : undefined;
   return selected ? (
-    <PublishingDesk key={selected.id} />
+    <PublishingDesk
+      key={`${selected.id}-${promiseId ?? ''}`}
+      promiseId={promiseId}
+    />
   ) : (
     <p className="notice">Connect a channel to prepare Community Lore.</p>
   );
 }
-function PublishingDesk() {
+function PublishingDesk({ promiseId }: { promiseId?: string }) {
   const api = usePublications(),
     { selected, preview, href } = useWorkspace();
+  const [sourcePromiseId, setSourcePromiseId] = useState(promiseId);
+  const [tab, setTab] = useState('stories');
+  const [draftKind, setDraftKind] =
+    useState<PublicationFields['kind']>('milestone');
   const channelId = selected!.id,
     reviewer = selected!.role !== 'team';
   const [rows, setRows] = useState<ManagedPublication[]>([]),
@@ -38,7 +71,7 @@ function PublishingDesk() {
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
     [revision, setRevision] = useState(0),
-    [creating, setCreating] = useState(false),
+    [creating, setCreating] = useState(Boolean(sourcePromiseId)),
     [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [suggested, setSuggested] =
     useState<z.infer<typeof summaryDraftSchema>>();
@@ -83,8 +116,10 @@ function PublishingDesk() {
     <div className="content-stack">
       <div className="page-heading">
         <div>
-          <h1>Community publishing</h1>
-          <p>Prepare stories and recaps, then review them before publishing.</p>
+          <h1>Public stories</h1>
+          <p>
+            Share community moments. Review each draft before anyone can see it.
+          </p>
         </div>
         <Link
           className="button secondary"
@@ -106,116 +141,187 @@ function PublishingDesk() {
           them.
         </p>
       )}
-      <SummaryGenerator
-        onUse={(draft) => {
-          setSuggested(draft);
-          setRequestId(crypto.randomUUID());
-          setCreating(true);
-        }}
+      <SectionTabs
+        label="Publishing tasks"
+        value={tab}
+        onValueChange={setTab}
+        tabs={[
+          {
+            value: 'stories',
+            label: 'Stories & drafts',
+            content: (
+              <div className="content-stack">
+                <div className="list-toolbar">
+                  <button
+                    className="button primary"
+                    disabled={!selected!.connected || creating}
+                    onClick={() => {
+                      setSuggested(undefined);
+                      setSourcePromiseId(undefined);
+                      setDraftKind('milestone');
+                      setRequestId(crypto.randomUUID());
+                      setCreating(true);
+                    }}
+                  >
+                    New story
+                  </button>
+                  <label className="field">
+                    Publication status
+                    <Select value={filter} onValueChange={(e) => setFilter(e)}>
+                      <option value="all">All entries</option>
+                      <option value="draft">Drafts</option>
+                      <option value="published">Published</option>
+                      <option value="unpublished">Unpublished</option>
+                    </Select>
+                  </label>
+                  <button
+                    className="button secondary"
+                    onClick={refresh}
+                    disabled={loading}
+                  >
+                    Refresh entries
+                  </button>
+                </div>
+                {creating && (
+                  <PublicationForm
+                    key={requestId}
+                    suggested={suggested}
+                    initialKind={draftKind}
+                    sourcePromiseId={sourcePromiseId}
+                    onCancel={() => setCreating(false)}
+                    onSave={async (fields) => {
+                      await api.create(
+                        channelId,
+                        createPublicationSchema.parse({ ...fields, requestId }),
+                      );
+                      setCreating(false);
+                      refresh();
+                    }}
+                  />
+                )}
+                {error && (
+                  <p role="alert" className="notice error">
+                    {error}
+                  </p>
+                )}
+                {loading && <p role="status">Loading community entries…</p>}
+                {!loading && !error && !rows.length && (
+                  <div className="panel">
+                    <h2>Your first story starts here.</h2>
+                    <p>
+                      Choose New story to share a moment or update a promise. It
+                      stays private until an owner or moderator publishes it.
+                    </p>
+                  </div>
+                )}
+                {!loading &&
+                  rows.map((r) => (
+                    <PublicationCard
+                      key={`${r.id}-${r.version}`}
+                      record={r}
+                      canReview={reviewer}
+                      connected={selected!.connected}
+                      onChanged={refresh}
+                    />
+                  ))}
+                {cursor && (
+                  <button
+                    className="button secondary"
+                    onClick={() => {
+                      setLoading(true);
+                      void api
+                        .list(channelId, {
+                          ...(filter === 'all'
+                            ? {}
+                            : {
+                                status: z
+                                  .enum(['draft', 'published', 'unpublished'])
+                                  .parse(filter),
+                              }),
+                          cursor,
+                        })
+                        .then((p) => {
+                          setRows((s) => [...s, ...p.items]);
+                          setCursor(p.nextCursor);
+                        })
+                        .catch((e: unknown) =>
+                          setError(
+                            e instanceof Error
+                              ? e.message
+                              : 'Could not load more entries.',
+                          ),
+                        )
+                        .finally(() => setLoading(false));
+                    }}
+                  >
+                    Load older entries
+                  </button>
+                )}
+              </div>
+            ),
+          },
+          {
+            value: 'recap',
+            label: 'Create a recap',
+            content: (
+              <div className="content-stack">
+                <div className="task-intro">
+                  <h2>Bring newcomers up to speed</h2>
+                  <p>
+                    Publish stories first, then combine their approved public
+                    text into a recap. A published recap supplies the short
+                    wording for !catchup.
+                  </p>
+                </div>
+                <SummaryGenerator
+                  canUseDraft={!creating}
+                  onUse={(draft) => {
+                    setSuggested(draft);
+                    setSourcePromiseId(undefined);
+                    setRequestId(crypto.randomUUID());
+                    setCreating(true);
+                    setTab('stories');
+                  }}
+                />
+                {creating && (
+                  <p className="notice">
+                    You have an unsaved story draft. Save or cancel it in
+                    Stories &amp; drafts before starting another.
+                  </p>
+                )}
+                <button
+                  className="button secondary"
+                  disabled={!selected!.connected || creating}
+                  onClick={() => {
+                    setSuggested(undefined);
+                    setSourcePromiseId(undefined);
+                    setDraftKind('summary');
+                    setRequestId(crypto.randomUUID());
+                    setCreating(true);
+                    setTab('stories');
+                  }}
+                >
+                  Write a recap yourself
+                </button>
+              </div>
+            ),
+          },
+          ...(selected!.role === 'owner'
+            ? [
+                {
+                  value: 'chat',
+                  label: 'Twitch replies',
+                  content: (
+                    <div className="content-stack">
+                      <CatchupSettings key={channelId} />
+                      <FeatureControls only={['promiseConfirmationsEnabled']} />
+                    </div>
+                  ),
+                },
+              ]
+            : []),
+        ]}
       />
-      <div className="button-row">
-        <button
-          className="button primary"
-          disabled={!selected!.connected}
-          onClick={() => {
-            setSuggested(undefined);
-            setRequestId(crypto.randomUUID());
-            setCreating(true);
-          }}
-        >
-          New community draft
-        </button>
-        <label className="field">
-          Publication status
-          <Select value={filter} onValueChange={(e) => setFilter(e)}>
-            <option value="all">All entries</option>
-            <option value="draft">Drafts</option>
-            <option value="published">Published</option>
-            <option value="unpublished">Unpublished</option>
-          </Select>
-        </label>
-        <button
-          className="button secondary"
-          onClick={refresh}
-          disabled={loading}
-        >
-          Refresh entries
-        </button>
-      </div>
-      {creating && (
-        <PublicationForm
-          key={requestId}
-          suggested={suggested}
-          onCancel={() => setCreating(false)}
-          onSave={async (fields) => {
-            await api.create(
-              channelId,
-              createPublicationSchema.parse({ ...fields, requestId }),
-            );
-            setCreating(false);
-            refresh();
-          }}
-        />
-      )}
-      {error && (
-        <p role="alert" className="notice error">
-          {error}
-        </p>
-      )}
-      {loading && <p role="status">Loading community entries…</p>}
-      {!loading && !error && !rows.length && (
-        <div className="panel">
-          <h2>No community entries yet.</h2>
-          <p>
-            Start with a moment, a recurring chat reference, or a short catch-up
-            summary.
-          </p>
-        </div>
-      )}
-      {!loading &&
-        rows.map((r) => (
-          <PublicationCard
-            key={`${r.id}-${r.version}`}
-            record={r}
-            canReview={reviewer}
-            connected={selected!.connected}
-            onChanged={refresh}
-          />
-        ))}
-      {cursor && (
-        <button
-          className="button secondary"
-          onClick={() => {
-            setLoading(true);
-            void api
-              .list(channelId, {
-                ...(filter === 'all'
-                  ? {}
-                  : {
-                      status: z
-                        .enum(['draft', 'published', 'unpublished'])
-                        .parse(filter),
-                    }),
-                cursor,
-              })
-              .then((p) => {
-                setRows((s) => [...s, ...p.items]);
-                setCursor(p.nextCursor);
-              })
-              .catch((e: unknown) =>
-                setError(
-                  e instanceof Error
-                    ? e.message
-                    : 'Could not load more entries.',
-                ),
-              )
-              .finally(() => setLoading(false));
-          }}
-        >
-          Load older entries
-        </button>
-      )}
-      {selected!.role === 'owner' && <CatchupSettings key={channelId} />}
     </div>
   );
 }
@@ -231,6 +337,7 @@ function PublicationCard({
   onChanged: () => void;
 }) {
   const api = usePublications();
+  const { selected, preview, href } = useWorkspace();
   const [editing, setEditing] = useState(false),
     [action, setAction] = useState<'publish' | 'unpublish' | 'delete' | null>(
       null,
@@ -255,14 +362,27 @@ function PublicationCard({
           <p className="case-prose">{r.chatSummary}</p>
         </div>
       )}
-      <p className="muted">
-        v{r.version}
+      <p className="muted publication-date">
         {r.publishedAt
-          ? ` · Published ${new Date(r.publishedAt).toLocaleString()} by Twitch user ${r.approvedByTwitchUserId}`
-          : ' · Private until publication review'}
-        {r.sourceIds.length ? ` · ${r.sourceIds.length} public citations` : ''}
-        {r.promiseId ? ' · Private promise drafting source' : ''}
+          ? `Published ${new Date(r.publishedAt).toLocaleDateString()}`
+          : 'Private draft · not visible to viewers'}
+        {r.sourceIds.length
+          ? ` · ${r.sourceIds.length} public ${r.sourceIds.length === 1 ? 'source' : 'sources'}`
+          : ''}
       </p>
+      <details className="publication-details">
+        <summary>Publication details</summary>
+        <p className="muted">
+          v{r.version}
+          {r.publishedAt
+            ? ` · Published ${new Date(r.publishedAt).toLocaleString()} by Twitch user ${r.approvedByTwitchUserId}`
+            : ' · Private until publication review'}
+          {r.sourceIds.length
+            ? ` · ${r.sourceIds.length} public citations`
+            : ''}
+          {r.promiseId ? ' · Private promise drafting source' : ''}
+        </p>
+      </details>
       {editing ? (
         <PublicationForm
           initial={r}
@@ -286,7 +406,7 @@ function PublicationCard({
             disabled={!connected || (r.status === 'published' && !canReview)}
             onClick={() => setEditing(true)}
           >
-            Edit to draft
+            {r.status === 'published' ? 'Edit as draft' : 'Edit draft'}
           </button>
           {canReview && r.status !== 'published' && (
             <button
@@ -313,34 +433,54 @@ function PublicationCard({
               Unpublish
             </button>
           )}
-          {(canReview || r.status === 'draft') && (
-            <button
-              className="button danger"
-              onClick={() => {
-                setReason('');
-                setError('');
-                setAction('delete');
-              }}
+          {r.status === 'published' && selected && (
+            <Link
+              className="text-link"
+              href={
+                preview
+                  ? `${href('community')}&entry=${r.id}`
+                  : `/c/${selected.slug}/entries/${r.id}`
+              }
+              prefetch={false}
             >
-              Delete entry
-            </button>
+              View public story ↗
+            </Link>
           )}
-          <button
-            className="button secondary"
-            onClick={() => {
-              setError('');
-              void api
-                .history(r)
-                .then(setHistory)
-                .catch((e: unknown) =>
-                  setError(
-                    e instanceof Error ? e.message : 'Could not load history.',
-                  ),
-                );
-            }}
-          >
-            Review history
-          </button>
+          <details className="record-more">
+            <summary>More actions</summary>
+            <div className="button-row">
+              {(canReview || r.status === 'draft') && (
+                <button
+                  className="button danger"
+                  onClick={() => {
+                    setReason('');
+                    setError('');
+                    setAction('delete');
+                  }}
+                >
+                  Delete entry
+                </button>
+              )}
+              <button
+                className="button secondary"
+                onClick={() => {
+                  setError('');
+                  void api
+                    .history(r)
+                    .then(setHistory)
+                    .catch((e: unknown) =>
+                      setError(
+                        e instanceof Error
+                          ? e.message
+                          : 'Could not load history.',
+                      ),
+                    );
+                }}
+              >
+                Review history
+              </button>
+            </div>
+          </details>
         </div>
       )}
       {error && !action && (
@@ -364,6 +504,7 @@ function PublicationCard({
       )}
       {action && (
         <ConfirmDialog
+          tone={action === 'publish' ? 'primary' : 'danger'}
           title={
             action === 'publish'
               ? 'Publish this exact wording?'
@@ -451,7 +592,7 @@ function PublicationCard({
 }
 function CatchupSettings() {
   const api = usePublications(),
-    { selected, preview } = useWorkspace();
+    { selected, preview, href } = useWorkspace();
   const [state, setState] = useState<z.infer<
       typeof catchupSettingsSchema
     > | null>(null),
@@ -487,9 +628,8 @@ function CatchupSettings() {
         only to this channel, at most once per minute.
       </p>
       <p className="muted">
-        Live capture and explicit chat-sending permission are required. Stopping
-        capture or disconnecting stops replies. A reply already being sent
-        cannot be retracted.
+        Turn on capture, authorize sending, then enable replies below. These
+        permissions are separate from sign-in. Stopping capture stops replies.
       </p>
       {error && (
         <p className="notice error" role="alert">
@@ -515,7 +655,8 @@ function CatchupSettings() {
               {state.missingScopes.length > 0 && (
                 <>
                   <p className="muted">
-                    Authorization needed: {state.missingScopes.join(', ')}
+                    Twitch permission is needed to send replies as your
+                    broadcaster account.
                   </p>
                   <a className="button secondary" href="/api/auth/twitch/chat">
                     Authorize chat replies with Twitch
@@ -524,48 +665,53 @@ function CatchupSettings() {
               )}
               {!state.captureEnabled && (
                 <p className="notice">
-                  Start live capture in Channel settings first.
+                  Live capture is off.{' '}
+                  <Link className="text-link" href={href('settings')}>
+                    Open capture settings →
+                  </Link>
                 </p>
               )}
             </>
           )}
-          <button
-            className="button secondary"
-            disabled={
-              preview ||
-              busy ||
-              (!state.enabled &&
-                (!selected!.connected ||
-                  !state.configured ||
-                  !state.captureEnabled ||
-                  state.missingScopes.length > 0))
-            }
-            onClick={() => {
-              setBusy(true);
-              setError('');
-              void api
-                .consent(selected!.id, !state.enabled)
-                .then(() => setRevision((r) => r + 1))
-                .catch((e: unknown) =>
-                  setError(
-                    e instanceof Error
-                      ? e.message
-                      : 'Could not update chat replies.',
-                  ),
-                )
-                .finally(() => setBusy(false));
-            }}
-          >
-            {state.enabled
-              ? 'Disable !catchup replies'
-              : 'Enable !catchup replies'}
-          </button>
-          <button
-            className="button secondary"
-            onClick={() => setRevision((r) => r + 1)}
-          >
-            Refresh chat status
-          </button>
+          <div className="button-row">
+            <button
+              className="button primary"
+              disabled={
+                preview ||
+                busy ||
+                (!state.enabled &&
+                  (!selected!.connected ||
+                    !state.configured ||
+                    !state.captureEnabled ||
+                    state.missingScopes.length > 0))
+              }
+              onClick={() => {
+                setBusy(true);
+                setError('');
+                void api
+                  .consent(selected!.id, !state.enabled)
+                  .then(() => setRevision((r) => r + 1))
+                  .catch((e: unknown) =>
+                    setError(
+                      e instanceof Error
+                        ? e.message
+                        : 'Could not update chat replies.',
+                    ),
+                  )
+                  .finally(() => setBusy(false));
+              }}
+            >
+              {state.enabled
+                ? 'Disable !catchup replies'
+                : 'Enable !catchup replies'}
+            </button>
+            <button
+              className="button secondary"
+              onClick={() => setRevision((r) => r + 1)}
+            >
+              Refresh chat status
+            </button>
+          </div>
           {state.recent.length > 0 && (
             <ul>
               {state.recent.map((r) => (

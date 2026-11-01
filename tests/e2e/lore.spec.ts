@@ -172,6 +172,7 @@ test('setup marks a team complete after adding a moderator and reopens it after 
   await page
     .getByRole('button', { name: 'Connect channel', exact: true })
     .click();
+  await page.getByText('Channels & setup', { exact: true }).click();
   await expect(page.getByRole('link', { name: /Add your team/ })).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'Community navigation' });
   await nav.getByRole('link', { name: 'Teams', exact: true }).click();
@@ -181,6 +182,7 @@ test('setup marks a team complete after adding a moderator and reopens it after 
     page.getByText('Moderator enabled in Lore and Twitch.', { exact: true }),
   ).toBeVisible();
   await nav.getByRole('link', { name: 'Overview', exact: true }).click();
+  await page.getByText('Channels & setup', { exact: true }).click();
   const completed = page.getByRole('link', {
     name: /Team added 1 teammate has access/,
   });
@@ -206,6 +208,7 @@ test('setup marks a team complete after adding a moderator and reopens it after 
     page.getByText('Access removed from Lore and Twitch.', { exact: true }),
   ).toBeVisible();
   await nav.getByRole('link', { name: 'Overview', exact: true }).click();
+  await page.getByText('Channels & setup', { exact: true }).click();
   await expect(
     page.getByRole('link', { name: /Add your team/ }),
   ).not.toHaveClass(/done/);
@@ -731,6 +734,7 @@ test('channel updates preserve editing until refresh is confirmed', async ({
     });
   });
   await page.goto('/app/streamer');
+  await page.getByText('New promise', { exact: true }).click();
   const wording = page.getByLabel('What did we promise?');
   await wording.fill('Keep this unsaved promise');
   await page.evaluate(() => {
@@ -776,6 +780,7 @@ test('authenticated promise capture, retention and publication use real API data
 }, info) => {
   await signIn(context);
   await page.goto('/app/streamer');
+  await page.getByText('New promise', { exact: true }).click();
   await page
     .getByLabel('What did we promise?')
     .fill('Authenticated browser commitment.');
@@ -794,6 +799,7 @@ test('authenticated promise capture, retention and publication use real API data
   await page
     .getByRole('link', { name: 'Channel settings', exact: true })
     .click();
+  await page.getByRole('tab', { name: 'Privacy & data' }).click();
   await chooseSelect(page, page.getByLabel('Ordinary chat retention'), '1');
   await page.getByRole('button', { name: 'Save preferences' }).click();
   await expect(page.getByLabel('Ordinary chat retention')).toHaveText('1 day');
@@ -805,10 +811,8 @@ test('authenticated promise capture, retention and publication use real API data
   await expect(
     page.getByRole('region', { name: 'Retention status' }),
   ).toContainText('0 awaiting expiry cleanup');
-  await page
-    .getByRole('link', { name: 'Community publishing', exact: true })
-    .click();
-  await page.getByRole('button', { name: 'New community draft' }).click();
+  await page.getByRole('link', { name: 'Public stories', exact: true }).click();
+  await page.getByRole('button', { name: 'New story' }).click();
   await chooseSelect(page, page.getByLabel('Entry type'), 'summary');
   await page
     .getByLabel('Public title', { exact: true })
@@ -912,6 +916,7 @@ test('protected routes, team role and CSRF boundaries survive direct browser nav
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByText('PRIVATE_BROWSER_INCIDENT')).toHaveCount(0);
   await page.goto('/app/settings');
+  await page.getByRole('tab', { name: 'Privacy & data' }).click();
   await expect(page.getByLabel('Ordinary chat retention')).toBeDisabled();
   const response = await page.request.get(`/api/channels/${channelId}/cases`);
   expect(response.status()).toBe(404);
@@ -1002,10 +1007,8 @@ test('owner opts in, reviews a Gemini public draft and saves it without automati
       )
     ).status(),
   ).toBe(200);
-  await page.goto('/app/settings');
-  await page
-    .getByText('Additional channel capabilities', { exact: true })
-    .click();
+  await page.goto('/app/publications');
+  await page.getByRole('tab', { name: 'Create a recap' }).click();
   await page
     .getByRole('button', { name: 'Enable gemini public summary drafts' })
     .click();
@@ -1014,12 +1017,8 @@ test('owner opts in, reviews a Gemini public draft and saves it without automati
     .getByRole('button', { name: 'Enable capability' })
     .click();
   await expect(
-    page.getByRole('button', { name: 'Disable gemini public summary drafts' }),
-  ).toBeVisible();
-  await page.goto('/app/publications');
-  await page
-    .getByText('Draft a catch-up summary with Gemini', { exact: true })
-    .click();
+    page.getByRole('button', { name: 'Generate summary draft' }),
+  ).toBeDisabled();
   await page
     .getByRole('checkbox', {
       name: 'Browser public garden source',
@@ -1077,10 +1076,8 @@ test('records a synthetic clip after explicit consent, previews audio and confir
     });
   });
 
-  await page.goto('/app/settings');
-  await page
-    .getByText('Additional channel capabilities', { exact: true })
-    .click();
+  await page.goto('/app/candidates');
+  await page.getByText('Microphone follow-ups', { exact: true }).click();
   await page
     .getByRole('button', { name: 'Enable microphone follow-up suggestions' })
     .click();
@@ -1089,12 +1086,8 @@ test('records a synthetic clip after explicit consent, previews audio and confir
     .getByRole('button', { name: 'Enable capability' })
     .click();
   await expect(
-    page.getByRole('button', {
-      name: 'Disable microphone follow-up suggestions',
-    }),
-  ).toBeVisible();
-  await page.goto('/app/candidates');
-  await page.getByText('Microphone follow-ups', { exact: true }).click();
+    page.getByRole('button', { name: 'Start recording', exact: true }),
+  ).toBeEnabled();
   await page
     .getByRole('button', { name: 'Start recording', exact: true })
     .click();
@@ -1168,9 +1161,7 @@ test('production SSE refreshes clean views and preserves edits when another clie
   await expect(
     page.getByText('Live updates connected', { exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole('button', { name: 'New community draft', exact: true })
-    .click();
+  await page.getByRole('button', { name: 'New story', exact: true }).click();
   await page
     .getByLabel('Public title', { exact: true })
     .fill('Preserve my unsaved title');
@@ -1181,4 +1172,114 @@ test('production SSE refreshes clean views and preserves edits when another clie
   await expect(page.getByLabel('Public title', { exact: true })).toHaveValue(
     'Preserve my unsaved title',
   );
+});
+
+test('a promise leads to a viewer-safe draft without publishing, and task tabs preserve edits', async ({
+  page,
+  context,
+}) => {
+  await signIn(context);
+  await page.goto('/app/streamer');
+  await page.getByText('New promise', { exact: true }).click();
+  await page
+    .getByLabel('What did we promise?')
+    .fill('Finish the launch garden tour.');
+  await page.getByRole('button', { name: 'Save promise', exact: true }).click();
+  const promise = page.getByRole('article', {
+    name: 'Finish the launch garden tour.',
+    exact: true,
+  });
+  await promise.getByRole('link', { name: 'Create public story →' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'New story draft', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel('Confirmed promise (optional)')).toHaveText(
+    'Finish the launch garden tour.',
+  );
+  await page
+    .getByRole('button', { name: 'Use promise wording as a draft' })
+    .click();
+  await page
+    .getByLabel('Public title', { exact: true })
+    .fill('Launch tour update');
+  await page
+    .getByRole('textbox', { name: 'Public story', exact: true })
+    .fill('The garden tour continues next stream. Come help name the pond.');
+  await page.getByRole('tab', { name: 'Create a recap' }).click();
+  await page.getByRole('tab', { name: 'Stories & drafts' }).click();
+  await expect(page.getByLabel('Public title', { exact: true })).toHaveValue(
+    'Launch tour update',
+  );
+  await page
+    .getByRole('button', { name: 'Save community draft', exact: true })
+    .click();
+  const draft = page.getByRole('article', {
+    name: 'Launch tour update',
+    exact: true,
+  });
+  await expect(draft.getByText('draft', { exact: true })).toBeVisible();
+  const feed = await (
+    await page.request.get('/api/public/channels/browser-test')
+  ).json();
+  expect(JSON.stringify(feed)).not.toContain('Launch tour update');
+});
+
+test('a promise shortcut keeps the channel switcher usable and manual recaps keep human authorship', async ({
+  page,
+  context,
+  browser,
+}) => {
+  const other = await browser.newContext({ baseURL: 'http://127.0.0.1:4322' });
+  let otherChannel: { id: string; displayName: string };
+  try {
+    await signIn(other, 'team');
+    const session = await (await other.request.get('/api/auth/session')).json();
+    const headers = {
+      'X-CSRF-Token': session.csrfToken,
+      Origin: 'http://127.0.0.1:4322',
+    };
+    const connected = await other.request.post('/api/channels/connect', {
+      headers,
+      data: {},
+    });
+    expect(connected.ok()).toBe(true);
+    otherChannel = await connected.json();
+    const grant = await other.request.post(
+      `/api/channels/${otherChannel.id}/members`,
+      { headers, data: { twitchUserId: '100', role: 'team' } },
+    );
+    expect(grant.ok()).toBe(true);
+  } finally {
+    await other.close();
+  }
+  await signIn(context);
+  await page.goto('/app/streamer');
+  await chooseSelect(page, page.getByLabel('Selected channel'), channelId);
+  await page
+    .getByRole('article')
+    .first()
+    .getByRole('link', { name: 'Create public story →' })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'New story draft', exact: true }),
+  ).toBeVisible();
+  await chooseSelect(
+    page,
+    page.getByLabel('Selected channel'),
+    otherChannel.id,
+  );
+  await expect(page.getByLabel('Selected channel')).toHaveText(
+    otherChannel.displayName,
+  );
+  await expect(
+    page.getByRole('heading', { name: 'New story draft', exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: 'Twitch replies' })).toHaveCount(
+    0,
+  );
+  await page.getByRole('tab', { name: 'Create a recap' }).click();
+  await page.getByRole('button', { name: 'Write a recap yourself' }).click();
+  await expect(page.getByLabel('Entry type')).toHaveText('Catch-up summary');
+  await expect(page.getByLabel('Short !catchup reply')).toBeVisible();
+  await expect(page.getByText(/Gemini draft · verify/)).toHaveCount(0);
 });

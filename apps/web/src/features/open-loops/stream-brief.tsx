@@ -15,7 +15,7 @@ export function StreamBriefScreen() {
           <p>Saved promises and source-linked changes for your next stream.</p>
         </div>
         <Link className="button secondary" href={href('streamer')}>
-          Manage open loops
+          Manage promises
         </Link>
       </div>
       {selected ? (
@@ -63,14 +63,9 @@ function Brief({ channelId }: { channelId: string }) {
   }, [channelId, loadBrief, revision]);
   return (
     <div className="content-stack">
-      <section className="panel">
-        <div className="panel-title">
-          <h2>Your next stream</h2>
-          <ListChecks size={22} aria-hidden="true" />
-        </div>
-        <p className="panel-description">
-          In-progress promises come first. This brief uses saved records, not an
-          AI-generated recap.
+      <div className="list-toolbar">
+        <p className="muted">
+          Your saved promises, with in-progress work first.
         </p>
         <button
           className="button secondary"
@@ -80,8 +75,8 @@ function Brief({ channelId }: { channelId: string }) {
           <RefreshCw size={16} aria-hidden="true" />
           {loading ? 'Loading…' : 'Refresh brief'}
         </button>
-      </section>
-      {loading && <p role="status">Gathering your open loops…</p>}
+      </div>
+      {loading && <p role="status">Gathering your promises…</p>}
       {error && (
         <p className="notice error" role="alert">
           {error}
@@ -94,6 +89,54 @@ function Brief({ channelId }: { channelId: string }) {
             {brief.activeCount === 1 ? 'promise' : 'promises'} · Updated{' '}
             {new Date(brief.generatedAt).toLocaleString()}
           </p>
+          {brief.items.length === 0 ? (
+            <div className="empty-state">
+              <ListChecks size={28} />
+              <h2>A clear slate.</h2>
+              <p>
+                No confirmed, in-progress or postponed promises to bring into
+                the next stream.
+              </p>
+              <Link className="button primary" href={href('streamer')}>
+                Capture a promise
+              </Link>
+            </div>
+          ) : (
+            <ol className="brief-list">
+              {brief.items.map((loop) => (
+                <li key={loop.id} className="panel">
+                  <span className="status purple">
+                    {openLoopLabels[loop.status]}
+                  </span>
+                  <h2>
+                    <Link
+                      href={`${href('streamer')}${preview ? '&' : '?'}loop=${loop.id}#loop-${loop.id}`}
+                    >
+                      {loop.wording}
+                    </Link>
+                  </h2>
+                  <p>
+                    {loop.ownerLabel || 'Follow-up owner not set'} ·{' '}
+                    {loop.dueContext || 'No due context set'}
+                  </p>
+                  <small className="muted">
+                    {loop.origin === 'demo_fixture'
+                      ? 'Demo fixture'
+                      : loop.origin === 'live_twitch'
+                        ? 'Live Twitch'
+                        : 'Manual import'}{' '}
+                    · Saved source: {loop.source.excerpt}
+                  </small>
+                </li>
+              ))}
+            </ol>
+          )}
+          {brief.activeCount > brief.items.length && (
+            <p className="notice">
+              Showing the first {brief.items.length} promises.{' '}
+              <Link href={href('streamer')}>See all promises</Link>.
+            </p>
+          )}
           {brief.context && (
             <section className="panel content-stack">
               <h2>
@@ -154,54 +197,6 @@ function Brief({ channelId }: { channelId: string }) {
                 </p>
               )}
             </section>
-          )}
-          {brief.items.length === 0 ? (
-            <div className="empty-state">
-              <ListChecks size={28} />
-              <h2>A clear slate.</h2>
-              <p>
-                No confirmed, in-progress or postponed promises to bring into
-                the next stream.
-              </p>
-              <Link className="button primary" href={href('streamer')}>
-                Capture a promise
-              </Link>
-            </div>
-          ) : (
-            <ol className="brief-list">
-              {brief.items.map((loop) => (
-                <li key={loop.id} className="panel">
-                  <span className="status purple">
-                    {openLoopLabels[loop.status]}
-                  </span>
-                  <h2>
-                    <Link
-                      href={`${href('streamer')}${preview ? '&' : '?'}loop=${loop.id}#loop-${loop.id}`}
-                    >
-                      {loop.wording}
-                    </Link>
-                  </h2>
-                  <p>
-                    {loop.ownerLabel || 'Follow-up owner not set'} ·{' '}
-                    {loop.dueContext || 'No due context set'}
-                  </p>
-                  <small className="muted">
-                    {loop.origin === 'demo_fixture'
-                      ? 'Demo fixture'
-                      : loop.origin === 'live_twitch'
-                        ? 'Live Twitch'
-                        : 'Manual import'}{' '}
-                    · Saved source: {loop.source.excerpt}
-                  </small>
-                </li>
-              ))}
-            </ol>
-          )}
-          {brief.activeCount > brief.items.length && (
-            <p className="notice">
-              Showing the first {brief.items.length} promises.{' '}
-              <Link href={href('streamer')}>See all open loops</Link>.
-            </p>
           )}
         </>
       )}

@@ -128,6 +128,12 @@ function CaseFile({ id }: { id: string }) {
           Refresh case
         </button>
       </div>
+      <nav className="case-jump-nav" aria-label="Case sections">
+        <a href="#case-incident">Incident &amp; rule</a>
+        <a href="#case-evidence">Evidence</a>
+        <a href="#case-decision">Review &amp; decision</a>
+        <a href="#case-follow-up">Follow-up</a>
+      </nav>
       {!selected?.connected && (
         <p className="notice">
           Reconnect the channel before changing this case.
@@ -155,7 +161,7 @@ function CaseFile({ id }: { id: string }) {
           </p>
         </section>
       )}
-      <section className="panel content-stack">
+      <section className="panel content-stack" id="case-incident">
         <div className="panel-title">
           <h2>The incident & appeal</h2>
           {editable && (
@@ -205,20 +211,24 @@ function CaseFile({ id }: { id: string }) {
           }}
         />
       )}
-      <CaseEvidencePanel
-        key={`evidence-${record.version}`}
-        record={record}
-        editable={editable}
-        onChanged={setRecord}
-      />
-      <CasePrecedents
-        key={`review-${record.version}`}
-        record={record}
-        editable={editable}
-        onDecided={setRecord}
-      />
-      <section className="panel">
-        <h2>Case history</h2>
+      <div id="case-evidence">
+        <CaseEvidencePanel
+          key={`evidence-${record.version}`}
+          record={record}
+          editable={editable}
+          onChanged={setRecord}
+        />
+      </div>
+      <div id="case-decision">
+        <CasePrecedents
+          key={`review-${record.version}`}
+          record={record}
+          editable={editable}
+          onDecided={setRecord}
+        />
+      </div>
+      <details className="panel">
+        <summary>Case history</summary>
         <ol className="case-history">
           {record.history.map((item) => (
             <li key={item.id}>
@@ -232,8 +242,10 @@ function CaseFile({ id }: { id: string }) {
             </li>
           ))}
         </ol>
-      </section>
-      <CaseWorkflowPanel record={record} />
+      </details>
+      <div id="case-follow-up">
+        <CaseWorkflowPanel record={record} />
+      </div>
     </div>
   );
 }
