@@ -16,6 +16,7 @@ import {
   grantMembershipSchema,
   type Membership,
   type GrantMembership,
+  type TwitchModeratorAccess,
 } from '@lore/shared';
 import { useWorkspace } from './workspace-context';
 import { Avatar } from '../../components/avatar';
@@ -37,6 +38,7 @@ export function Team() {
     loadMembers,
     grant,
     remove,
+    loadModeratorAccess,
   } = useWorkspace();
   const [members, setMembers] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,10 +50,39 @@ export function Team() {
   const [success, setSuccess] = useState('');
   const [removing, setRemoving] = useState<Membership | null>(null);
   const [revision, setRevision] = useState(0);
+  const [moderatorAccess, setModeratorAccess] = useState<{
+    channelId: string;
+    value: TwitchModeratorAccess;
+  } | null>(null);
+  const [moderatorError, setModeratorError] = useState('');
   const channelId = selected?.id;
   useLiveRefresh(channelId ?? '', () => setRevision((value) => value + 1));
   const allowed = selected?.role === 'owner' && selected.connected;
   const ownChannel = channels.find((channel) => channel.role === 'owner');
+  const twitchAccess =
+    moderatorAccess && moderatorAccess.channelId === channelId
+      ? moderatorAccess.value
+      : null;
+  useEffect(() => {
+    if (!channelId || !allowed) return;
+    const controller = new AbortController();
+    setModeratorAccess(null);
+    setModeratorError('');
+    loadModeratorAccess(channelId, controller.signal)
+      .then((value) => {
+        if (!controller.signal.aborted)
+          setModeratorAccess({ channelId, value });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted)
+          setModeratorError(
+            error instanceof Error
+              ? error.message
+              : 'Could not check Twitch moderator access.',
+          );
+      });
+    return () => controller.abort();
+  }, [channelId, allowed, loadModeratorAccess, revision]);
   async function connectOwnChannel() {
     setBusy(true);
     setError('');
@@ -114,7 +145,11 @@ export function Team() {
       await grant(parsed.data);
       setUserId('');
       if (!preview) setRevision((value) => value + 1);
-      setSuccess('Team access updated.');
+      setSuccess(
+        parsed.data.role === 'moderator'
+          ? 'Moderator enabled in Lore and Twitch.'
+          : 'Team access updated.',
+      );
     } catch (error) {
       setError(
         error instanceof Error ? error.message : 'Could not add this person.',
@@ -135,7 +170,11 @@ export function Team() {
     try {
       await grant(parsed.data);
       if (!preview) setRevision((value) => value + 1);
-      setSuccess('Role updated.');
+      setSuccess(
+        parsed.data.role === 'moderator'
+          ? 'Moderator enabled in Lore and Twitch.'
+          : 'Lore role updated. Twitch roles are unchanged.',
+      );
     } catch (error) {
       setError(
         error instanceof Error ? error.message : 'Could not update this role.',
@@ -256,6 +295,59 @@ export function Team() {
       )}
       {selected && allowed && (
         <div className="content-stack">
+          <section
+            className="panel content-stack"
+            aria-label="Twitch moderator access"
+          >
+            <h2>Moderator access</h2>
+            <p>
+              Choosing Moderator grants moderation powers in Lore and on Twitch.
+              Changing someone to Team member or removing them here only changes
+              Lore access.
+            </p>
+            {preview && (
+              <p className="notice">
+                Demo fixture · Twitch role changes are simulated.
+              </p>
+            )}
+            {moderatorError ? (
+              <p className="notice error" role="alert">
+                {moderatorError}{' '}
+                <button
+                  className="button secondary compact"
+                  onClick={() => setRevision((value) => value + 1)}
+                >
+                  Retry Twitch status
+                </button>
+                {!preview && (
+                  <a className="text-link" href="/api/auth/twitch/team">
+                    Authorize Twitch moderator management
+                  </a>
+                )}
+              </p>
+            ) : !twitchAccess ? (
+              <p role="status">Checking Twitch permissions…</p>
+            ) : !twitchAccess.authorized ? (
+              <div className="content-stack">
+                <p>
+                  Authorize your Twitch account before assigning Moderator.
+                  After approving, return to Teams to finish the change.
+                </p>
+                <a className="button primary" href="/api/auth/twitch/team">
+                  Authorize Twitch moderator management
+                </a>
+              </div>
+            ) : (
+              <p className="inline-success">
+                Twitch moderator management authorized.{' '}
+                {!preview && (
+                  <a className="text-link" href="/api/auth/twitch/team">
+                    Update Twitch permissions
+                  </a>
+                )}
+              </p>
+            )}
+          </section>
           {success && (
             <p className="inline-success" role="status">
               {success}
@@ -305,17 +397,50 @@ export function Team() {
                     <Avatar name={person.login} />
                     <div className="member-identity">
                       <strong>{person.displayName}</strong>
-                      <small>Owner-approved access</small>
+                      <small>
+                        {person.role === 'moderator'
+                          ? twitchAccess?.authorized &&
+                            twitchAccess.moderators.includes(
+                              person.twitchUserId,
+                            )
+                            ? 'Moderator in Lore and Twitch'
+                            : twitchAccess?.authorized
+                              ? 'Twitch moderator not enabled'
+                              : 'Lore moderator · Twitch status unverified'
+                          : 'Owner-approved access'}
+                      </small>
                     </div>
-                    <Select
-                      aria-label={`Role for ${person.displayName}`}
-                      value={person.role}
-                      disabled={busy}
-                      onValueChange={(event) => void changeRole(person, event)}
-                    >
-                      <option value="moderator">Moderator</option>
-                      <option value="team">Team member</option>
-                    </Select>
+                    <div className="member-role-controls">
+                      <Select
+                        aria-label={`Role for ${person.displayName}`}
+                        value={person.role}
+                        disabled={busy}
+                        onValueChange={(event) =>
+                          void changeRole(person, event)
+                        }
+                      >
+                        <option
+                          value="moderator"
+                          disabled={!twitchAccess?.authorized}
+                        >
+                          Moderator
+                        </option>
+                        <option value="team">Team member</option>
+                      </Select>
+                      {person.role === 'moderator' &&
+                        twitchAccess?.authorized &&
+                        !twitchAccess.moderators.includes(
+                          person.twitchUserId,
+                        ) && (
+                          <button
+                            className="button secondary compact"
+                            disabled={busy}
+                            onClick={() => void changeRole(person, 'moderator')}
+                          >
+                            Enable on Twitch
+                          </button>
+                        )}
+                    </div>
                     <button
                       className="icon-button"
                       aria-label={`Remove ${person.displayName}`}
@@ -371,11 +496,21 @@ export function Team() {
                   }}
                   disabled={busy}
                 >
-                  <option value="moderator">Moderator</option>
+                  <option
+                    value="moderator"
+                    disabled={!twitchAccess?.authorized}
+                  >
+                    Moderator
+                  </option>
                   <option value="team">Team member</option>
                 </Select>
               </div>
-              <button className="button primary" disabled={busy}>
+              <button
+                className="button primary"
+                disabled={
+                  busy || (role === 'moderator' && !twitchAccess?.authorized)
+                }
+              >
                 {busy ? (
                   'Adding…'
                 ) : (
@@ -390,8 +525,7 @@ export function Team() {
               <div>
                 <strong>Moderator</strong>
                 <p>
-                  Review private moderation cases and help manage community
-                  stories.
+                  Moderate in Lore and Twitch, including private case review.
                 </p>
               </div>
               <div>
@@ -402,8 +536,8 @@ export function Team() {
               </div>
             </div>
             <p className="section-footnote">
-              Lore roles don’t grant Twitch chat or moderation permissions.
-              Channel settings and team access stay with the owner.
+              Team member grants Lore access only. Channel settings and team
+              access stay with the owner.
             </p>
           </section>
         </div>
@@ -418,7 +552,7 @@ export function Team() {
         >
           <p>
             They’ll lose access to this channel immediately. You can add them
-            again later.
+            again later. Their Twitch moderator role is unchanged.
           </p>
         </ConfirmDialog>
       )}

@@ -66,7 +66,7 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   async chat(@Req() request: AuthenticatedRequest, @Res() response: Response) {
-    const login = await this.auth.beginLogin(request.auth.user.id, true);
+    const login = await this.auth.beginLogin(request.auth.user.id, 'chat');
     response.cookie('lore_oauth', login.browser, {
       ...stateOptions,
       maxAge: oauthMaxAge,
@@ -80,7 +80,21 @@ export class AuthController {
     @Req() request: AuthenticatedRequest,
     @Res() response: Response,
   ) {
-    const login = await this.auth.beginLogin(request.auth.user.id, false, true);
+    const login = await this.auth.beginLogin(
+      request.auth.user.id,
+      'moderation',
+    );
+    response.cookie('lore_oauth', login.browser, {
+      ...stateOptions,
+      maxAge: oauthMaxAge,
+    });
+    response.redirect(login.url);
+  }
+  @Get('twitch/team')
+  @UseGuards(SessionGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async team(@Req() request: AuthenticatedRequest, @Res() response: Response) {
+    const login = await this.auth.beginLogin(request.auth.user.id, 'team');
     response.cookie('lore_oauth', login.browser, {
       ...stateOptions,
       maxAge: oauthMaxAge,

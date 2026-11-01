@@ -106,6 +106,13 @@ export class ChannelsController {
       parse(grantMembershipSchema, body),
     );
   }
+  @Get(':id/members/twitch')
+  moderatorAccess(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.channels.moderatorAccess(id, request.auth.user.id);
+  }
   @Delete(':id/members/:userId')
   @HttpCode(204)
   remove(

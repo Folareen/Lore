@@ -25,7 +25,10 @@ export class AuthService {
     @Inject(TwitchClient) private readonly twitch: TwitchClient,
     @Inject(TokenService) private readonly tokens: TokenService,
   ) {}
-  async beginLogin(expectedUserId?: string, chat = false, moderation = false) {
+  async beginLogin(
+    expectedUserId?: string,
+    purpose: 'capture' | 'chat' | 'moderation' | 'team' = 'capture',
+  ) {
     this.twitch.configured();
     const state = randomToken();
     const browser = randomToken();
@@ -49,13 +52,13 @@ export class AuthService {
       : [];
     return {
       browser,
-      url: this.twitch.authorizationUrl(
-        state,
-        Boolean(expectedUserId),
-        chat,
-        moderation,
-        existing?.scopes,
-      ),
+      url: this.twitch.authorizationUrl(state, {
+        capture: Boolean(expectedUserId) && purpose !== 'team',
+        chat: purpose === 'chat',
+        moderation: purpose === 'moderation',
+        existingScopes: existing?.scopes,
+        manageModerators: purpose === 'team',
+      }),
     };
   }
   async completeLogin(
@@ -91,7 +94,7 @@ export class AuthService {
         .where(eq(users.id, accepted.expectedUserId));
       if (!expected || expected.twitchUserId !== profile.id)
         throw new UnauthorizedException(
-          'Authorize capture with the signed-in Twitch account',
+          'Authorize Twitch with the signed-in account',
         );
     }
     const session = randomToken();

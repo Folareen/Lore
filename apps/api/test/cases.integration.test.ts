@@ -17,6 +17,7 @@ import {
   consistencyFlagSchema,
   ruleChangeSchema,
   queueNames,
+  twitchModeratorScope,
   type CaseDetail,
 } from '@lore/shared';
 import { csrfToken, hashToken, encryptTokens } from '../src/auth/auth-crypto';
@@ -205,7 +206,7 @@ beforeAll(async () => {
       [user.id, user.twitch, `user${user.twitch}`],
     );
     await pool.query(
-      "INSERT INTO oauth_connections (user_id,encrypted_tokens,scopes,expires_at,validated_at) VALUES ($1,$2,'{}',now()+interval '1 day',now())",
+      "INSERT INTO oauth_connections (user_id,encrypted_tokens,scopes,expires_at,validated_at) VALUES ($1,$2,$3,now()+interval '1 day',now())",
       [
         user.id,
         encryptTokens(
@@ -216,6 +217,7 @@ beforeAll(async () => {
           user.id,
           encryptionKey,
         ),
+        user.id === owner.id ? [twitchModeratorScope] : [],
       ],
     );
     await pool.query(
@@ -240,6 +242,18 @@ beforeAll(async () => {
       [channelId, user.id, role, owner.id],
     );
   mock = createServer(async (req, res) => {
+    if (req.url?.startsWith('/helix/moderation/moderators?')) {
+      res.setHeader('Content-Type', 'application/json');
+      const url = new URL(req.url, 'http://test.local');
+      res.end(
+        JSON.stringify({
+          data: url.searchParams
+            .getAll('user_id')
+            .map((user_id) => ({ user_id })),
+        }),
+      );
+      return;
+    }
     if (req.url === '/oauth2/validate') {
       const twitch = req.headers.authorization?.replace('OAuth access-', '');
       res.setHeader('Content-Type', 'application/json');
@@ -248,7 +262,7 @@ beforeAll(async () => {
           client_id: 'test-client',
           user_id: twitch,
           login: `user${twitch}`,
-          scopes: [],
+          scopes: twitch === owner.twitch ? [twitchModeratorScope] : [],
           expires_in: 86400,
         }),
       );

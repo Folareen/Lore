@@ -63,6 +63,7 @@ const response = (body: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 const fetchMock = vi.fn<typeof fetch>();
+const twitchStatusMock = vi.fn<typeof fetch>();
 function workspace(
   children: ReactNode,
   channels: Channel[] = [previewChannels[0]],
@@ -79,7 +80,16 @@ function workspace(
   );
 }
 beforeEach(() => {
-  vi.stubGlobal('fetch', fetchMock);
+  twitchStatusMock
+    .mockReset()
+    .mockImplementation(async () =>
+      response({ authorized: true, moderators: ['200'] }),
+    );
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) =>
+    String(input).endsWith('/members/twitch')
+      ? twitchStatusMock(input, init)
+      : fetchMock(input, init),
+  );
   fetchMock.mockReset();
   replace.mockReset();
   push.mockReset();
@@ -312,6 +322,87 @@ describe('Lore interface behavior', () => {
       method: 'POST',
       headers: { 'X-CSRF-Token': previewSession.csrfToken },
     });
+  });
+  it('requires Twitch authorization before adding a moderator but still permits team members', async () => {
+    twitchStatusMock.mockImplementation(async () =>
+      response({ authorized: false, moderators: [] }),
+    );
+    fetchMock.mockImplementation(async (_url, options) =>
+      options?.method === 'POST'
+        ? response({
+            userId: previewPeople[1].userId,
+            role: 'team',
+            verificationState: 'owner_approved',
+          })
+        : response([]),
+    );
+    workspace(<Team />);
+    const user = userEvent.setup();
+    expect(
+      (
+        await screen.findByRole('link', {
+          name: 'Authorize Twitch moderator management',
+        })
+      ).getAttribute('href'),
+    ).toBe('/api/auth/twitch/team');
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: 'Add to team' })
+        .disabled,
+    ).toBe(true);
+    await user.type(screen.getByLabelText('Twitch user ID'), '300');
+    await selectValue(user, screen.getByLabelText('Role'), 'team');
+    await user.click(screen.getByRole('button', { name: 'Add to team' }));
+    expect(
+      fetchMock.mock.calls.find(
+        ([, options]) => options?.method === 'POST',
+      )?.[1]?.body,
+    ).toBe(JSON.stringify({ twitchUserId: '300', role: 'team' }));
+  });
+  it('syncs legacy moderators explicitly and does not claim success on failure', async () => {
+    let enabled = false;
+    twitchStatusMock.mockImplementation(async () =>
+      response({ authorized: true, moderators: enabled ? ['200'] : [] }),
+    );
+    fetchMock.mockImplementation(async (_url, options) => {
+      if (options?.method === 'POST') {
+        enabled = true;
+        return response({
+          userId: previewPeople[0].userId,
+          role: 'moderator',
+          verificationState: 'owner_approved',
+        });
+      }
+      return response([previewPeople[0]]);
+    });
+    workspace(<Team />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: 'Enable on Twitch' }),
+    );
+    expect(
+      await screen.findByText('Moderator in Lore and Twitch'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Moderator enabled in Lore and Twitch.'),
+    ).toBeTruthy();
+    fetchMock.mockImplementation(async (_url, options) =>
+      options?.method === 'POST'
+        ? response({ message: 'Twitch unavailable' }, 503)
+        : response([previewPeople[0]]),
+    );
+    await selectValue(
+      user,
+      screen.getByLabelText(`Role for ${previewPeople[0].displayName}`),
+      'team',
+    );
+    expect(
+      await screen.findByText(
+        'Lore’s connection is taking a break. Please try again shortly.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText('Lore role updated. Twitch roles are unchanged.'),
+    ).toBeNull();
   });
   it('adds a team member and refetches the authorized member list', async () => {
     let added = false;

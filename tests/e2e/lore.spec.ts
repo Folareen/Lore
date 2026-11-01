@@ -178,7 +178,7 @@ test('setup marks a team complete after adding a moderator and reopens it after 
   await page.getByLabel('Twitch user ID', { exact: true }).fill('200');
   await page.getByRole('button', { name: 'Add to team', exact: true }).click();
   await expect(
-    page.getByText('Team access updated.', { exact: true }),
+    page.getByText('Moderator enabled in Lore and Twitch.', { exact: true }),
   ).toBeVisible();
   await nav.getByRole('link', { name: 'Overview', exact: true }).click();
   const completed = page.getByRole('link', {
@@ -306,6 +306,70 @@ test('one account can switch between teams with three different roles', async ({
   } finally {
     await otherOwner.close();
   }
+});
+
+test('Moderator assignment promotes on Twitch and legacy roles can be synced explicitly', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  await page.route('**/members/twitch', (route) =>
+    route.fulfill({ json: { authorized: false, moderators: [] } }),
+  );
+  await page.goto('/app/team');
+  await expect(
+    page.getByRole('link', { name: 'Authorize Twitch moderator management' }),
+  ).toHaveAttribute('href', '/api/auth/twitch/team');
+  await expect(
+    page.getByRole('button', { name: 'Add to team', exact: true }),
+  ).toBeDisabled();
+  await page.screenshot({
+    path: info.outputPath('teams-authorize.png'),
+    fullPage: true,
+  });
+  await page.unroute('**/members/twitch');
+  await page.goto('/app/team');
+  await page
+    .getByRole('button', { name: 'Enable on Twitch', exact: true })
+    .click();
+  await expect(
+    page.getByText('Moderator in Lore and Twitch', { exact: true }),
+  ).toHaveCount(1);
+  await chooseSelect(
+    page,
+    page.getByRole('combobox', { name: 'Role for user300', exact: true }),
+    'moderator',
+  );
+  await expect(
+    page.getByText('Moderator in Lore and Twitch', { exact: true }),
+  ).toHaveCount(2);
+  await expect(
+    page.getByText('Moderator enabled in Lore and Twitch.', { exact: true }),
+  ).toBeVisible();
+  for (const width of [390, 1440]) {
+    await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light' });
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => scrollTo(0, 0));
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`teams-twitch-moderators-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await chooseSelect(
+    page,
+    page.getByRole('combobox', { name: 'Role for user300', exact: true }),
+    'team',
+  );
+  await expect(
+    page.getByText('Lore role updated. Twitch roles are unchanged.', {
+      exact: true,
+    }),
+  ).toBeVisible();
 });
 
 test('team rows keep names readable and controls usable', async ({

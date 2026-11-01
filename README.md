@@ -75,6 +75,8 @@ Integration tests use mocked Twitch responses and real PostgreSQL/Redis. Set `TE
 
 Do not change the webhook secret while subscriptions using it are active: stop capture, allow reconciliation to remove the subscriptions, change the secret, restart, then start capture again. When a tunnel hostname changes, update both callback settings and Twitch's OAuth redirect. Twitch app tokens are obtained and renewed by the backend; you do not need to generate them yourself.
 
+In **Teams → Moderator access**, the channel owner must authorize `channel:manage:moderators` once before assigning Moderator. That role enables moderation in both Lore and Twitch; promotion must succeed on Twitch before Lore saves the role. Existing Lore moderators can use **Enable on Twitch** to sync. Team member grants Lore access only. Demoting or removing someone in Lore leaves their Twitch role unchanged. No additional environment variables are needed.
+
 References: [app registration](https://dev.twitch.tv/docs/authentication/register-app/), [chat authorization](https://dev.twitch.tv/docs/chat/authenticating/), [webhook verification](https://dev.twitch.tv/docs/eventsub/handling-webhook-events/), [subscription management](https://dev.twitch.tv/docs/eventsub/manage-subscriptions/). Behavior and operational details live in [backend conventions](docs/backend.md#twitch-eventsub-ingestion).
 
 If services fail, start Docker Desktop and check `pnpm db:logs`. Changing PostgreSQL initialization credentials does not change an existing database volume. `pnpm db:down` preserves data; adding `--volumes` to Compose shutdown deletes it.

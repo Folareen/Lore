@@ -17,6 +17,7 @@ import { z } from 'zod';
 import {
   retentionStatusSchema,
   captureScopes,
+  twitchModeratorScope,
   channelResponseSchema,
   ingestionStatusSchema,
   queueNames,
@@ -58,6 +59,10 @@ const revoked = new Set<string>();
 let refreshes = 0;
 let invalidClient = false;
 let captureGranted = false;
+let moderatorManagementGranted = false;
+let moderatorFailure = 0;
+let moderatorWrites = 0;
+const twitchModerators = new Set<string>();
 let redisUnavailable = false;
 let redisProxy: NetServer;
 let queue: Queue;
@@ -202,12 +207,19 @@ async function request(
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
 }
-async function begin(captureUser?: Login) {
+async function begin(
+  captureUser?: Login,
+  purpose: 'capture' | 'team' = 'capture',
+) {
   const response = await request(
-    captureUser ? '/auth/twitch/capture' : '/auth/twitch',
+    captureUser ? `/auth/twitch/${purpose}` : '/auth/twitch',
     captureUser,
   );
   expect(response.status).toBe(302);
+  if (purpose === 'team')
+    expect(
+      new URL(response.headers.get('location')!).searchParams.get('scope'),
+    ).toBe(twitchModeratorScope);
   const state = new URL(response.headers.get('location')!).searchParams.get(
     'state',
   )!;
@@ -220,8 +232,9 @@ async function begin(captureUser?: Login) {
 async function login(
   code: keyof typeof identities,
   capture = false,
+  purpose: 'capture' | 'team' = 'capture',
 ): Promise<Login> {
-  const start = await begin(capture ? owner : undefined);
+  const start = await begin(capture ? owner : undefined, purpose);
   const response = await request(
     `/auth/twitch/callback?state=${start.state}&code=${code}`,
     undefined,
@@ -258,6 +271,29 @@ beforeAll(async () => {
     if (providerUnavailable) {
       res.writeHead(503).end();
       return;
+    }
+    if (req.url?.startsWith('/helix/moderation/moderators?')) {
+      const url = new URL(req.url, 'http://test.local');
+      expect(req.headers.authorization).toBe('Bearer access-owner');
+      expect(url.searchParams.get('broadcaster_id')).toBe('100');
+      res.setHeader('Content-Type', 'application/json');
+      if (req.method === 'POST') {
+        moderatorWrites++;
+        if (moderatorFailure)
+          return void res
+            .writeHead(moderatorFailure)
+            .end('{"message":"private-provider-error"}');
+        twitchModerators.add(url.searchParams.get('user_id')!);
+        return void res.writeHead(204).end();
+      }
+      return void res.end(
+        JSON.stringify({
+          data: url.searchParams
+            .getAll('user_id')
+            .filter((id) => twitchModerators.has(id))
+            .map((user_id) => ({ user_id })),
+        }),
+      );
     }
     const chunks: Buffer[] = [];
     for await (const chunk of req) chunks.push(Buffer.from(chunk));
@@ -335,7 +371,13 @@ beforeAll(async () => {
           client_id: invalidClient ? 'other-client' : 'test-client',
           user_id: identity.id,
           login: identity.login,
-          scopes: name === 'owner' && captureGranted ? captureScopes : null,
+          scopes:
+            name === 'owner'
+              ? [
+                  ...(captureGranted ? captureScopes : []),
+                  ...(moderatorManagementGranted ? [twitchModeratorScope] : []),
+                ]
+              : null,
           expires_in: 3600,
         }),
       );
@@ -564,6 +606,49 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
       ).status,
     ).toBe(404);
   });
+  it('requires owner authorization for automatic Twitch promotion and fails closed on provider rejection', async () => {
+    expect(
+      await (
+        await request(`/channels/${channelId}/members/twitch`, owner)
+      ).json(),
+    ).toEqual({ authorized: false, moderators: [] });
+    expect(
+      (
+        await request(`/channels/${channelId}/members`, owner, 'POST', {
+          twitchUserId: '200',
+          role: 'moderator',
+        })
+      ).status,
+    ).toBe(403);
+    expect(moderatorWrites).toBe(0);
+    moderatorManagementGranted = true;
+    owner = await login('owner', true, 'team');
+    expect(
+      (await request(`/channels/${channelId}/members/twitch`, member)).status,
+    ).toBe(404);
+    await request(`/channels/${channelId}/members`, owner, 'POST', {
+      twitchUserId: '300',
+      role: 'team',
+    });
+    moderatorFailure = 422;
+    const failed = await request(
+      `/channels/${channelId}/members`,
+      owner,
+      'POST',
+      { twitchUserId: '300', role: 'moderator' },
+    );
+    expect(failed.status).toBe(409);
+    expect(await failed.text()).not.toContain('private-provider-error');
+    expect(
+      await (await request(`/channels/${channelId}`, outsider)).json(),
+    ).toMatchObject({ role: 'team' });
+    moderatorFailure = 0;
+    await request(
+      `/channels/${channelId}/members/${outsider.id}`,
+      owner,
+      'DELETE',
+    );
+  });
   it('grants explicit roles, prevents escalation, and removes access immediately', async () => {
     expect(
       (
@@ -600,6 +685,22 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
       role: 'moderator',
       verificationState: 'owner_approved',
     });
+    expect(twitchModerators.has('200')).toBe(true);
+    const writes = moderatorWrites;
+    expect(
+      (
+        await request(`/channels/${channelId}/members`, owner, 'POST', {
+          twitchUserId: '200',
+          role: 'moderator',
+        })
+      ).status,
+    ).toBe(200);
+    expect(moderatorWrites).toBe(writes);
+    expect(
+      await (
+        await request(`/channels/${channelId}/members/twitch`, owner)
+      ).json(),
+    ).toEqual({ authorized: true, moderators: ['200'] });
     expect(
       await (await request(`/channels/${channelId}`, member)).json(),
     ).toMatchObject({ role: 'moderator' });
@@ -648,6 +749,7 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
       ).status,
     ).toBe(204);
     expect((await request(`/channels/${channelId}`, member)).status).toBe(404);
+    expect(twitchModerators.has('200')).toBe(true);
   });
   it('constrains retention, rejects mass assignment, and audits successful changes', async () => {
     for (const days of [0, 8, 1.5])
@@ -758,7 +860,10 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
     const authorize = await request('/auth/twitch/capture', owner);
     expect(authorize.status).toBe(302);
     const url = new URL(authorize.headers.get('location')!);
-    expect(url.searchParams.get('scope')?.split(' ')).toEqual(captureScopes);
+    expect(url.searchParams.get('scope')?.split(' ')).toEqual([
+      ...captureScopes,
+      twitchModeratorScope,
+    ]);
     const browser = authorize.headers
       .getSetCookie()
       .find((value) => value.startsWith('lore_oauth='))!

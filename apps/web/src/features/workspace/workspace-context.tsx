@@ -27,6 +27,10 @@ import {
 import { ApiError, apiRequest } from '../../lib/api';
 import { previewPeople } from '../../lib/preview-data';
 import {
+  twitchModeratorAccessSchema,
+  type TwitchModeratorAccess,
+} from '@lore/shared';
+import {
   fixtureHistory,
   previewBrief,
   previewOpenLoops,
@@ -43,6 +47,10 @@ type Workspace = {
   saveRetention: (days: number) => Promise<void>;
   disconnect: () => Promise<void>;
   loadMembers: (id: string, signal?: AbortSignal) => Promise<Membership[]>;
+  loadModeratorAccess: (
+    id: string,
+    signal?: AbortSignal,
+  ) => Promise<TwitchModeratorAccess>;
   grant: (input: GrantMembership) => Promise<void>;
   remove: (userId: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -254,6 +262,22 @@ export function WorkspaceProvider({
       ...current.filter((item) => item.userId !== person.userId),
       { ...person, role: input.role },
     ]);
+  }
+  async function loadModeratorAccess(id: string, signal?: AbortSignal) {
+    if (preview)
+      return {
+        authorized: true,
+        moderators: demoMembers
+          .filter((person) => person.role === 'moderator')
+          .map((person) => person.twitchUserId),
+      };
+    return request(
+      `/channels/${id}/members/twitch`,
+      twitchModeratorAccessSchema,
+      'GET',
+      undefined,
+      signal,
+    );
   }
   async function remove(userId: string) {
     const channel = ownerChannel();
@@ -471,6 +495,7 @@ export function WorkspaceProvider({
         saveRetention,
         disconnect,
         loadMembers,
+        loadModeratorAccess,
         grant,
         remove,
         logout,

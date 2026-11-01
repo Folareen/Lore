@@ -11,6 +11,12 @@ export const grantMembershipSchema = z.strictObject({
 });
 export type UpdateChannel = z.infer<typeof updateChannelSchema>;
 export type GrantMembership = z.infer<typeof grantMembershipSchema>;
+export const twitchModeratorScope = 'channel:manage:moderators';
+export const twitchModeratorAccessSchema = z.strictObject({
+  authorized: z.boolean(),
+  moderators: z.array(z.string().regex(/^\d+$/)),
+});
+export type TwitchModeratorAccess = z.infer<typeof twitchModeratorAccessSchema>;
 export const sessionResponseSchema = z.strictObject({
   user: z.strictObject({
     id: z.uuid(),

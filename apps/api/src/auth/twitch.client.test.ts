@@ -1,5 +1,10 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { captureScopes } from '@lore/shared';
+import {
+  catchupScopes,
+  moderationReadScopes,
+  twitchModeratorScope,
+} from '@lore/shared';
 import { TwitchClient } from './twitch.client';
 
 vi.mock('../config', () => ({
@@ -17,6 +22,31 @@ const tokens = {
   token_type: 'bearer',
 };
 afterEach(() => vi.unstubAllGlobals());
+it('requests team management separately and preserves it through later scope upgrades', () => {
+  const client = new TwitchClient();
+  const requested = new URL(
+    client.authorizationUrl('state', { manageModerators: true }),
+  );
+  expect(requested.searchParams.get('scope')).toBe(twitchModeratorScope);
+  const preserved = new URL(
+    client.authorizationUrl('state', {
+      capture: true,
+      chat: true,
+      moderation: true,
+      existingScopes: [twitchModeratorScope, 'unrelated:scope'],
+    }),
+  );
+  expect(preserved.searchParams.get('scope')?.split(' ')).toEqual([
+    ...new Set([
+      ...catchupScopes,
+      ...moderationReadScopes,
+      twitchModeratorScope,
+    ]),
+  ]);
+  expect(
+    new URL(client.authorizationUrl('state')).searchParams.get('scope'),
+  ).toBe('');
+});
 
 it('accepts Twitch exchange and refresh responses without scope for ordinary sign-in', async () => {
   const fetchMock = vi
@@ -43,7 +73,9 @@ it('accepts scoped capture responses and preserves the separate authorization fl
   );
   const client = new TwitchClient();
   expect(
-    new URL(client.authorizationUrl('synthetic-state', true)).searchParams
+    new URL(
+      client.authorizationUrl('synthetic-state', { capture: true }),
+    ).searchParams
       .get('scope')
       ?.split(' '),
   ).toEqual(captureScopes);
@@ -113,10 +145,11 @@ it.each(['user:read:chat', true, {}])(
 );
 it('adds optional moderation reads while preserving supported existing capture and chat grants', () => {
   const scopes = new URL(
-    new TwitchClient().authorizationUrl('state', true, false, true, [
-      'user:write:chat',
-      'unrelated:permission',
-    ]),
+    new TwitchClient().authorizationUrl('state', {
+      capture: true,
+      moderation: true,
+      existingScopes: ['user:write:chat', 'unrelated:permission'],
+    }),
   ).searchParams
     .get('scope')!
     .split(' ');
