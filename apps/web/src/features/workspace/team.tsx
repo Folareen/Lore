@@ -142,14 +142,25 @@ export function Team() {
     setPending(null);
     if (!twitchAccess.authorized) {
       setError(
-        'Twitch moderator permission was not granted. Try assigning Moderator again.',
+        'Twitch moderator permission was not granted. Please try the change again.',
       );
       return;
     }
     setBusy(true);
-    grant({ twitchUserId: pending.twitchUserId, role: 'moderator' })
+    const action = pending.action;
+    const operation =
+      action.kind === 'remove'
+        ? remove(action.userId)
+        : grant({ twitchUserId: action.twitchUserId, role: action.role });
+    operation
       .then(() => {
-        setSuccess('Moderator enabled in Lore and Twitch.');
+        setSuccess(
+          action.kind === 'remove'
+            ? 'Access removed from Lore and Twitch.'
+            : action.role === 'moderator'
+              ? 'Moderator enabled in Lore and Twitch.'
+              : 'Team member saved. Twitch moderator access removed.',
+        );
         setRevision((value) => value + 1);
       })
       .catch((error) =>
@@ -160,36 +171,37 @@ export function Team() {
         ),
       )
       .finally(() => setBusy(false));
-  }, [pending, selected?.id, allowed, twitchAccess, grant]);
-  function authorizeModerator(input: GrantMembership) {
+  }, [pending, selected?.id, allowed, twitchAccess, grant, remove]);
+  function authorizeModerator(action: PendingModerator['action']) {
     if (!channelId) throw new Error('Select your team first.');
     savePendingModerator({
       actorId: session.user.id,
       channelId,
-      twitchUserId: input.twitchUserId,
+      action,
     });
     window.location.assign('/api/auth/twitch/team');
   }
-  async function assignRole(input: GrantMembership) {
-    if (
-      !preview &&
-      input.role === 'moderator' &&
-      twitchAccess?.authorized === false
-    ) {
-      authorizeModerator(input);
+  async function applyChange(
+    action: PendingModerator['action'],
+    needsTwitch: boolean,
+  ) {
+    if (!preview && needsTwitch && twitchAccess?.authorized === false) {
+      authorizeModerator(action);
       return false;
     }
     try {
-      await grant(input);
+      if (action.kind === 'remove') await remove(action.userId);
+      else
+        await grant({ twitchUserId: action.twitchUserId, role: action.role });
       return true;
     } catch (error) {
       if (
         !preview &&
-        input.role === 'moderator' &&
         error instanceof ApiError &&
-        error.status === 403
+        error.status === 403 &&
+        error.message.startsWith('Twitch moderator permission')
       ) {
-        authorizeModerator(input);
+        authorizeModerator(action);
         return false;
       }
       throw error;
@@ -247,7 +259,13 @@ export function Team() {
     }
     setBusy(true);
     try {
-      if (!(await assignRole(parsed.data))) return;
+      if (
+        !(await applyChange(
+          { kind: 'grant', ...parsed.data },
+          parsed.data.role === 'moderator',
+        ))
+      )
+        return;
       setUserId('');
       if (!preview) setRevision((value) => value + 1);
       setSuccess(
@@ -273,12 +291,18 @@ export function Team() {
     setError('');
     setSuccess('');
     try {
-      if (!(await assignRole(parsed.data))) return;
+      if (
+        !(await applyChange(
+          { kind: 'grant', ...parsed.data },
+          person.role === 'moderator' || parsed.data.role === 'moderator',
+        ))
+      )
+        return;
       if (!preview) setRevision((value) => value + 1);
       setSuccess(
         parsed.data.role === 'moderator'
           ? 'Moderator enabled in Lore and Twitch.'
-          : 'Lore role updated. Twitch roles are unchanged.',
+          : 'Team member saved. Twitch moderator access removed.',
       );
     } catch (error) {
       setError(
@@ -294,9 +318,19 @@ export function Team() {
     setError('');
     setSuccess('');
     try {
-      await remove(removing.userId);
+      if (
+        !(await applyChange(
+          { kind: 'remove', userId: removing.userId },
+          removing.role === 'moderator',
+        ))
+      )
+        return;
       if (!preview) setRevision((value) => value + 1);
-      setSuccess('Team access removed.');
+      setSuccess(
+        removing.role === 'moderator'
+          ? 'Access removed from Lore and Twitch.'
+          : 'Team access removed.',
+      );
     } catch (error) {
       setError(
         error instanceof Error ? error.message : 'Could not remove access.',
@@ -606,8 +640,9 @@ export function Team() {
               </div>
             </div>
             <p className="section-footnote">
-              Changing to Team member or removing access here leaves the Twitch
-              role unchanged. Channel settings stay with the owner.
+              Changing a Moderator to Team member removes their Twitch moderator
+              role. Removing a Moderator revokes access in both places. Channel
+              settings stay with the owner.
             </p>
           </section>
         </div>
@@ -621,8 +656,10 @@ export function Team() {
           onConfirm={() => void removePerson()}
         >
           <p>
-            They’ll lose access to this channel immediately. You can add them
-            again later. Their Twitch moderator role is unchanged.
+            {removing.role === 'moderator'
+              ? 'They’ll lose access to this channel in Lore and their moderator role on Twitch.'
+              : 'They’ll lose access to this channel in Lore.'}{' '}
+            You can add them again later.
           </p>
         </ConfirmDialog>
       )}

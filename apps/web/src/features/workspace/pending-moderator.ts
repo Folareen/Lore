@@ -4,7 +4,14 @@ const storageKey = 'lore:pending-moderator';
 const pendingSchema = z.strictObject({
   actorId: z.uuid(),
   channelId: z.uuid(),
-  twitchUserId: z.string().regex(/^\d+$/),
+  action: z.discriminatedUnion('kind', [
+    z.strictObject({
+      kind: z.literal('grant'),
+      twitchUserId: z.string().regex(/^\d+$/),
+      role: z.enum(['moderator', 'team']),
+    }),
+    z.strictObject({ kind: z.literal('remove'), userId: z.uuid() }),
+  ]),
   createdAt: z.number(),
 });
 export type PendingModerator = z.infer<typeof pendingSchema>;

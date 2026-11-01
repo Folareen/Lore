@@ -7,7 +7,11 @@ import {
 const input = {
   actorId: '00000000-0000-4000-8000-000000000001',
   channelId: '00000000-0000-4000-8000-000000000002',
-  twitchUserId: '200',
+  action: {
+    kind: 'grant' as const,
+    twitchUserId: '200',
+    role: 'moderator' as const,
+  },
 };
 afterEach(() => {
   sessionStorage.clear();

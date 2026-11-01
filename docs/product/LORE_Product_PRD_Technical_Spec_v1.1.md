@@ -58,7 +58,7 @@ Project: TwitchCon × OpenAI Codex Hackathon 2026
 
 Raid Relay, Community Questline, generic toxicity detection, autonomous banning or unbanning, cross-channel reputation tracking and public moderator grading are not part of Lore.
 
-Channel owners explicitly manage their team. Assigning Moderator grants that role in Lore and Twitch, opening Twitch consent within the add/edit flow when needed and resuming the pending change afterward; a failed Twitch promotion must not save a new Lore moderator grant. Existing Lore moderators can be synced explicitly. Team-member access remains Lore-only, and demotion/removal inside Lore does not revoke Twitch roles. This owner-directed role management does not perform case decisions or autonomous moderation.
+Channel owners explicitly manage their team. Assigning Moderator grants that role in Lore and Twitch, opening Twitch consent within the add/edit flow when needed and resuming the pending change afterward; a failed Twitch promotion must not save a new Lore moderator grant. Existing Lore moderators can be synced explicitly. Team-member access remains Lore-only. Demoting or removing a Lore Moderator also revokes their Twitch moderator role, and the Lore change is saved only after Twitch accepts the requested role. This owner-directed role management does not perform case decisions or autonomous moderation.
 
 ## 3. Users and product surfaces
 

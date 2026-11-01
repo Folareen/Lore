@@ -4,6 +4,39 @@ vi.mock('../config', () => ({ env: { TWITCH_CLIENT_ID: 'test-client' } }));
 afterEach(() => vi.unstubAllGlobals());
 const listed = (ids: string[]) =>
   Response.json({ data: ids.map((user_id) => ({ user_id })) });
+it('removes the Twitch role with DELETE and safely skips an already removed role', async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(listed(['200']))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(listed([]));
+  vi.stubGlobal('fetch', fetcher);
+  const client = new TwitchModeratorsClient();
+  await client.ensure('token', '100', '200', false);
+  expect(fetcher.mock.calls[1][1].method).toBe('DELETE');
+  await client.ensure('token', '100', '200', false);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+});
+it('accepts a concurrent removal but fails when Twitch still reports the role', async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(listed(['200']))
+    .mockResolvedValueOnce(new Response(null, { status: 400 }))
+    .mockResolvedValueOnce(listed([]));
+  vi.stubGlobal('fetch', fetcher);
+  const client = new TwitchModeratorsClient();
+  await expect(
+    client.ensure('token', '100', '200', false),
+  ).resolves.toBeUndefined();
+  fetcher
+    .mockResolvedValueOnce(listed(['200']))
+    .mockResolvedValueOnce(
+      new Response('private-provider-error', { status: 503 }),
+    );
+  await expect(client.ensure('token', '100', '200', false)).rejects.toThrow(
+    'Could not remove the Twitch moderator role',
+  );
+});
 it('promotes only after checking current Twitch status and accepts an empty 204 body', async () => {
   const fetcher = vi
     .fn()

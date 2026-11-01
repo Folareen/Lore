@@ -241,14 +241,26 @@ beforeAll(async () => {
       'INSERT INTO memberships (channel_id,user_id,role,granted_by) VALUES ($1,$2,$3,$4)',
       [channelId, user.id, role, owner.id],
     );
+  const removedTwitchModerators = new Set<string>();
   mock = createServer(async (req, res) => {
     if (req.url?.startsWith('/helix/moderation/moderators?')) {
       res.setHeader('Content-Type', 'application/json');
       const url = new URL(req.url, 'http://test.local');
+      if (req.method === 'DELETE') {
+        removedTwitchModerators.add(url.searchParams.get('user_id')!);
+        res.writeHead(204).end();
+        return;
+      }
+      if (req.method === 'POST') {
+        removedTwitchModerators.delete(url.searchParams.get('user_id')!);
+        res.writeHead(204).end();
+        return;
+      }
       res.end(
         JSON.stringify({
           data: url.searchParams
             .getAll('user_id')
+            .filter((id) => !removedTwitchModerators.has(id))
             .map((user_id) => ({ user_id })),
         }),
       );

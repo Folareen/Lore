@@ -406,7 +406,7 @@ describe('Lore interface behavior', () => {
       ),
     ).toBeTruthy();
     expect(
-      screen.queryByText('Lore role updated. Twitch roles are unchanged.'),
+      screen.queryByText('Team member saved. Twitch moderator access removed.'),
     ).toBeNull();
   });
   it('adds a team member and refetches the authorized member list', async () => {

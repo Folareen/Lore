@@ -256,16 +256,26 @@ export class ChannelsRepository {
         );
       if (member.id === userId)
         throw new ForbiddenException('The owner role cannot be changed');
-      if (input.role === 'moderator') {
+      const [previous] = await tx
+        .select({ role: memberships.role })
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.channelId, channelId),
+            eq(memberships.userId, member.id),
+          ),
+        );
+      if (input.role === 'moderator' || previous?.role === 'moderator') {
         const token = await this.moderatorToken(tx, userId);
         if (!token || !channel.twitchChannelId)
           throw new ForbiddenException(
-            'Twitch moderator permission is required before assigning Moderator.',
+            'Twitch moderator permission is required to change moderator access.',
           );
         await this.twitchModerators.ensure(
           token,
           channel.twitchChannelId,
           input.twitchUserId,
+          input.role === 'moderator',
         );
       }
       await tx
@@ -291,19 +301,41 @@ export class ChannelsRepository {
     });
   }
   async removeMember(channelId: string, userId: string, memberId: string) {
-    return this.withOwner(channelId, userId, async (tx) => {
+    return this.withOwner(channelId, userId, async (tx, channel) => {
       if (memberId === userId)
         throw new ForbiddenException('The owner cannot be removed');
-      const [removed] = await tx
+      const [member] = await tx
+        .select({ role: memberships.role, twitchUserId: users.twitchUserId })
+        .from(memberships)
+        .innerJoin(users, eq(users.id, memberships.userId))
+        .where(
+          and(
+            eq(memberships.channelId, channelId),
+            eq(memberships.userId, memberId),
+          ),
+        );
+      if (!member) throw new NotFoundException('Membership not found');
+      if (member.role === 'moderator') {
+        const token = await this.moderatorToken(tx, userId);
+        if (!token || !channel.twitchChannelId)
+          throw new ForbiddenException(
+            'Twitch moderator permission is required to remove moderator access.',
+          );
+        await this.twitchModerators.ensure(
+          token,
+          channel.twitchChannelId,
+          member.twitchUserId,
+          false,
+        );
+      }
+      await tx
         .delete(memberships)
         .where(
           and(
             eq(memberships.channelId, channelId),
             eq(memberships.userId, memberId),
           ),
-        )
-        .returning();
-      if (!removed) throw new NotFoundException('Membership not found');
+        );
       await this.audit(tx, channelId, userId, 'membership.removed', memberId);
     });
   }

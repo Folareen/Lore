@@ -37,6 +37,10 @@ const mock = createServer(async (req, res) => {
       return void res.writeHead(403).end('{}');
     const people = twitchModerators.get(broadcaster) ?? new Set<string>();
     twitchModerators.set(broadcaster, people);
+    if (req.method === 'DELETE') {
+      people.delete(url.searchParams.get('user_id')!);
+      return void res.writeHead(204).end();
+    }
     if (req.method === 'POST') {
       people.add(url.searchParams.get('user_id')!);
       return void res.writeHead(204).end();

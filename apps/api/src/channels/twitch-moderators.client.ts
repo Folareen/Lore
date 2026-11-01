@@ -39,7 +39,7 @@ export class TwitchModeratorsClient {
     }
     if (response.status === 401 || response.status === 403)
       throw new ForbiddenException(
-        'Twitch moderator permission is required. Try assigning Moderator again.',
+        'Twitch moderator permission is required. Please try the role change again.',
       );
     if (response.status === 429)
       throw new ServiceUnavailableException(
@@ -81,27 +81,38 @@ export class TwitchModeratorsClient {
     }
     return found;
   }
-  async ensure(token: string, broadcasterId: string, userId: string) {
-    if ((await this.list(token, broadcasterId, [userId])).includes(userId))
+  async ensure(
+    token: string,
+    broadcasterId: string,
+    userId: string,
+    enabled = true,
+  ) {
+    if (
+      (await this.list(token, broadcasterId, [userId])).includes(userId) ===
+      enabled
+    )
       return;
     const response = await this.request(
       token,
       new URLSearchParams({ broadcaster_id: broadcasterId, user_id: userId }),
-      'POST',
+      enabled ? 'POST' : 'DELETE',
     );
     if (response.status === 204) return;
-    // Another owner request may have promoted the same user between the read and write.
+    // A concurrent Twitch change may already have reached the requested role.
     if (
       response.status === 400 &&
-      (await this.list(token, broadcasterId, [userId])).includes(userId)
+      (await this.list(token, broadcasterId, [userId])).includes(userId) ===
+        enabled
     )
       return;
-    if (response.status === 400 || response.status === 422)
+    if (enabled && (response.status === 400 || response.status === 422))
       throw new ConflictException(
         'Twitch could not make this person a moderator. Check that they are not banned or a VIP, then try again.',
       );
     throw new ServiceUnavailableException(
-      'Could not enable the Twitch moderator role. Try again.',
+      enabled
+        ? 'Could not enable the Twitch moderator role. Try again.'
+        : 'Could not remove the Twitch moderator role. Try again.',
     );
   }
 }

@@ -284,13 +284,15 @@ beforeAll(async () => {
       expect(req.headers.authorization).toBe('Bearer access-owner');
       expect(url.searchParams.get('broadcaster_id')).toBe('100');
       res.setHeader('Content-Type', 'application/json');
-      if (req.method === 'POST') {
+      if (req.method === 'POST' || req.method === 'DELETE') {
         moderatorWrites++;
         if (moderatorFailure)
           return void res
             .writeHead(moderatorFailure)
             .end('{"message":"private-provider-error"}');
-        twitchModerators.add(url.searchParams.get('user_id')!);
+        if (req.method === 'POST')
+          twitchModerators.add(url.searchParams.get('user_id')!);
+        else twitchModerators.delete(url.searchParams.get('user_id')!);
         return void res.writeHead(204).end();
       }
       return void res.end(
@@ -651,6 +653,31 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
       ).status,
     ).toBe(403);
     expect(moderatorWrites).toBe(0);
+    await pool.query(
+      "INSERT INTO memberships (channel_id,user_id,role,granted_by) VALUES ($1,$2,'moderator',$3)",
+      [channelId, member.id, owner.id],
+    );
+    expect(
+      (
+        await request(`/channels/${channelId}/members`, owner, 'POST', {
+          twitchUserId: '200',
+          role: 'team',
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(
+          `/channels/${channelId}/members/${member.id}`,
+          owner,
+          'DELETE',
+        )
+      ).status,
+    ).toBe(403);
+    expect(
+      await (await request(`/channels/${channelId}`, member)).json(),
+    ).toMatchObject({ role: 'moderator' });
+    expect(moderatorWrites).toBe(0);
     moderatorManagementGranted = true;
     owner = await login('owner', true, 'team');
     expect(
@@ -762,6 +789,29 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
         )
       ).status,
     ).toBe(403);
+    moderatorFailure = 503;
+    expect(
+      (
+        await request(`/channels/${channelId}/members`, owner, 'POST', {
+          twitchUserId: '200',
+          role: 'team',
+        })
+      ).status,
+    ).toBe(503);
+    expect(
+      (
+        await request(
+          `/channels/${channelId}/members/${member.id}`,
+          owner,
+          'DELETE',
+        )
+      ).status,
+    ).toBe(503);
+    expect(
+      await (await request(`/channels/${channelId}`, member)).json(),
+    ).toMatchObject({ role: 'moderator' });
+    expect(twitchModerators.has('200')).toBe(true);
+    moderatorFailure = 0;
     await request(`/channels/${channelId}/members`, owner, 'POST', {
       twitchUserId: '200',
       role: 'team',
@@ -769,6 +819,7 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
     expect(
       await (await request(`/channels/${channelId}`, member)).json(),
     ).toMatchObject({ role: 'team' });
+    expect(twitchModerators.has('200')).toBe(false);
     expect(
       (
         await request(
@@ -779,7 +830,22 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
       ).status,
     ).toBe(204);
     expect((await request(`/channels/${channelId}`, member)).status).toBe(404);
+    expect(twitchModerators.has('200')).toBe(false);
+    await request(`/channels/${channelId}/members`, owner, 'POST', {
+      twitchUserId: '200',
+      role: 'moderator',
+    });
     expect(twitchModerators.has('200')).toBe(true);
+    expect(
+      (
+        await request(
+          `/channels/${channelId}/members/${member.id}`,
+          owner,
+          'DELETE',
+        )
+      ).status,
+    ).toBe(204);
+    expect(twitchModerators.has('200')).toBe(false);
   });
   it('constrains retention, rejects mass assignment, and audits successful changes', async () => {
     for (const days of [0, 8, 1.5])

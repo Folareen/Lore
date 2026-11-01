@@ -10,6 +10,7 @@ import { Queue } from 'bullmq';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   queueNames,
+  twitchModeratorScope,
   aiStatusSchema,
   candidatePageSchema,
   streamBriefSchema,
@@ -143,8 +144,8 @@ beforeAll(async () => {
       encryptionKey,
     );
     await pool.query(
-      "INSERT INTO oauth_connections (user_id,encrypted_tokens,scopes,expires_at,validated_at) VALUES ($1,$2,'{}',now()+interval '1 day',now())",
-      [actor.id, tokens],
+      "INSERT INTO oauth_connections (user_id,encrypted_tokens,scopes,expires_at,validated_at) VALUES ($1,$2,$3,now()+interval '1 day',now())",
+      [actor.id, tokens, actor.id === owner.id ? [twitchModeratorScope] : []],
     );
     await pool.query(
       "INSERT INTO sessions (token_hash,user_id,expires_at) VALUES ($1,$2,now()+interval '1 day')",
@@ -164,6 +165,11 @@ beforeAll(async () => {
     [channelId, member.id, owner.id],
   );
   mock = createServer(async (req, res) => {
+    if (req.url?.startsWith('/helix/moderation/moderators?')) {
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ data: [] }));
+      return;
+    }
     if (req.url === '/oauth2/validate') {
       const twitch =
         req.headers.authorization?.replace('OAuth access-', '') || '';
@@ -173,7 +179,7 @@ beforeAll(async () => {
           client_id: 'test-client',
           user_id: twitch,
           login: `user${twitch}`,
-          scopes: [],
+          scopes: twitch === owner.twitch ? [twitchModeratorScope] : [],
           expires_in: 86400,
         }),
       );
