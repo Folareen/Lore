@@ -19,7 +19,6 @@
   --shadow: 0 5px 20px #30243408;
   --radius: 12px;
   --dialog-scrim: rgb(8 6 12 / 94%);
-  --menu-scrim: rgb(8 6 12 / 88%);
   color-scheme: light;
 }
 [data-theme='dark'] {

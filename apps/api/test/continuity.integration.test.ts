@@ -512,7 +512,7 @@ it('requires owner opt-in, CSRF, channel membership and separate Twitch grants',
     moderationImportsEnabled: false,
     promiseConfirmationsEnabled: false,
     publicSummaryAiEnabled: false,
-    communityAssistantEnabled: false,
+    communityAssistantEnabled: true,
     microphoneEnabled: false,
   });
   expect(
@@ -1017,6 +1017,8 @@ it('answers anonymously from published same-channel projections only, with owner
     'publish',
     outsider,
   );
+  expect((await publicQuestion('What happens on stream?')).status).toBe(200);
+  await feature('communityAssistantEnabled', false);
   expect((await publicQuestion('What happens on stream?')).status).toBe(409);
   expect(
     (
@@ -1105,4 +1107,45 @@ it('reserves a shared daily budget before contacting Gemini', async () => {
   ).toBe(429);
   expect(communityPrompts.length).toBe(before);
   await feature('communityAssistantEnabled', false);
+});
+
+it('upgrades the old assistant default without overriding explicit owner choices', async () => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const untouched = randomUUID(),
+      optedOut = randomUUID();
+    for (const id of [untouched, optedOut])
+      await client.query(
+        `INSERT INTO channels(id,slug,display_name,origin,community_assistant_enabled)
+         VALUES($1::uuid,$1::text,$1::text,'manual_import',false)`,
+        [id],
+      );
+    await client.query(
+      `INSERT INTO audit_events(channel_id,actor_id,target_id,action)
+       VALUES($1,$2,$1,'feature.communityAssistantEnabled.disabled')`,
+      [optedOut, owner.id],
+    );
+    await client.query(
+      readFileSync(
+        'apps/api/drizzle/0013_community_assistant_default.sql',
+        'utf8',
+      ),
+    );
+    const result = await client.query(
+      'SELECT id,community_assistant_enabled,features_generation FROM channels WHERE id=ANY($1::uuid[])',
+      [[untouched, optedOut]],
+    );
+    expect(result.rows.find((row) => row.id === untouched)).toMatchObject({
+      community_assistant_enabled: true,
+      features_generation: 1,
+    });
+    expect(result.rows.find((row) => row.id === optedOut)).toMatchObject({
+      community_assistant_enabled: false,
+      features_generation: 0,
+    });
+  } finally {
+    await client.query('ROLLBACK');
+    client.release();
+  }
 });

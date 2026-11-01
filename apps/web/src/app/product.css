@@ -1638,7 +1638,7 @@ dialog::backdrop {
   }
 }
 
-/* Floating choices and menus separate clearly from the page beneath them. */
+/* Compact mobile workspace navigation. */
 .workspace .mobile-nav-toggle {
   width: 44px;
   height: 44px;
@@ -1646,34 +1646,75 @@ dialog::backdrop {
   padding: 10px;
   justify-content: center;
 }
-.select-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 140;
-  background: var(--menu-scrim);
-  pointer-events: auto;
+
+/* Community identity and navigation stay in view while reading. */
+.reader-shell .reader-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--page);
+  box-shadow: 0 1px 0 var(--raised);
 }
-.marketing-menu[open]::before,
-.demo-tools details[open]::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: var(--menu-scrim);
+.reader-shell [id] {
+  scroll-margin-top: 150px;
 }
-.marketing-menu[open]::before {
-  z-index: 1;
+.reader-shell .reader-community-hero {
+  margin-top: 8px;
+  padding: 32px;
+  border-radius: 20px;
+  background: linear-gradient(115deg, var(--purple-soft), var(--surface));
+  align-items: flex-end;
 }
-.marketing-menu[open] > summary {
-  position: relative;
-  z-index: 2;
-  background: var(--raised);
+.reader-community-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  color: var(--muted);
+  font-size: 13px;
 }
-.demo-tools details[open]::before {
-  z-index: 64;
+.reader-community-identity .avatar {
+  flex-shrink: 0;
 }
-.demo-tools details[open] > summary {
-  position: relative;
-  z-index: 66;
-  background: var(--raised);
-  border-radius: 6px;
+.reader-community-nav {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  margin: 24px 0;
+  border-bottom: 1px solid var(--raised);
+}
+.reader-community-nav a {
+  white-space: nowrap;
+  padding: 12px 0;
+  font-size: 14px;
+}
+.reader-community-nav a:first-child {
+  color: var(--purple-ink);
+  border-bottom: 2px solid var(--primary);
+}
+.reader-shell .reader-feed-title {
+  font-size: 22px;
+  margin: 32px 0 16px;
+}
+.reader-start h2 a {
+  color: var(--text);
+}
+@media (max-width: 760px) {
+  .reader-shell .reader-community-hero {
+    padding: 24px;
+    align-items: flex-start;
+  }
+  .reader-community-identity {
+    gap: 12px;
+  }
+  .reader-community-identity .avatar {
+    width: 56px;
+    height: 56px;
+  }
+  .reader-community-nav {
+    gap: 20px;
+  }
+  .reader-shell .reader-story > p {
+    -webkit-line-clamp: 2;
+  }
 }

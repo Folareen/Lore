@@ -56,7 +56,7 @@ export function PublicShell({
             <span>Discover</span>
           </Link>
           <Link href={feedHref} prefetch={false}>
-            Stories
+            Community
           </Link>
           <Link href={catchupHref} prefetch={false}>
             Catch up
@@ -154,11 +154,19 @@ export function CommunityContent({
   ];
   return (
     <div className="reader-content">
-      <div className="reader-intro">
+      <div
+        className={`reader-intro${view.mode === 'feed' ? ' reader-community-hero' : ''}`}
+      >
         <div>
+          {view.mode === 'feed' && (
+            <div className="reader-community-identity">
+              <Avatar name={view.data.channel.displayName} size={72} />
+              <span>Welcome to the community</span>
+            </div>
+          )}
           <h1>
             {view.mode === 'feed'
-              ? 'Community stories'
+              ? view.data.channel.displayName
               : `Catch up with ${view.data.channel.displayName}`}
           </h1>
           <p>
@@ -169,7 +177,7 @@ export function CommunityContent({
         </div>
         {view.mode === 'feed' && (
           <Link href={catchupHref} className="button primary" prefetch={false}>
-            New here? Catch up <ArrowRight size={16} />
+            Get caught up <ArrowRight size={16} />
           </Link>
         )}
       </div>
@@ -185,13 +193,31 @@ export function CommunityContent({
             ))}
         </nav>
       )}
+      {view.mode === 'feed' && (
+        <nav
+          className="reader-community-nav"
+          aria-label="Explore this community"
+        >
+          <a href="#community-feed">Stories</a>
+          <Link href={`${catchupHref}#community-references`} prefetch={false}>
+            Inside references
+          </Link>
+          <Link href={`${catchupHref}#community-plans`} prefetch={false}>
+            Plans & promises
+          </Link>
+        </nav>
+      )}
       {featured && (
         <aside className="reader-start">
           <div>
             <span className="reader-kind">
               New here? Start with the latest recap
             </span>
-            <h2>{featured.title}</h2>
+            <h2>
+              <Link href={link(featured.id)} prefetch={false}>
+                {featured.title}
+              </Link>
+            </h2>
             <p>{featured.body}</p>
             <PublishedAt entry={featured} />
           </div>
@@ -223,35 +249,38 @@ export function CommunityContent({
           </div>
         ))}
       {view.mode === 'feed' ? (
-        <form className="reader-search" method="GET" onSubmit={onSearch}>
-          <label className="field">
-            <span className="sr-only">Search public Lore</span>
-            <div className="reader-search-input">
-              <Search size={18} />
-              <input
-                name="q"
-                maxLength={100}
-                defaultValue={new URLSearchParams(query).get('q') ?? ''}
-                placeholder="Search stories and references…"
-              />
-            </div>
-          </label>
-          <label className="field">
-            <span className="sr-only">Show</span>
-            <Select
-              name="kind"
-              defaultValue={new URLSearchParams(query).get('kind') ?? ''}
-            >
-              <option value="">All updates</option>
-              {Object.entries(publicationLabels).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <button className="button secondary">Search</button>
-        </form>
+        <section id="community-feed" aria-label="Community stories">
+          <h2 className="reader-feed-title">Community stories</h2>
+          <form className="reader-search" method="GET" onSubmit={onSearch}>
+            <label className="field">
+              <span className="sr-only">Search public Lore</span>
+              <div className="reader-search-input">
+                <Search size={18} />
+                <input
+                  name="q"
+                  maxLength={100}
+                  defaultValue={new URLSearchParams(query).get('q') ?? ''}
+                  placeholder="Search stories and references…"
+                />
+              </div>
+            </label>
+            <label className="field">
+              <span className="sr-only">Show</span>
+              <Select
+                name="kind"
+                defaultValue={new URLSearchParams(query).get('kind') ?? ''}
+              >
+                <option value="">All updates</option>
+                {Object.entries(publicationLabels).map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <button className="button secondary">Search</button>
+          </form>
+        </section>
       ) : null}
       {!entries.length && (
         <div className="reader-empty">

@@ -117,6 +117,17 @@ for (const width of [390, 1440]) {
       await expect(
         page.getByRole('heading', { name: 'Community stories', exact: true }),
       ).toBeVisible();
+      await page.locator('.reader-footer').scrollIntoViewIfNeeded();
+      await expect
+        .poll(() =>
+          page
+            .locator('.reader-header')
+            .evaluate((header) =>
+              Math.round(header.getBoundingClientRect().top),
+            ),
+        )
+        .toBe(0);
+      await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({
         path: info.outputPath(`${width}-${theme}-public-feed.png`),
         fullPage: true,
@@ -230,7 +241,7 @@ test('demo community guide uses only local public fixtures', async ({
 });
 
 for (const width of [390, 1440]) {
-  test(`dialogs and floating menus have dark backdrops at ${width}px`, async ({
+  test(`dialogs stay dark and small menus do not dim the page at ${width}px`, async ({
     page,
   }, info) => {
     await page.setViewportSize({ width, height: 900 });
@@ -278,11 +289,9 @@ for (const width of [390, 1440]) {
       expect(
         await page
           .locator('.demo-tools details')
-          .evaluate(
-            (element) => getComputedStyle(element, '::before').backgroundColor,
-          ),
-      ).toBe('rgba(8, 6, 12, 0.88)');
-      await page.mouse.click(5, 880);
+          .evaluate((element) => getComputedStyle(element, '::before').content),
+      ).toBe('none');
+      await page.keyboard.press('Escape');
       await expect(
         page.getByRole('navigation', { name: 'Demo tools', exact: true }),
       ).not.toBeVisible();
@@ -315,13 +324,8 @@ for (const width of [390, 1440]) {
       await publication
         .getByRole('combobox', { name: 'Entry type', exact: true })
         .click();
-      await expect(publication.locator('.select-scrim')).toBeVisible();
+      await expect(publication.locator('.select-scrim')).toHaveCount(0);
       await expect(publication.getByRole('listbox')).toBeVisible();
-      expect(
-        await publication
-          .locator('.select-scrim')
-          .evaluate((element) => getComputedStyle(element).backgroundColor),
-      ).toBe('rgba(8, 6, 12, 0.88)');
       await page.screenshot({
         path: info.outputPath(`${width}-${theme}-dark-select.png`),
         fullPage: false,
@@ -329,7 +333,7 @@ for (const width of [390, 1440]) {
       await page
         .getByRole('option', { name: 'Milestone', exact: true })
         .click();
-      await expect(publication.locator('.select-scrim')).not.toBeVisible();
+      await expect(publication.locator('.select-scrim')).toHaveCount(0);
       await expect(publication).toBeVisible();
       await expect(
         publication.getByRole('combobox', { name: 'Entry type', exact: true }),
@@ -344,14 +348,13 @@ for (const width of [390, 1440]) {
           await page
             .locator('.marketing-menu')
             .evaluate(
-              (element) =>
-                getComputedStyle(element, '::before').backgroundColor,
+              (element) => getComputedStyle(element, '::before').content,
             ),
-        ).toBe('rgba(8, 6, 12, 0.88)');
+        ).toBe('none');
         await expect(
           page.getByRole('navigation', { name: 'Mobile site navigation' }),
         ).toBeVisible();
-        await page.mouse.click(5, 880);
+        await page.keyboard.press('Escape');
         await expect(
           page.getByRole('navigation', { name: 'Mobile site navigation' }),
         ).not.toBeVisible();

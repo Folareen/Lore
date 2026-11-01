@@ -1334,14 +1334,10 @@ test('public community guide answers signed-out viewers with public citations an
       )
     ).ok(),
   ).toBe(true);
-  expect(
-    (
-      await page.request.post(`/api/channels/${channelId}/features`, {
-        headers,
-        data: { feature: 'communityAssistantEnabled', enabled: true },
-      })
-    ).ok(),
-  ).toBe(true);
+  const features = await (
+    await page.request.get(`/api/channels/${channelId}/features`)
+  ).json();
+  expect(features.communityAssistantEnabled).toBe(true);
   await context.clearCookies();
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
