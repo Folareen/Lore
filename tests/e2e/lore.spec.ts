@@ -163,6 +163,61 @@ test('demo evidence, precedent and human decision remain connected across naviga
     page.getByRole('heading', { name: 'Previously, in our corner of chat…' }),
   ).toBeVisible();
 });
+test('team rows keep names readable and controls usable', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  const names = ['folareen_', 'A_very_long_community_member_name'];
+  await page.route('**/api/channels/*/members', (route) =>
+    route.fulfill({
+      json: names.map((displayName, index) => ({
+        userId: `00000000-0000-4000-8000-00000000000${index + 1}`,
+        twitchUserId: String(100 + index),
+        login: displayName.toLowerCase(),
+        displayName,
+        role: 'moderator',
+        verificationState: 'owner_approved',
+      })),
+    }),
+  );
+  for (const width of [320, 390, 1440]) {
+    await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light' });
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/app/team');
+    for (const name of names) {
+      await expect(page.getByText(name, { exact: true })).toBeVisible();
+      const identity = await page
+        .getByText(name, { exact: true })
+        .boundingBox();
+      expect(identity!.width).toBeGreaterThan(110);
+      await expect(
+        page.getByRole('combobox', { name: `Role for ${name}` }),
+      ).toBeVisible();
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`team-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await page.getByRole('combobox', { name: 'Role for folareen_' }).click();
+  await expect(
+    page.getByRole('option', { name: 'Team member', exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('button', { name: 'Remove folareen_', exact: true })
+    .click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByText('folareen_', { exact: true })).toBeVisible();
+});
+
 test('moderation list has aligned controls and useful empty states', async ({
   page,
   context,
