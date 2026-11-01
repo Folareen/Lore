@@ -1,7 +1,9 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { and, eq, gt, lt } from 'drizzle-orm';
+import { and, eq, gt, lt, isNull, isNotNull } from 'drizzle-orm';
+import { captureScopes } from '@lore/shared';
 import { InfrastructureService } from '../infrastructure.service';
 import {
+  channels,
   oauthConnections,
   oauthStates,
   sessions,
@@ -137,6 +139,20 @@ export class AuthService {
           target: oauthConnections.userId,
           set: connection,
         });
+      if (captureScopes.every((scope) => identity.scopes.includes(scope))) {
+        // A fresh validated grant clears an old failure, without restarting capture.
+        await tx
+          .update(channels)
+          .set({ captureError: null, updatedAt: new Date() })
+          .where(
+            and(
+              eq(channels.ownerUserId, user.id),
+              eq(channels.captureError, 'authorization_required'),
+              isNotNull(channels.connectedAt),
+              isNull(channels.disconnectedAt),
+            ),
+          );
+      }
       if (previousSession)
         await tx
           .delete(sessions)

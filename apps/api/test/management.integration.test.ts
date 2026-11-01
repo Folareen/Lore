@@ -976,8 +976,30 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
         )
       ).status,
     ).toBe(401);
+    await pool.query(
+      "UPDATE channels SET capture_error='authorization_required',capture_requested=false,catchup_enabled=false WHERE id=$1",
+      [channelId],
+    );
+    owner = await login('owner', true, 'team');
+    expect(
+      (
+        await pool.query('SELECT capture_error FROM channels WHERE id=$1', [
+          channelId,
+        ])
+      ).rows[0].capture_error,
+    ).toBe('authorization_required');
     captureGranted = true;
     owner = await login('owner', true);
+    const recovered = await pool.query(
+      'SELECT capture_error,capture_requested,catchup_enabled FROM channels WHERE id=$1',
+      [channelId],
+    );
+    expect(recovered.rows[0]).toEqual({
+      capture_error: null,
+      capture_requested: false,
+      catchup_enabled: false,
+    });
+
     expect(
       (await request(`/channels/${channelId}/ingestion/start`, owner, 'POST'))
         .status,

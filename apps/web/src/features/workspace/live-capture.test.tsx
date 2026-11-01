@@ -64,6 +64,44 @@ it('explains missing capture permissions and links to separate Twitch authorizat
   expect(link.getAttribute('href')).toBe('/api/auth/twitch/capture');
   expect(screen.queryByRole('button', { name: 'Start capture' })).toBeNull();
 });
+it('offers a retry for a recorded authorization failure when capture scopes are present', async () => {
+  fetchMock.mockImplementation(async (_url, options) =>
+    reply(
+      options?.method === 'POST'
+        ? {
+            ...paused,
+            requested: true,
+            subscriptions: twitchEventTypes.map((type) => ({
+              type,
+              status: 'enabled',
+            })),
+          }
+        : { ...paused, error: 'authorization_required' },
+    ),
+  );
+  setup();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('button', { name: 'Manage live capture' }));
+  expect(await screen.findByText('Capture needs attention')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Start capture' })).toBeNull();
+  expect(
+    screen
+      .getByRole('link', { name: 'Reconnect Twitch permissions' })
+      .getAttribute('href'),
+  ).toBe('/api/auth/twitch/capture');
+  await user.click(screen.getByRole('button', { name: 'Retry capture' }));
+  expect(await screen.findByText('Listening on Twitch')).toBeTruthy();
+  expect(
+    screen.queryByRole('link', { name: 'Reconnect Twitch permissions' }),
+  ).toBeNull();
+  expect(fetchMock.mock.calls[1][0]).toBe(
+    `/api/channels/${previewChannels[0].id}/ingestion/start`,
+  );
+  expect(fetchMock.mock.calls[1][1]).toMatchObject({
+    method: 'POST',
+    headers: { 'X-CSRF-Token': previewSession.csrfToken },
+  });
+});
 it('starts and stops through CSRF-protected mutations and reports actual subscription readiness', async () => {
   fetchMock.mockImplementation(async (_url, options) =>
     reply(

@@ -524,6 +524,83 @@ test('demotion and removal resume the exact Twitch role change after approval', 
   ).toBeVisible();
 });
 
+test('capture can retry a prior authorization failure with a currently valid grant', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  const types = [
+    'channel.chat.message',
+    'channel.chat.message_delete',
+    'channel.chat.clear',
+    'channel.chat.clear_user_messages',
+    'stream.online',
+    'stream.offline',
+  ];
+  await page.route('**/ingestion{,/start}', (route) => {
+    const running = route.request().method() === 'POST';
+    return route.fulfill({
+      json: {
+        configured: true,
+        requested: running,
+        missingScopes: [],
+        error: running ? null : 'authorization_required',
+        subscriptions: running
+          ? types.map((type) => ({ type, status: 'enabled' }))
+          : [],
+        pending: 0,
+        failed: 0,
+        lastReceivedAt: null,
+      },
+    });
+  });
+  await page.goto('/app/settings');
+  await page
+    .getByRole('button', { name: 'Manage live capture', exact: true })
+    .click();
+  const capture = page.locator('section.panel').filter({
+    has: page.getByRole('heading', { name: 'Live capture', exact: true }),
+  });
+  await expect(
+    capture.getByText('Capture needs attention', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    capture.getByRole('button', { name: 'Start capture', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    capture.getByRole('link', {
+      name: 'Reconnect Twitch permissions',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/api/auth/twitch/capture');
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await capture.screenshot({
+      path: info.outputPath(`capture-recovery-${width}.png`),
+    });
+  }
+  await capture
+    .getByRole('button', { name: 'Retry capture', exact: true })
+    .click();
+  await expect(
+    capture.getByText('Listening on Twitch', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    capture.getByRole('link', {
+      name: 'Reconnect Twitch permissions',
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    capture.getByRole('button', { name: 'Stop capture', exact: true }),
+  ).toBeVisible();
+});
+
 test('team rows keep names readable and controls usable', async ({
   page,
   context,
