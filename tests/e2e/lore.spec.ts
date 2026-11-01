@@ -163,6 +163,55 @@ test('demo evidence, precedent and human decision remain connected across naviga
     page.getByRole('heading', { name: 'Previously, in our corner of chat…' }),
   ).toBeVisible();
 });
+test('setup marks a team complete after adding a moderator and reopens it after removal', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context, 'outsider');
+  await page.goto('/app');
+  await page
+    .getByRole('button', { name: 'Connect channel', exact: true })
+    .click();
+  await expect(page.getByRole('link', { name: /Add your team/ })).toBeVisible();
+  const nav = page.getByRole('navigation', { name: 'Community navigation' });
+  await nav.getByRole('link', { name: 'Teams', exact: true }).click();
+  await page.getByLabel('Twitch user ID', { exact: true }).fill('200');
+  await page.getByRole('button', { name: 'Add to team', exact: true }).click();
+  await expect(
+    page.getByText('Team access updated.', { exact: true }),
+  ).toBeVisible();
+  await nav.getByRole('link', { name: 'Overview', exact: true }).click();
+  const completed = page.getByRole('link', {
+    name: /Team added 1 teammate has access/,
+  });
+  await expect(completed).toHaveClass(/done/);
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light' });
+    await page
+      .locator('.panel')
+      .filter({
+        has: page.getByRole('heading', { name: 'Get set up', exact: true }),
+      })
+      .screenshot({ path: info.outputPath(`setup-complete-${width}.png`) });
+  }
+  await completed.click();
+  await page
+    .getByRole('button', { name: 'Remove user200', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Remove access', exact: true })
+    .click();
+  await expect(
+    page.getByText('Team access removed.', { exact: true }),
+  ).toBeVisible();
+  await nav.getByRole('link', { name: 'Overview', exact: true }).click();
+  await expect(
+    page.getByRole('link', { name: /Add your team/ }),
+  ).not.toHaveClass(/done/);
+  await expect(page.getByText('Team added', { exact: true })).toHaveCount(0);
+});
+
 test('one account can switch between teams with three different roles', async ({
   page,
   context,

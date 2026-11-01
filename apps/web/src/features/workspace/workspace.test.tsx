@@ -2,6 +2,7 @@
 import { selectValue } from '../../test/select-value';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -418,6 +419,38 @@ describe('Lore interface behavior', () => {
       expect(replace).toHaveBeenCalledWith('/login?expired=1'),
     );
     expect(screen.queryByText('Preferences saved')).toBeNull();
+  });
+  it('marks team setup complete from membership data and updates after removal', async () => {
+    let members = [previewPeople[0]];
+    fetchMock.mockImplementation(async () => response(members));
+    workspace(<Overview />);
+    const completed = await screen.findByRole('link', {
+      name: /Team added 1 teammate has access/,
+    });
+    expect(completed.classList.contains('done')).toBe(true);
+    expect(completed.getAttribute('href')).toBe('/app/team');
+    expect(screen.queryByText('Add your team', { exact: true })).toBeNull();
+    members = [];
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('lore:workspace-updated', {
+          detail: previewChannels[0].id,
+        }),
+      );
+    });
+    const pending = await screen.findByRole('link', { name: /Add your team/ });
+    expect(pending.classList.contains('done')).toBe(false);
+  });
+  it('keeps setup status unknown on a failed membership check and skips private checks for moderators', async () => {
+    fetchMock.mockRejectedValue(new Error('Unavailable'));
+    const view = workspace(<Overview />);
+    expect(await screen.findByText('Open Teams to check access.')).toBeTruthy();
+    expect(screen.queryByText('Team added')).toBeNull();
+    view.unmount();
+    fetchMock.mockClear();
+    workspace(<Overview />, [previewChannels[1]]);
+    expect(screen.getByText('Your access')).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
   it('connects an authenticated user’s channel from the empty overview', async () => {
     fetchMock.mockResolvedValue(response(previewChannels[0]));
