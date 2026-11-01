@@ -9,6 +9,7 @@ import {
   captureScopes,
   catchupScopes,
   moderationReadScopes,
+  twitchModeratorScope,
 } from '@lore/shared';
 export const tokenPairSchema = z.object({
   access_token: z.string().min(1),
@@ -59,10 +60,19 @@ export class TwitchClient {
   }
   authorizationUrl(
     state: string,
-    capture = false,
-    chat = false,
-    moderation = false,
-    existingScopes: string[] = [],
+    {
+      capture = false,
+      chat = false,
+      moderation = false,
+      existingScopes = [],
+      manageModerators = false,
+    }: {
+      capture?: boolean;
+      chat?: boolean;
+      moderation?: boolean;
+      existingScopes?: string[];
+      manageModerators?: boolean;
+    } = {},
   ) {
     const { clientId } = this.configured();
     const url = new URL('https://id.twitch.tv/oauth2/authorize');
@@ -74,10 +84,14 @@ export class TwitchClient {
         ...new Set([
           ...(chat ? catchupScopes : capture ? captureScopes : []),
           ...(moderation ? moderationReadScopes : []),
+          ...(manageModerators ? [twitchModeratorScope] : []),
           ...existingScopes.filter((s) =>
-            [...captureScopes, ...catchupScopes, ...moderationReadScopes].some(
-              (allowed) => allowed === s,
-            ),
+            [
+              ...captureScopes,
+              ...catchupScopes,
+              ...moderationReadScopes,
+              twitchModeratorScope,
+            ].some((allowed) => allowed === s),
           ),
         ]),
       ].join(' '),

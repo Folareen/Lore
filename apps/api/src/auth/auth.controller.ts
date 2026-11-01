@@ -66,7 +66,7 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   async chat(@Req() request: AuthenticatedRequest, @Res() response: Response) {
-    const login = await this.auth.beginLogin(request.auth.user.id, true);
+    const login = await this.auth.beginLogin(request.auth.user.id, 'chat');
     response.cookie('lore_oauth', login.browser, {
       ...stateOptions,
       maxAge: oauthMaxAge,
@@ -80,8 +80,26 @@ export class AuthController {
     @Req() request: AuthenticatedRequest,
     @Res() response: Response,
   ) {
-    const login = await this.auth.beginLogin(request.auth.user.id, false, true);
+    const login = await this.auth.beginLogin(
+      request.auth.user.id,
+      'moderation',
+    );
     response.cookie('lore_oauth', login.browser, {
+      ...stateOptions,
+      maxAge: oauthMaxAge,
+    });
+    response.redirect(login.url);
+  }
+  @Get('twitch/team')
+  @UseGuards(SessionGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async team(@Req() request: AuthenticatedRequest, @Res() response: Response) {
+    const login = await this.auth.beginLogin(request.auth.user.id, 'team');
+    response.cookie('lore_oauth', login.browser, {
+      ...stateOptions,
+      maxAge: oauthMaxAge,
+    });
+    response.cookie('lore_team_return', login.browser, {
       ...stateOptions,
       maxAge: oauthMaxAge,
     });
@@ -102,6 +120,18 @@ export class AuthController {
     const browser = cookieValue(request, 'lore_oauth');
     if (!browser || !/^[a-f0-9]{64}$/.test(browser))
       throw new UnauthorizedException('OAuth browser binding missing');
+    const teamReturn = cookieValue(request, 'lore_team_return') === browser;
+    response.clearCookie('lore_team_return', stateOptions);
+    if (teamReturn && parsed.data.error) {
+      // Consume the denied state, but never resume a pending role change.
+      try {
+        await this.auth.completeLogin(parsed.data.state, browser);
+      } catch (error) {
+        if (!(error instanceof UnauthorizedException)) throw error;
+      }
+      response.redirect(`${env.APP_ORIGIN}/app/team?moderator=cancelled`);
+      return;
+    }
     const token = await this.auth.completeLogin(
       parsed.data.state,
       browser,
@@ -112,7 +142,9 @@ export class AuthController {
       ...options,
       maxAge: sessionMaxAge,
     });
-    response.redirect(`${env.APP_ORIGIN}/app`);
+    response.redirect(
+      `${env.APP_ORIGIN}${teamReturn ? '/app/team?moderator=resume' : '/app'}`,
+    );
   }
   @Get('status')
   status() {

@@ -2,6 +2,7 @@
 import { selectValue } from '../../test/select-value';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -62,6 +63,7 @@ const response = (body: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 const fetchMock = vi.fn<typeof fetch>();
+const twitchStatusMock = vi.fn<typeof fetch>();
 function workspace(
   children: ReactNode,
   channels: Channel[] = [previewChannels[0]],
@@ -78,7 +80,16 @@ function workspace(
   );
 }
 beforeEach(() => {
-  vi.stubGlobal('fetch', fetchMock);
+  twitchStatusMock
+    .mockReset()
+    .mockImplementation(async () =>
+      response({ authorized: true, moderators: ['200'] }),
+    );
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) =>
+    String(input).endsWith('/members/twitch')
+      ? twitchStatusMock(input, init)
+      : fetchMock(input, init),
+  );
   fetchMock.mockReset();
   replace.mockReset();
   push.mockReset();
@@ -241,9 +252,162 @@ describe('Lore interface behavior', () => {
       screen.queryByRole('button', { name: 'Disconnect channel' }),
     ).toBeNull();
     expect(
-      await screen.findByText('Only the owner can manage the team.'),
+      await screen.findByText(
+        /Only the channel owner can add people or change roles/,
+      ),
     ).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('shows all teams and switches between owner, moderator and team-member views', async () => {
+    const memberChannel: Channel = {
+      ...previewChannels[1],
+      id: '00000000-0000-4000-8000-000000000003',
+      displayName: 'pixelclub',
+      role: 'team',
+    };
+    workspace(<Team />, [...previewChannels, memberChannel], true);
+    const user = userEvent.setup();
+    await screen.findByText('moss.jpeg');
+    const directory = screen.getByRole('region', { name: 'Your teams' });
+    expect(within(directory).getByText('Owner')).toBeTruthy();
+    expect(within(directory).getByText('Moderator')).toBeTruthy();
+    expect(within(directory).getByText('Team member')).toBeTruthy();
+    await user.click(
+      within(directory).getByRole('button', {
+        name: 'Select thelatecafe team',
+      }),
+    );
+    expect(screen.getByText(/You’re a moderator here/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add to team' })).toBeNull();
+    await user.click(
+      within(directory).getByRole('button', { name: 'Select pixelclub team' }),
+    );
+    expect(screen.getByText(/You’re a team member here/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add to team' })).toBeNull();
+    await user.click(
+      within(directory).getByRole('button', { name: 'Select cozybyte team' }),
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Add to team' }),
+    ).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('lets an existing moderator connect their own channel without losing the other membership', async () => {
+    fetchMock.mockImplementation(async (url) =>
+      response(
+        String(url).endsWith('/connect') ? previewChannels[0] : previewPeople,
+      ),
+    );
+    workspace(<Team />, [previewChannels[1]]);
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole('button', { name: 'Connect your channel' }),
+    );
+    expect(
+      await screen.findByRole('heading', { name: 'cozybyte team' }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Select thelatecafe team' }),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: 'Select cozybyte team' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(
+      fetchMock.mock.calls.find(([url]) =>
+        String(url).endsWith('/connect'),
+      )?.[1],
+    ).toMatchObject({
+      method: 'POST',
+      headers: { 'X-CSRF-Token': previewSession.csrfToken },
+    });
+  });
+  it('requires Twitch authorization before adding a moderator but still permits team members', async () => {
+    twitchStatusMock.mockImplementation(async () =>
+      response({ authorized: false, moderators: [] }),
+    );
+    fetchMock.mockImplementation(async (_url, options) =>
+      options?.method === 'POST'
+        ? response({
+            userId: previewPeople[1].userId,
+            role: 'team',
+            verificationState: 'owner_approved',
+          })
+        : response([]),
+    );
+    workspace(<Team />);
+    const user = userEvent.setup();
+    await waitFor(() =>
+      expect(
+        screen.getByRole<HTMLButtonElement>('button', { name: 'Add to team' })
+          .disabled,
+      ).toBe(false),
+    );
+    expect(
+      screen.queryByRole('link', {
+        name: 'Authorize Twitch moderator management',
+      }),
+    ).toBeNull();
+    expect(
+      screen.getByText(
+        'When you choose Moderator, Twitch will ask you to approve the permission before Lore saves it.',
+      ),
+    ).toBeTruthy();
+    await user.type(screen.getByLabelText('Twitch user ID'), '300');
+    await selectValue(user, screen.getByLabelText('Role'), 'team');
+    await user.click(screen.getByRole('button', { name: 'Add to team' }));
+    expect(
+      fetchMock.mock.calls.find(
+        ([, options]) => options?.method === 'POST',
+      )?.[1]?.body,
+    ).toBe(JSON.stringify({ twitchUserId: '300', role: 'team' }));
+  });
+  it('syncs legacy moderators explicitly and does not claim success on failure', async () => {
+    let enabled = false;
+    twitchStatusMock.mockImplementation(async () =>
+      response({ authorized: true, moderators: enabled ? ['200'] : [] }),
+    );
+    fetchMock.mockImplementation(async (_url, options) => {
+      if (options?.method === 'POST') {
+        enabled = true;
+        return response({
+          userId: previewPeople[0].userId,
+          role: 'moderator',
+          verificationState: 'owner_approved',
+        });
+      }
+      return response([previewPeople[0]]);
+    });
+    workspace(<Team />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: 'Enable on Twitch' }),
+    );
+    expect(
+      await screen.findByText('Moderator in Lore and Twitch'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Moderator enabled in Lore and Twitch.'),
+    ).toBeTruthy();
+    fetchMock.mockImplementation(async (_url, options) =>
+      options?.method === 'POST'
+        ? response({ message: 'Twitch unavailable' }, 503)
+        : response([previewPeople[0]]),
+    );
+    await selectValue(
+      user,
+      screen.getByLabelText(`Role for ${previewPeople[0].displayName}`),
+      'team',
+    );
+    expect(
+      await screen.findByText(
+        'Lore’s connection is taking a break. Please try again shortly.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText('Team member saved. Twitch moderator access removed.'),
+    ).toBeNull();
   });
   it('adds a team member and refetches the authorized member list', async () => {
     let added = false;
@@ -351,6 +515,38 @@ describe('Lore interface behavior', () => {
       expect(replace).toHaveBeenCalledWith('/login?expired=1'),
     );
     expect(screen.queryByText('Preferences saved')).toBeNull();
+  });
+  it('marks team setup complete from membership data and updates after removal', async () => {
+    let members = [previewPeople[0]];
+    fetchMock.mockImplementation(async () => response(members));
+    workspace(<Overview />);
+    const completed = await screen.findByRole('link', {
+      name: /Team added 1 teammate has access/,
+    });
+    expect(completed.classList.contains('done')).toBe(true);
+    expect(completed.getAttribute('href')).toBe('/app/team');
+    expect(screen.queryByText('Add your team', { exact: true })).toBeNull();
+    members = [];
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('lore:workspace-updated', {
+          detail: previewChannels[0].id,
+        }),
+      );
+    });
+    const pending = await screen.findByRole('link', { name: /Add your team/ });
+    expect(pending.classList.contains('done')).toBe(false);
+  });
+  it('keeps setup status unknown on a failed membership check and skips private checks for moderators', async () => {
+    fetchMock.mockRejectedValue(new Error('Unavailable'));
+    const view = workspace(<Overview />);
+    expect(await screen.findByText('Open Teams to check access.')).toBeTruthy();
+    expect(screen.queryByText('Team added')).toBeNull();
+    view.unmount();
+    fetchMock.mockClear();
+    workspace(<Overview />, [previewChannels[1]]);
+    expect(screen.getByText('Your access')).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
   it('connects an authenticated user’s channel from the empty overview', async () => {
     fetchMock.mockResolvedValue(response(previewChannels[0]));

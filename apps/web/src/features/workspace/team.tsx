@@ -1,20 +1,51 @@
 'use client';
+import { ApiError } from '../../lib/api';
+import {
+  savePendingModerator,
+  takePendingModerator,
+  type PendingModerator,
+} from './pending-moderator';
 import { Select } from '../../components/select';
 import Link from 'next/link';
 import { useLiveRefresh } from '../continuity/live-updates';
-import { useEffect, useState } from 'react';
-import { Plus, ShieldCheck, Trash2, Users, RefreshCw } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Check,
+  ChevronRight,
+  Link2,
+  Plus,
+  Trash2,
+  Users,
+  RefreshCw,
+} from 'lucide-react';
 import {
   grantMembershipSchema,
   type Membership,
   type GrantMembership,
+  type TwitchModeratorAccess,
 } from '@lore/shared';
 import { useWorkspace } from './workspace-context';
 import { Avatar } from '../../components/avatar';
 import { ConfirmDialog } from '../../components/confirm-dialog';
+const roleLabels = {
+  owner: 'Owner',
+  moderator: 'Moderator',
+  team: 'Team member',
+};
 export function Team() {
-  const { selected, session, preview, href, loadMembers, grant, remove } =
-    useWorkspace();
+  const {
+    channels,
+    selectChannel,
+    connect,
+    selected,
+    session,
+    preview,
+    href,
+    loadMembers,
+    grant,
+    remove,
+    loadModeratorAccess,
+  } = useWorkspace();
   const [members, setMembers] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -25,9 +56,172 @@ export function Team() {
   const [success, setSuccess] = useState('');
   const [removing, setRemoving] = useState<Membership | null>(null);
   const [revision, setRevision] = useState(0);
+  const [moderatorAccess, setModeratorAccess] = useState<{
+    channelId: string;
+    value: TwitchModeratorAccess;
+  } | null>(null);
+  const [moderatorError, setModeratorError] = useState('');
   const channelId = selected?.id;
   useLiveRefresh(channelId ?? '', () => setRevision((value) => value + 1));
   const allowed = selected?.role === 'owner' && selected.connected;
+  const ownChannel = channels.find((channel) => channel.role === 'owner');
+  const twitchAccess =
+    moderatorAccess && moderatorAccess.channelId === channelId
+      ? moderatorAccess.value
+      : null;
+  useEffect(() => {
+    if (!channelId || !allowed) return;
+    const controller = new AbortController();
+    setModeratorAccess(null);
+    setModeratorError('');
+    loadModeratorAccess(channelId, controller.signal)
+      .then((value) => {
+        if (!controller.signal.aborted)
+          setModeratorAccess({ channelId, value });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted)
+          setModeratorError(
+            error instanceof Error
+              ? error.message
+              : 'Could not check Twitch moderator access.',
+          );
+      });
+    return () => controller.abort();
+  }, [channelId, allowed, loadModeratorAccess, revision]);
+  useEffect(() => {
+    setError('');
+    setSuccess('');
+    setRemoving(null);
+    setUserId('');
+    setMembers([]);
+  }, [channelId, allowed]);
+  const [pending, setPending] = useState<PendingModerator | null>(null);
+  const returning = useRef(false);
+  const resuming = useRef(false);
+  useEffect(() => {
+    if (preview || returning.current) return;
+    const url = new URL(window.location.href);
+    const result = url.searchParams.get('moderator');
+    if (!result) return;
+    returning.current = true;
+    url.searchParams.delete('moderator');
+    window.history.replaceState(null, '', url.pathname + url.search);
+    try {
+      const saved = takePendingModerator(session.user.id);
+      if (result !== 'resume') {
+        setError('Twitch authorization was cancelled. No role was changed.');
+      } else if (
+        !saved ||
+        !channels.some(
+          (channel) =>
+            channel.id === saved.channelId &&
+            channel.role === 'owner' &&
+            channel.connected,
+        )
+      ) {
+        setError('This moderator change expired. Please try again.');
+      } else {
+        selectChannel(saved.channelId);
+        setPending(saved);
+      }
+    } catch {
+      setError('Could not restore the moderator change. Please try again.');
+    }
+  }, [preview, session.user.id, channels, selectChannel]);
+  useEffect(() => {
+    if (
+      !pending ||
+      selected?.id !== pending.channelId ||
+      !allowed ||
+      !twitchAccess ||
+      resuming.current
+    )
+      return;
+    resuming.current = true;
+    setPending(null);
+    if (!twitchAccess.authorized) {
+      setError(
+        'Twitch moderator permission was not granted. Please try the change again.',
+      );
+      return;
+    }
+    setBusy(true);
+    const action = pending.action;
+    const operation =
+      action.kind === 'remove'
+        ? remove(action.userId)
+        : grant({ twitchUserId: action.twitchUserId, role: action.role });
+    operation
+      .then(() => {
+        setSuccess(
+          action.kind === 'remove'
+            ? 'Access removed from Lore and Twitch.'
+            : action.role === 'moderator'
+              ? 'Moderator enabled in Lore and Twitch.'
+              : 'Team member saved. Twitch moderator access removed.',
+        );
+        setRevision((value) => value + 1);
+      })
+      .catch((error) =>
+        setError(
+          error instanceof Error
+            ? error.message
+            : 'Could not assign Moderator. Please try again.',
+        ),
+      )
+      .finally(() => setBusy(false));
+  }, [pending, selected?.id, allowed, twitchAccess, grant, remove]);
+  function authorizeModerator(action: PendingModerator['action']) {
+    if (!channelId) throw new Error('Select your team first.');
+    savePendingModerator({
+      actorId: session.user.id,
+      channelId,
+      action,
+    });
+    window.location.assign('/api/auth/twitch/team');
+  }
+  async function applyChange(
+    action: PendingModerator['action'],
+    needsTwitch: boolean,
+  ) {
+    if (!preview && needsTwitch && twitchAccess?.authorized === false) {
+      authorizeModerator(action);
+      return false;
+    }
+    try {
+      if (action.kind === 'remove') await remove(action.userId);
+      else
+        await grant({ twitchUserId: action.twitchUserId, role: action.role });
+      return true;
+    } catch (error) {
+      if (
+        !preview &&
+        error instanceof ApiError &&
+        error.status === 403 &&
+        error.message.startsWith('Twitch moderator permission')
+      ) {
+        authorizeModerator(action);
+        return false;
+      }
+      throw error;
+    }
+  }
+  async function connectOwnChannel() {
+    setBusy(true);
+    setError('');
+    try {
+      await connect();
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Could not connect your channel.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   useEffect(() => {
     setLoadError('');
     if (!channelId || !allowed) {
@@ -51,13 +245,6 @@ export function Team() {
       });
     return () => controller.abort();
   }, [channelId, allowed, loadMembers, revision]);
-  useEffect(() => {
-    setError('');
-    setSuccess('');
-    setRemoving(null);
-    setUserId('');
-    setMembers([]);
-  }, [channelId, allowed]);
   async function add(event: React.FormEvent) {
     event.preventDefault();
     setError('');
@@ -72,10 +259,20 @@ export function Team() {
     }
     setBusy(true);
     try {
-      await grant(parsed.data);
+      if (
+        !(await applyChange(
+          { kind: 'grant', ...parsed.data },
+          parsed.data.role === 'moderator',
+        ))
+      )
+        return;
       setUserId('');
       if (!preview) setRevision((value) => value + 1);
-      setSuccess('Team access updated.');
+      setSuccess(
+        parsed.data.role === 'moderator'
+          ? 'Moderator enabled in Lore and Twitch.'
+          : 'Team access updated.',
+      );
     } catch (error) {
       setError(
         error instanceof Error ? error.message : 'Could not add this person.',
@@ -94,9 +291,19 @@ export function Team() {
     setError('');
     setSuccess('');
     try {
-      await grant(parsed.data);
+      if (
+        !(await applyChange(
+          { kind: 'grant', ...parsed.data },
+          person.role === 'moderator' || parsed.data.role === 'moderator',
+        ))
+      )
+        return;
       if (!preview) setRevision((value) => value + 1);
-      setSuccess('Role updated.');
+      setSuccess(
+        parsed.data.role === 'moderator'
+          ? 'Moderator enabled in Lore and Twitch.'
+          : 'Team member saved. Twitch moderator access removed.',
+      );
     } catch (error) {
       setError(
         error instanceof Error ? error.message : 'Could not update this role.',
@@ -111,9 +318,19 @@ export function Team() {
     setError('');
     setSuccess('');
     try {
-      await remove(removing.userId);
+      if (
+        !(await applyChange(
+          { kind: 'remove', userId: removing.userId },
+          removing.role === 'moderator',
+        ))
+      )
+        return;
       if (!preview) setRevision((value) => value + 1);
-      setSuccess('Team access removed.');
+      setSuccess(
+        removing.role === 'moderator'
+          ? 'Access removed from Lore and Twitch.'
+          : 'Team access removed.',
+      );
     } catch (error) {
       setError(
         error instanceof Error ? error.message : 'Could not remove access.',
@@ -124,50 +341,99 @@ export function Team() {
     }
   }
   return (
-    <>
+    <div className="content-stack team-page">
       <div className="page-heading">
         <div>
-          <h1>Your team</h1>
-          <p>Manage access to {selected?.displayName || 'your community'}.</p>
+          <h1>Teams</h1>
+          <p>Switch communities and see your role in each team.</p>
         </div>
+        {!ownChannel?.connected && (
+          <button
+            className="button secondary"
+            disabled={busy}
+            onClick={() => void connectOwnChannel()}
+          >
+            <Link2 size={16} aria-hidden="true" />
+            {busy
+              ? 'Connecting…'
+              : ownChannel
+                ? 'Reconnect your channel'
+                : 'Connect your channel'}
+          </button>
+        )}
       </div>
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      {channels.length > 0 && (
+        <section className="panel team-directory" aria-label="Your teams">
+          {channels.map((channel) => (
+            <button
+              key={channel.id}
+              className={`channel-row ${selected?.id === channel.id ? 'selected' : ''}`}
+              aria-label={`Select ${channel.displayName} team`}
+              aria-pressed={selected?.id === channel.id}
+              onClick={() => selectChannel(channel.id)}
+            >
+              <Avatar name={channel.displayName} size={40} />
+              <div className="channel-info">
+                <strong>{channel.displayName}</strong>
+                <small>
+                  {roleLabels[channel.role]}
+                  {!channel.connected && ' · Disconnected'}
+                </small>
+              </div>
+              {selected?.id === channel.id ? (
+                <Check size={18} aria-hidden="true" />
+              ) : (
+                <ChevronRight size={18} aria-hidden="true" />
+              )}
+            </button>
+          ))}
+          <p className="section-footnote">
+            To join another team, share your Twitch user ID from{' '}
+            <Link className="text-link" href={href('account')}>
+              Account
+            </Link>{' '}
+            with its owner.
+          </p>
+        </section>
+      )}
       {!selected && (
         <div className="empty-state">
           <Users size={30} />
-          <h2>A channel comes first.</h2>
-          <p>Connect your channel before bringing your team into Lore.</p>
-          <Link href={href('overview')} className="button primary">
-            Go to your channels
-          </Link>
+          <h2>No teams yet</h2>
+          <p>
+            Connect your own channel, or share your Twitch user ID from{' '}
+            <Link className="text-link" href={href('account')}>
+              Account
+            </Link>{' '}
+            with another channel’s owner.
+          </p>
         </div>
       )}
       {selected && !allowed && (
         <div className="panel">
-          <div className="empty-state">
-            <ShieldCheck size={30} />
-            <h2>
-              {selected.role !== 'owner'
-                ? 'Only the owner can manage the team.'
-                : 'Reconnect to bring your team back.'}
-            </h2>
-            <p>
-              {selected.role !== 'owner'
-                ? 'The owner adds people and assigns roles. You can see your role on the overview.'
-                : 'Team access is cleared when a channel is disconnected. Reconnect, then add your people again.'}
-            </p>
-            <Link href={href('settings')} className="button secondary">
-              Channel settings
-            </Link>
-          </div>
+          <h2>{selected.displayName} team</h2>
+          <p className="team-access-description">
+            {selected.role !== 'owner'
+              ? `You’re a ${roleLabels[selected.role].toLowerCase()} here. Only the channel owner can add people or change roles.`
+              : 'Team access is cleared when a channel is disconnected. Reconnect, then add your people again.'}
+          </p>
+          <Link
+            href={href(selected.role === 'owner' ? 'settings' : 'overview')}
+            className="button secondary"
+          >
+            {selected.role === 'owner'
+              ? 'Channel settings'
+              : 'Open channel overview'}
+          </Link>
         </div>
       )}
       {selected && allowed && (
         <div className="content-stack">
-          {error && (
-            <p className="notice error" role="alert">
-              {error}
-            </p>
-          )}
           {success && (
             <p className="inline-success" role="status">
               {success}
@@ -175,11 +441,31 @@ export function Team() {
           )}
           <section className="panel">
             <div className="panel-title">
-              <h2>People with access</h2>
+              <h2>{selected.displayName} team</h2>
               <span className="count-tag">
                 {members.length + 1} {members.length ? 'people' : 'person'}
               </span>
             </div>
+            <p className="section-footnote">
+              Moderator gives access in Lore and Twitch. Team member gives Lore
+              access only.
+            </p>
+            {preview && (
+              <p className="section-footnote">
+                Twitch role changes are simulated in the demo.
+              </p>
+            )}
+            {moderatorError && (
+              <p className="notice error" role="alert">
+                {moderatorError}{' '}
+                <button
+                  className="button secondary compact"
+                  onClick={() => setRevision((value) => value + 1)}
+                >
+                  Retry Twitch status
+                </button>
+              </p>
+            )}
             <div className="member-list">
               <div className="member-row member-row-owner">
                 <Avatar name={session.user.login} />
@@ -217,17 +503,45 @@ export function Team() {
                     <Avatar name={person.login} />
                     <div className="member-identity">
                       <strong>{person.displayName}</strong>
-                      <small>Owner-approved access</small>
+                      <small>
+                        {person.role === 'moderator'
+                          ? twitchAccess?.authorized &&
+                            twitchAccess.moderators.includes(
+                              person.twitchUserId,
+                            )
+                            ? 'Moderator in Lore and Twitch'
+                            : twitchAccess?.authorized
+                              ? 'Twitch moderator not enabled'
+                              : 'Lore moderator · Twitch status unverified'
+                          : 'Owner-approved access'}
+                      </small>
                     </div>
-                    <Select
-                      aria-label={`Role for ${person.displayName}`}
-                      value={person.role}
-                      disabled={busy}
-                      onValueChange={(event) => void changeRole(person, event)}
-                    >
-                      <option value="moderator">Moderator</option>
-                      <option value="team">Team member</option>
-                    </Select>
+                    <div className="member-role-controls">
+                      <Select
+                        aria-label={`Role for ${person.displayName}`}
+                        value={person.role}
+                        disabled={busy}
+                        onValueChange={(event) =>
+                          void changeRole(person, event)
+                        }
+                      >
+                        <option value="moderator">Moderator</option>
+                        <option value="team">Team member</option>
+                      </Select>
+                      {person.role === 'moderator' &&
+                        twitchAccess &&
+                        !twitchAccess.moderators.includes(
+                          person.twitchUserId,
+                        ) && (
+                          <button
+                            className="button secondary compact"
+                            disabled={busy}
+                            onClick={() => void changeRole(person, 'moderator')}
+                          >
+                            Enable on Twitch
+                          </button>
+                        )}
+                    </div>
                     <button
                       className="icon-button"
                       aria-label={`Remove ${person.displayName}`}
@@ -257,6 +571,12 @@ export function Team() {
                 ? ' In this preview, use 200 for moss.jpeg or 300 for pixel_pilot.'
                 : ''}
             </p>
+            {twitchAccess?.authorized === false && (
+              <p className="section-footnote">
+                When you choose Moderator, Twitch will ask you to approve the
+                permission before Lore saves it.
+              </p>
+            )}
             <form className="invite-form" onSubmit={add}>
               <div className="field">
                 <label htmlFor="twitch-user-id">Twitch user ID</label>
@@ -287,7 +607,14 @@ export function Team() {
                   <option value="team">Team member</option>
                 </Select>
               </div>
-              <button className="button primary" disabled={busy}>
+              <button
+                className="button primary"
+                disabled={
+                  busy ||
+                  Boolean(pending) ||
+                  (role === 'moderator' && !twitchAccess && !moderatorError)
+                }
+              >
                 {busy ? (
                   'Adding…'
                 ) : (
@@ -302,8 +629,7 @@ export function Team() {
               <div>
                 <strong>Moderator</strong>
                 <p>
-                  Trusted with private moderation context as those workflows
-                  become available.
+                  Moderate in Lore and Twitch, including private case review.
                 </p>
               </div>
               <div>
@@ -314,8 +640,9 @@ export function Team() {
               </div>
             </div>
             <p className="section-footnote">
-              Lore roles don’t grant Twitch chat or moderation permissions.
-              Channel settings and team access stay with the owner.
+              Changing a Moderator to Team member removes their Twitch moderator
+              role. Removing a Moderator revokes access in both places. Channel
+              settings stay with the owner.
             </p>
           </section>
         </div>
@@ -329,11 +656,13 @@ export function Team() {
           onConfirm={() => void removePerson()}
         >
           <p>
-            They’ll lose access to this channel immediately. You can add them
-            again later.
+            {removing.role === 'moderator'
+              ? 'They’ll lose access to this channel in Lore and their moderator role on Twitch.'
+              : 'They’ll lose access to this channel in Lore.'}{' '}
+            You can add them again later.
           </p>
         </ConfirmDialog>
       )}
-    </>
+    </div>
   );
 }

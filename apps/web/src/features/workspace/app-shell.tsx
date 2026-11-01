@@ -38,7 +38,7 @@ const navigation = [
   { view: 'candidates', title: 'Needs review', icon: ClipboardCheck },
   { view: 'brief', title: 'Next-stream brief', icon: ListChecks },
   { view: 'settings', title: 'Channel settings', icon: Settings2 },
-  { view: 'team', title: 'Your team', icon: Users },
+  { view: 'team', title: 'Teams', icon: Users },
   { view: 'account', title: 'Account', icon: UserRound },
 ] as const;
 function Shell({

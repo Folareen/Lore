@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Queue } from 'bullmq';
-import { queueNames } from '@lore/shared';
+import { queueNames, twitchModeratorScope } from '@lore/shared';
 import { seedDemo } from '../src/database/seed-demo';
 import { encryptTokens, hashToken } from '../src/auth/auth-crypto';
 const root = resolve(__dirname, '../../..');
@@ -27,8 +27,33 @@ const webOrigin = 'http://127.0.0.1:4322';
 const children: ChildProcess[] = [];
 let stopping = false;
 let stage = 'create database';
+const twitchModerators = new Map<string, Set<string>>();
 const mock = createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
+  const url = new URL(req.url || '/', 'http://test.local');
+  if (url.pathname === '/helix/moderation/moderators') {
+    const broadcaster = url.searchParams.get('broadcaster_id') || '';
+    if (req.headers.authorization !== `Bearer access-${broadcaster}`)
+      return void res.writeHead(403).end('{}');
+    const people = twitchModerators.get(broadcaster) ?? new Set<string>();
+    twitchModerators.set(broadcaster, people);
+    if (req.method === 'DELETE') {
+      people.delete(url.searchParams.get('user_id')!);
+      return void res.writeHead(204).end();
+    }
+    if (req.method === 'POST') {
+      people.add(url.searchParams.get('user_id')!);
+      return void res.writeHead(204).end();
+    }
+    return void res.end(
+      JSON.stringify({
+        data: url.searchParams
+          .getAll('user_id')
+          .filter((id) => people.has(id))
+          .map((user_id) => ({ user_id })),
+      }),
+    );
+  }
   if (req.url === '/oauth2/validate') {
     const id = req.headers.authorization?.replace('OAuth access-', '') ?? '';
     return void res.end(
@@ -36,7 +61,7 @@ const mock = createServer(async (req, res) => {
         client_id: 'test-client',
         user_id: id,
         login: `user${id}`,
-        scopes: [],
+        scopes: [twitchModeratorScope],
         expires_in: 86400,
       }),
     );
@@ -153,7 +178,7 @@ async function main() {
       [id, twitch, `user${twitch}`],
     );
     await pool.query(
-      "INSERT INTO oauth_connections(user_id,encrypted_tokens,scopes,expires_at,validated_at)VALUES($1,$2,'{}'::text[],now()+interval '1 day',now())",
+      "INSERT INTO oauth_connections(user_id,encrypted_tokens,scopes,expires_at,validated_at)VALUES($1,$2,$3,now()+interval '1 day',now())",
       [
         id,
         encryptTokens(
@@ -164,6 +189,7 @@ async function main() {
           id,
           key,
         ),
+        [twitchModeratorScope],
       ],
     );
     await pool.query(

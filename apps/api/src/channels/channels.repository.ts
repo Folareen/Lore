@@ -11,9 +11,24 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { and, eq, isNotNull, isNull, or, sql } from 'drizzle-orm';
-import type { ChannelRole, GrantMembership, UpdateChannel } from '@lore/shared';
+import {
+  twitchModeratorScope,
+  type ChannelRole,
+  type GrantMembership,
+  type UpdateChannel,
+} from '@lore/shared';
 import { InfrastructureService } from '../infrastructure.service';
-import { auditEvents, channels, memberships, users } from '../database/schema';
+import {
+  auditEvents,
+  channels,
+  memberships,
+  users,
+  oauthConnections,
+} from '../database/schema';
+import { decryptTokens } from '../auth/auth-crypto';
+import { tokenPairSchema } from '../auth/twitch.client';
+import { env } from '../config';
+import { TwitchModeratorsClient } from './twitch-moderators.client';
 type Transaction = Parameters<
   Parameters<InfrastructureService['db']['transaction']>[0]
 >[0];
@@ -26,6 +41,8 @@ export class ChannelsRepository {
   constructor(
     @Inject(InfrastructureService)
     private readonly infrastructure: InfrastructureService,
+    @Inject(TwitchModeratorsClient)
+    private readonly twitchModerators: TwitchModeratorsClient,
   ) {}
   private access(userId: string) {
     return or(
@@ -239,6 +256,28 @@ export class ChannelsRepository {
         );
       if (member.id === userId)
         throw new ForbiddenException('The owner role cannot be changed');
+      const [previous] = await tx
+        .select({ role: memberships.role })
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.channelId, channelId),
+            eq(memberships.userId, member.id),
+          ),
+        );
+      if (input.role === 'moderator' || previous?.role === 'moderator') {
+        const token = await this.moderatorToken(tx, userId);
+        if (!token || !channel.twitchChannelId)
+          throw new ForbiddenException(
+            'Twitch moderator permission is required to change moderator access.',
+          );
+        await this.twitchModerators.ensure(
+          token,
+          channel.twitchChannelId,
+          input.twitchUserId,
+          input.role === 'moderator',
+        );
+      }
       await tx
         .insert(memberships)
         .values({
@@ -262,21 +301,107 @@ export class ChannelsRepository {
     });
   }
   async removeMember(channelId: string, userId: string, memberId: string) {
-    return this.withOwner(channelId, userId, async (tx) => {
+    return this.withOwner(channelId, userId, async (tx, channel) => {
       if (memberId === userId)
         throw new ForbiddenException('The owner cannot be removed');
-      const [removed] = await tx
+      const [member] = await tx
+        .select({ role: memberships.role, twitchUserId: users.twitchUserId })
+        .from(memberships)
+        .innerJoin(users, eq(users.id, memberships.userId))
+        .where(
+          and(
+            eq(memberships.channelId, channelId),
+            eq(memberships.userId, memberId),
+          ),
+        );
+      if (!member) throw new NotFoundException('Membership not found');
+      if (member.role === 'moderator') {
+        const token = await this.moderatorToken(tx, userId);
+        if (!token || !channel.twitchChannelId)
+          throw new ForbiddenException(
+            'Twitch moderator permission is required to remove moderator access.',
+          );
+        await this.twitchModerators.ensure(
+          token,
+          channel.twitchChannelId,
+          member.twitchUserId,
+          false,
+        );
+      }
+      await tx
         .delete(memberships)
         .where(
           and(
             eq(memberships.channelId, channelId),
             eq(memberships.userId, memberId),
           ),
-        )
-        .returning();
-      if (!removed) throw new NotFoundException('Membership not found');
+        );
       await this.audit(tx, channelId, userId, 'membership.removed', memberId);
     });
+  }
+  async moderatorAccess(channelId: string, userId: string) {
+    const access = await this.withOwner(
+      channelId,
+      userId,
+      async (tx, channel) => {
+        const token = await this.moderatorToken(tx, userId);
+        if (
+          !token ||
+          !channel.twitchChannelId ||
+          !channel.connectedAt ||
+          channel.disconnectedAt
+        )
+          return null;
+        const people = await tx
+          .select({ twitchUserId: users.twitchUserId })
+          .from(memberships)
+          .innerJoin(users, eq(users.id, memberships.userId))
+          .where(
+            and(
+              eq(memberships.channelId, channelId),
+              eq(memberships.role, 'moderator'),
+            ),
+          );
+        return {
+          token,
+          broadcasterId: channel.twitchChannelId,
+          userIds: people.map((person) => person.twitchUserId),
+        };
+      },
+    );
+    if (!access) return { authorized: false, moderators: [] };
+    return {
+      authorized: true,
+      moderators: await this.twitchModerators.list(
+        access.token,
+        access.broadcasterId,
+        access.userIds,
+      ),
+    };
+  }
+  private async moderatorToken(tx: Transaction, userId: string) {
+    const [connection] = await tx
+      .select()
+      .from(oauthConnections)
+      .where(eq(oauthConnections.userId, userId));
+    if (
+      !connection ||
+      connection.revokedAt ||
+      !connection.encryptedTokens ||
+      !connection.scopes.includes(twitchModeratorScope) ||
+      !env.AUTH_ENCRYPTION_KEY
+    )
+      return null;
+    const tokens = tokenPairSchema.parse(
+      JSON.parse(
+        decryptTokens(
+          connection.encryptedTokens,
+          userId,
+          env.AUTH_ENCRYPTION_KEY,
+        ),
+      ),
+    );
+    return tokens.access_token;
   }
   private async audit(
     tx: Transaction,

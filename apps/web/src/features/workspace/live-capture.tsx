@@ -125,7 +125,9 @@ export function LiveCapture({ channel }: { channel: Channel }) {
                 <>
                   <span className={`status ${ready ? '' : 'neutral'}`}>
                     {!status.requested
-                      ? 'Capture stopped'
+                      ? status.error === 'authorization_required'
+                        ? 'Capture needs attention'
+                        : 'Capture stopped'
                       : ready
                         ? 'Listening on Twitch'
                         : 'Waiting for Twitch'}
@@ -153,7 +155,7 @@ export function LiveCapture({ channel }: { channel: Channel }) {
                       {status.error && (
                         <p className="notice error" role="alert">
                           {status.error === 'authorization_required'
-                            ? 'Twitch needs permission again. Reauthorize capture, then try starting it.'
+                            ? 'Twitch previously rejected the connection. Retry capture, or reconnect your Twitch permissions if it fails again.'
                             : 'Twitch could not finish connecting. Check the connection and try again.'}
                         </p>
                       )}
@@ -162,7 +164,7 @@ export function LiveCapture({ channel }: { channel: Channel }) {
                           className="button secondary"
                           href="/api/auth/twitch/capture"
                         >
-                          Reauthorize chat capture
+                          Reconnect Twitch permissions
                         </a>
                       )}
                       <p>
@@ -187,7 +189,9 @@ export function LiveCapture({ channel }: { channel: Channel }) {
                           ? 'Updating…'
                           : status.requested
                             ? 'Stop capture'
-                            : 'Start capture'}
+                            : status.error === 'authorization_required'
+                              ? 'Retry capture'
+                              : 'Start capture'}
                       </button>
                     </>
                   )}

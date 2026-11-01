@@ -163,6 +163,444 @@ test('demo evidence, precedent and human decision remain connected across naviga
     page.getByRole('heading', { name: 'Previously, in our corner of chat…' }),
   ).toBeVisible();
 });
+test('setup marks a team complete after adding a moderator and reopens it after removal', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context, 'outsider');
+  await page.goto('/app');
+  await page
+    .getByRole('button', { name: 'Connect channel', exact: true })
+    .click();
+  await expect(page.getByRole('link', { name: /Add your team/ })).toBeVisible();
+  const nav = page.getByRole('navigation', { name: 'Community navigation' });
+  await nav.getByRole('link', { name: 'Teams', exact: true }).click();
+  await page.getByLabel('Twitch user ID', { exact: true }).fill('200');
+  await page.getByRole('button', { name: 'Add to team', exact: true }).click();
+  await expect(
+    page.getByText('Moderator enabled in Lore and Twitch.', { exact: true }),
+  ).toBeVisible();
+  await nav.getByRole('link', { name: 'Overview', exact: true }).click();
+  const completed = page.getByRole('link', {
+    name: /Team added 1 teammate has access/,
+  });
+  await expect(completed).toHaveClass(/done/);
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light' });
+    await page
+      .locator('.panel')
+      .filter({
+        has: page.getByRole('heading', { name: 'Get set up', exact: true }),
+      })
+      .screenshot({ path: info.outputPath(`setup-complete-${width}.png`) });
+  }
+  await completed.click();
+  await page
+    .getByRole('button', { name: 'Remove user200', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Remove access', exact: true })
+    .click();
+  await expect(
+    page.getByText('Access removed from Lore and Twitch.', { exact: true }),
+  ).toBeVisible();
+  await nav.getByRole('link', { name: 'Overview', exact: true }).click();
+  await expect(
+    page.getByRole('link', { name: /Add your team/ }),
+  ).not.toHaveClass(/done/);
+  await expect(page.getByText('Team added', { exact: true })).toHaveCount(0);
+});
+
+test('one account can switch between teams with three different roles', async ({
+  page,
+  context,
+  browser,
+}, info) => {
+  await signIn(context, 'moderator');
+  const rosterRequests: string[] = [];
+  page.on('request', (request) => {
+    if (/\/channels\/[^/]+\/members$/.test(new URL(request.url()).pathname))
+      rosterRequests.push(request.url());
+  });
+  await page.goto('/app/team');
+  await expect(page.getByText(/You’re a moderator here/)).toBeVisible();
+  expect(rosterRequests).toEqual([]);
+  await page
+    .getByRole('button', { name: 'Connect your channel', exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'user200 team', exact: true }),
+  ).toBeVisible();
+  const otherOwner = await browser.newContext({
+    baseURL: 'http://127.0.0.1:4322',
+  });
+  try {
+    await signIn(otherOwner, 'team');
+    const auth = await (
+      await otherOwner.request.get('/api/auth/session')
+    ).json();
+    const headers = {
+      'X-CSRF-Token': auth.csrfToken,
+      Origin: 'http://127.0.0.1:4322',
+    };
+    const connected = await otherOwner.request.post('/api/channels/connect', {
+      headers,
+      data: {},
+    });
+    expect(connected.ok()).toBe(true);
+    const third = await connected.json();
+    const granted = await otherOwner.request.post(
+      `/api/channels/${third.id}/members`,
+      { headers, data: { twitchUserId: '200', role: 'team' } },
+    );
+    expect(granted.ok()).toBe(true);
+    for (const width of [390, 1440]) {
+      await page.emulateMedia({
+        colorScheme: width === 390 ? 'dark' : 'light',
+      });
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/app/team');
+      const teams = page.getByRole('region', { name: 'Your teams' });
+      await expect(teams.getByText('Owner', { exact: true })).toBeVisible();
+      await expect(teams.getByText('Moderator', { exact: true })).toBeVisible();
+      await expect(
+        teams.getByText('Team member', { exact: true }),
+      ).toBeVisible();
+      await teams
+        .getByRole('button', { name: 'Select user200 team', exact: true })
+        .click();
+      await expect(
+        page.getByRole('button', { name: 'Add to team' }),
+      ).toBeVisible();
+      await teams
+        .getByRole('button', { name: 'Select user300 team', exact: true })
+        .click();
+      await expect(page.getByText(/You’re a team member here/)).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Add to team' }),
+      ).toHaveCount(0);
+      await teams
+        .getByRole('button', { name: 'Select Browser test team', exact: true })
+        .click();
+      await expect(page.getByText(/You’re a moderator here/)).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Add to team' }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('combobox', { name: 'Selected channel' }),
+      ).toContainText('Browser test');
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: info.outputPath(`teams-${width}.png`),
+        fullPage: true,
+      });
+    }
+    expect(
+      (await page.request.get(`/api/channels/${channelId}/members`)).status(),
+    ).toBe(404);
+  } finally {
+    await otherOwner.close();
+  }
+});
+
+test('Moderator assignment promotes on Twitch and legacy roles can be synced explicitly', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  await page.route('**/members/twitch', (route) =>
+    route.fulfill({ json: { authorized: false, moderators: [] } }),
+  );
+  await page.goto('/app/team');
+  await expect(
+    page.getByRole('button', { name: 'Add to team', exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole('heading', { name: 'Moderator access', exact: true }),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: info.outputPath('teams-before-promotion.png'),
+    fullPage: true,
+  });
+  let promotions = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/members'))
+      promotions++;
+  });
+  await page.route('**/api/auth/twitch/team', async (route) => {
+    await page.unroute('**/members/twitch');
+    await route.fulfill({
+      status: 302,
+      headers: { location: '/app/team?moderator=resume' },
+    });
+  });
+  await page
+    .getByRole('button', { name: 'Enable on Twitch', exact: true })
+    .click();
+  await expect(
+    page.getByText('Moderator in Lore and Twitch', { exact: true }),
+  ).toHaveCount(1);
+  expect(promotions).toBe(1);
+  await page.reload();
+  await expect(
+    page.getByText('Moderator in Lore and Twitch', { exact: true }),
+  ).toHaveCount(1);
+  expect(promotions).toBe(1);
+  await chooseSelect(
+    page,
+    page.getByRole('combobox', { name: 'Role for user300', exact: true }),
+    'moderator',
+  );
+  await expect(
+    page.getByText('Moderator in Lore and Twitch', { exact: true }),
+  ).toHaveCount(2);
+  await expect(
+    page.getByText('Moderator enabled in Lore and Twitch.', { exact: true }),
+  ).toBeVisible();
+  for (const width of [390, 1440]) {
+    await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light' });
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => scrollTo(0, 0));
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`teams-twitch-moderators-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await chooseSelect(
+    page,
+    page.getByRole('combobox', { name: 'Role for user300', exact: true }),
+    'team',
+  );
+  await expect(
+    page.getByText('Team member saved. Twitch moderator access removed.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test('adding a moderator handles Twitch cancellation and resumes approval once', async ({
+  page,
+  context,
+}) => {
+  await signIn(context);
+  await page.route('**/members/twitch', (route) =>
+    route.fulfill({ json: { authorized: false, moderators: [] } }),
+  );
+  await page.goto('/app/team');
+  let approved = false;
+  let writes = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/members'))
+      writes++;
+  });
+  await page.route('**/api/auth/twitch/team', async (route) => {
+    if (approved) await page.unroute('**/members/twitch');
+    await route.fulfill({
+      status: 302,
+      headers: {
+        location: `/app/team?moderator=${approved ? 'resume' : 'cancelled'}`,
+      },
+    });
+  });
+  await page.getByLabel('Twitch user ID', { exact: true }).fill('300');
+  await page.getByRole('button', { name: 'Add to team', exact: true }).click();
+  await expect(
+    page.getByText('Twitch authorization was cancelled. No role was changed.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(writes).toBe(0);
+  expect(
+    await page.evaluate(() => sessionStorage.getItem('lore:pending-moderator')),
+  ).toBeNull();
+  approved = true;
+  await page.getByLabel('Twitch user ID', { exact: true }).fill('300');
+  await page.getByRole('button', { name: 'Add to team', exact: true }).click();
+  await expect(
+    page.getByText('Moderator enabled in Lore and Twitch.', { exact: true }),
+  ).toBeVisible();
+  expect(writes).toBe(1);
+  await page.reload();
+  await expect(
+    page.getByRole('combobox', { name: 'Role for user300', exact: true }),
+  ).toContainText('Moderator');
+  expect(writes).toBe(1);
+  await chooseSelect(
+    page,
+    page.getByRole('combobox', { name: 'Role for user300', exact: true }),
+    'team',
+  );
+  await expect(
+    page.getByText('Team member saved. Twitch moderator access removed.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test('demotion and removal resume the exact Twitch role change after approval', async ({
+  page,
+  context,
+}) => {
+  await signIn(context);
+  await page.goto('/app/team');
+  const role = () =>
+    page.getByRole('combobox', { name: 'Role for user300', exact: true });
+  await chooseSelect(page, role(), 'moderator');
+  await expect(
+    page.getByText('Moderator enabled in Lore and Twitch.', { exact: true }),
+  ).toBeVisible();
+  await page.route('**/members/twitch', (route) =>
+    route.fulfill({ json: { authorized: false, moderators: [] } }),
+  );
+  await page.reload();
+  let approve = false;
+  await page.route('**/api/auth/twitch/team', async (route) => {
+    if (approve) await page.unroute('**/members/twitch');
+    await route.fulfill({
+      status: 302,
+      headers: {
+        location: `/app/team?moderator=${approve ? 'resume' : 'cancelled'}`,
+      },
+    });
+  });
+  await chooseSelect(page, role(), 'team');
+  await expect(
+    page.getByText('Twitch authorization was cancelled. No role was changed.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(role()).toContainText('Moderator');
+  approve = true;
+  await chooseSelect(page, role(), 'team');
+  await expect(
+    page.getByText('Team member saved. Twitch moderator access removed.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(role()).toContainText('Team member');
+  await chooseSelect(page, role(), 'moderator');
+  await expect(
+    page.getByText('Moderator enabled in Lore and Twitch.', { exact: true }),
+  ).toBeVisible();
+  await page.route('**/members/twitch', (route) =>
+    route.fulfill({ json: { authorized: false, moderators: [] } }),
+  );
+  await page.reload();
+  await page
+    .getByRole('button', { name: 'Remove user300', exact: true })
+    .click();
+  await expect(page.getByRole('dialog')).toContainText(
+    'their moderator role on Twitch',
+  );
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Remove access', exact: true })
+    .click();
+  await expect(
+    page.getByText('Access removed from Lore and Twitch.', { exact: true }),
+  ).toBeVisible();
+  await expect(role()).toHaveCount(0);
+  await page.reload();
+  await expect(role()).toHaveCount(0);
+  await page.getByLabel('Twitch user ID', { exact: true }).fill('300');
+  await chooseSelect(
+    page,
+    page.getByRole('combobox', { name: 'Role', exact: true }),
+    'team',
+  );
+  await page.getByRole('button', { name: 'Add to team', exact: true }).click();
+  await expect(
+    page.getByText('Team access updated.', { exact: true }),
+  ).toBeVisible();
+});
+
+test('capture can retry a prior authorization failure with a currently valid grant', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  const types = [
+    'channel.chat.message',
+    'channel.chat.message_delete',
+    'channel.chat.clear',
+    'channel.chat.clear_user_messages',
+    'stream.online',
+    'stream.offline',
+  ];
+  await page.route('**/ingestion{,/start}', (route) => {
+    const running = route.request().method() === 'POST';
+    return route.fulfill({
+      json: {
+        configured: true,
+        requested: running,
+        missingScopes: [],
+        error: running ? null : 'authorization_required',
+        subscriptions: running
+          ? types.map((type) => ({ type, status: 'enabled' }))
+          : [],
+        pending: 0,
+        failed: 0,
+        lastReceivedAt: null,
+      },
+    });
+  });
+  await page.goto('/app/settings');
+  await page
+    .getByRole('button', { name: 'Manage live capture', exact: true })
+    .click();
+  const capture = page.locator('section.panel').filter({
+    has: page.getByRole('heading', { name: 'Live capture', exact: true }),
+  });
+  await expect(
+    capture.getByText('Capture needs attention', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    capture.getByRole('button', { name: 'Start capture', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    capture.getByRole('link', {
+      name: 'Reconnect Twitch permissions',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/api/auth/twitch/capture');
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await capture.screenshot({
+      path: info.outputPath(`capture-recovery-${width}.png`),
+    });
+  }
+  await capture
+    .getByRole('button', { name: 'Retry capture', exact: true })
+    .click();
+  await expect(
+    capture.getByText('Listening on Twitch', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    capture.getByRole('link', {
+      name: 'Reconnect Twitch permissions',
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    capture.getByRole('button', { name: 'Stop capture', exact: true }),
+  ).toBeVisible();
+});
+
 test('team rows keep names readable and controls usable', async ({
   page,
   context,
@@ -737,7 +1175,9 @@ test('production SSE refreshes clean views and preserves edits when another clie
     .getByLabel('Public title', { exact: true })
     .fill('Preserve my unsaved title');
   await create('Another client mutation while editing.');
-  await expect(page.getByText(/Your edits have been preserved/)).toBeVisible();
+  await expect(
+    page.getByText('New channel updates', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel('Public title', { exact: true })).toHaveValue(
     'Preserve my unsaved title',
   );

@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowUpRight,
   Check,
@@ -16,12 +16,50 @@ import { useWorkspace } from './workspace-context';
 import { Avatar } from '../../components/avatar';
 import { TwitchMark } from '../../components/brand';
 import { QuickCapture } from '../open-loops/quick-capture';
+import { useLiveRefresh } from '../continuity/live-updates';
+type TeamProgress =
+  | { channelId: string; status: 'ready'; count: number }
+  | { channelId: string; status: 'loading' | 'error' };
 export function Overview() {
-  const { session, channels, selected, selectChannel, connect, href } =
-    useWorkspace();
+  const {
+    session,
+    channels,
+    selected,
+    selectChannel,
+    connect,
+    href,
+    loadMembers,
+  } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const ownChannel = channels.find((channel) => channel.role === 'owner');
+  const teamChannelId =
+    selected?.role === 'owner' && selected.connected ? selected.id : undefined;
+  const [teamProgress, setTeamProgress] = useState<TeamProgress | null>(null);
+  const [revision, setRevision] = useState(0);
+  useLiveRefresh(teamChannelId ?? '', () => setRevision((value) => value + 1));
+  useEffect(() => {
+    if (!teamChannelId) return;
+    const controller = new AbortController();
+    setTeamProgress({ channelId: teamChannelId, status: 'loading' });
+    void loadMembers(teamChannelId, controller.signal)
+      .then((members) => {
+        if (!controller.signal.aborted)
+          setTeamProgress({
+            channelId: teamChannelId,
+            status: 'ready',
+            count: members.length,
+          });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setTeamProgress({ channelId: teamChannelId, status: 'error' });
+      });
+    return () => controller.abort();
+  }, [teamChannelId, loadMembers, revision]);
+  const progress =
+    teamProgress?.channelId === teamChannelId ? teamProgress : null;
+  const hasTeam = progress?.status === 'ready' && progress.count > 0;
   async function connectChannel() {
     setBusy(true);
     setError('');
@@ -184,13 +222,30 @@ export function Overview() {
                 </div>
                 <ArrowUpRight size={14} />
               </Link>
-              <Link className="setup-step" href={href('team')}>
+              <Link
+                className={`setup-step ${hasTeam ? 'done' : ''}`}
+                href={href('team')}
+              >
                 <span className="step-icon">
-                  <Link2 size={15} />
+                  {hasTeam ? <Check size={16} /> : <Link2 size={15} />}
                 </span>
                 <div>
-                  <strong>Add your team</strong>
-                  <small>Grant moderators and team members access.</small>
+                  <strong>
+                    {hasTeam
+                      ? 'Team added'
+                      : teamChannelId && progress?.status !== 'ready'
+                        ? 'Team access'
+                        : 'Add your team'}
+                  </strong>
+                  <small>
+                    {hasTeam
+                      ? `${progress.count} ${progress.count === 1 ? 'teammate has' : 'teammates have'} access.`
+                      : progress?.status === 'error'
+                        ? 'Open Teams to check access.'
+                        : teamChannelId && progress?.status !== 'ready'
+                          ? 'Checking team access…'
+                          : 'Grant moderators and team members access.'}
+                  </small>
                 </div>
                 <ArrowUpRight size={14} />
               </Link>

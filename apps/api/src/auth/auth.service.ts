@@ -1,7 +1,9 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { and, eq, gt, lt } from 'drizzle-orm';
+import { and, eq, gt, lt, isNull, isNotNull } from 'drizzle-orm';
+import { captureScopes } from '@lore/shared';
 import { InfrastructureService } from '../infrastructure.service';
 import {
+  channels,
   oauthConnections,
   oauthStates,
   sessions,
@@ -25,7 +27,10 @@ export class AuthService {
     @Inject(TwitchClient) private readonly twitch: TwitchClient,
     @Inject(TokenService) private readonly tokens: TokenService,
   ) {}
-  async beginLogin(expectedUserId?: string, chat = false, moderation = false) {
+  async beginLogin(
+    expectedUserId?: string,
+    purpose: 'capture' | 'chat' | 'moderation' | 'team' = 'capture',
+  ) {
     this.twitch.configured();
     const state = randomToken();
     const browser = randomToken();
@@ -49,13 +54,13 @@ export class AuthService {
       : [];
     return {
       browser,
-      url: this.twitch.authorizationUrl(
-        state,
-        Boolean(expectedUserId),
-        chat,
-        moderation,
-        existing?.scopes,
-      ),
+      url: this.twitch.authorizationUrl(state, {
+        capture: Boolean(expectedUserId) && purpose !== 'team',
+        chat: purpose === 'chat',
+        moderation: purpose === 'moderation',
+        existingScopes: existing?.scopes,
+        manageModerators: purpose === 'team',
+      }),
     };
   }
   async completeLogin(
@@ -91,7 +96,7 @@ export class AuthService {
         .where(eq(users.id, accepted.expectedUserId));
       if (!expected || expected.twitchUserId !== profile.id)
         throw new UnauthorizedException(
-          'Authorize capture with the signed-in Twitch account',
+          'Authorize Twitch with the signed-in account',
         );
     }
     const session = randomToken();
@@ -134,6 +139,20 @@ export class AuthService {
           target: oauthConnections.userId,
           set: connection,
         });
+      if (captureScopes.every((scope) => identity.scopes.includes(scope))) {
+        // A fresh validated grant clears an old failure, without restarting capture.
+        await tx
+          .update(channels)
+          .set({ captureError: null, updatedAt: new Date() })
+          .where(
+            and(
+              eq(channels.ownerUserId, user.id),
+              eq(channels.captureError, 'authorization_required'),
+              isNotNull(channels.connectedAt),
+              isNull(channels.disconnectedAt),
+            ),
+          );
+      }
       if (previousSession)
         await tx
           .delete(sessions)
