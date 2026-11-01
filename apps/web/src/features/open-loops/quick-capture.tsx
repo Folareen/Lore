@@ -1,6 +1,5 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
 import { createOpenLoopSchema, type OpenLoop } from '@lore/shared';
 import { useWorkspace } from '../workspace/workspace-context';
 export function QuickCapture({
@@ -56,10 +55,6 @@ export function QuickCapture({
   }
   return (
     <section className="panel">
-      <div className="panel-title">
-        <h2>Save a promise</h2>
-        <Plus size={19} aria-hidden="true" />
-      </div>
       <p className="panel-description">
         Saving confirms this promise and keeps its wording as the source.
       </p>

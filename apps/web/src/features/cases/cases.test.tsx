@@ -72,6 +72,7 @@ it('takes a fixture case through evidence, precedent review and an explicitly co
   const user = userEvent.setup();
   await screen.findByRole('heading', { name: previewCases[0].title });
   expect(screen.getByText(previewCases[0].ruleText)).toBeTruthy();
+  await user.click(screen.getByRole('tab', { name: 'Evidence' }));
   await user.click(screen.getByText('Attach evidence'));
   await user.type(screen.getByLabelText('Evidence label'), 'Reminder context');
   await user.type(
@@ -80,6 +81,7 @@ it('takes a fixture case through evidence, precedent review and an explicitly co
   );
   await user.click(screen.getByRole('button', { name: 'Retain evidence' }));
   await screen.findByRole('article', { name: 'Reminder context' });
+  await user.click(screen.getByRole('tab', { name: 'Review & decision' }));
   await user.click(
     screen.getByRole('button', { name: 'Find potential precedents' }),
   );
@@ -138,6 +140,7 @@ it('lets a moderator edit a case snapshot without sending response-only fields',
 it('requires a reason and confirmation before removing retained evidence', async () => {
   setup();
   const user = userEvent.setup();
+  await user.click(await screen.findByRole('tab', { name: 'Evidence' }));
   await screen.findByRole('article', { name: 'Moderator’s incident note' });
   await user.click(screen.getByRole('button', { name: 'Remove evidence' }));
   const dialog = screen.getByRole('dialog');
@@ -245,6 +248,7 @@ it('keeps API version conflicts visible and never presents a decision as saved',
   setup(undefined, false);
   const user = userEvent.setup();
   await screen.findByRole('heading', { name: previewCases[0].title });
+  await user.click(screen.getByRole('tab', { name: 'Review & decision' }));
   expect(
     await screen.findByText(
       /Configure GEMINI_API_KEY on the API to enable semantic retrieval and reviewable recommendations/,
@@ -268,10 +272,12 @@ it('preserves a human rationale when a new recommendation arrives', async () => 
   setup();
   const user = userEvent.setup();
   await screen.findByRole('heading', { name: previewCases[0].title });
+  await user.click(screen.getByRole('tab', { name: 'Review & decision' }));
   await user.type(
     screen.getByLabelText('Decision rationale'),
     'My notes should stay while I compare the context.',
   );
+  await user.click(screen.getByRole('tab', { name: 'Review & decision' }));
   await user.click(
     screen.getByRole('button', { name: 'Find potential precedents' }),
   );

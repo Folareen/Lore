@@ -120,9 +120,11 @@ test('demo evidence, precedent and human decision remain connected across naviga
       exact: true,
     }),
   ).toBeVisible();
+  await page.getByRole('tab', { name: 'Evidence', exact: true }).click();
   await expect(
     page.getByRole('article', { name: 'Moderator’s incident note' }),
   ).toBeVisible();
+  await page.getByRole('tab', { name: 'Review & decision' }).click();
   await page.getByRole('button', { name: 'Find potential precedents' }).click();
   await expect(
     page.getByRole('heading', {
@@ -827,6 +829,7 @@ test('authenticated promise capture, retention and publication use real API data
     .fill('The browser story is ready for newcomers.');
   await page.getByRole('button', { name: 'Save community draft' }).click();
   const article = page.getByRole('article', { name: 'Browser-approved recap' });
+  await article.getByRole('button', { name: 'Open draft' }).click();
   await article.getByRole('button', { name: 'Review for publication' }).click();
   await page
     .getByLabel('Publication review reason')
@@ -864,6 +867,7 @@ test('authenticated promise capture, retention and publication use real API data
     });
   }
 
+  await article.getByRole('button', { name: 'Manage story' }).click();
   await article.getByRole('button', { name: 'Unpublish', exact: true }).click();
   await page
     .getByLabel('Publication review reason')
@@ -947,6 +951,10 @@ test('mobile demo remains usable in light/dark and a missing-token OBS canvas st
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await page
+    .getByRole('dialog', { name: 'Community menu' })
+    .getByText('More tools & settings', { exact: true })
+    .click();
+  await page
     .getByRole('navigation', { name: 'Community navigation' })
     .getByRole('link', { name: 'Account', exact: true })
     .focus();
@@ -1010,7 +1018,7 @@ test('owner opts in, reviews a Gemini public draft and saves it without automati
   await page.goto('/app/publications');
   await page.getByRole('tab', { name: 'Create a recap' }).click();
   await page
-    .getByRole('button', { name: 'Enable gemini public summary drafts' })
+    .getByRole('switch', { name: 'Enable gemini public summary drafts' })
     .click();
   await page
     .getByRole('dialog')
@@ -1079,7 +1087,7 @@ test('records a synthetic clip after explicit consent, previews audio and confir
   await page.goto('/app/candidates');
   await page.getByText('Microphone follow-ups', { exact: true }).click();
   await page
-    .getByRole('button', { name: 'Enable microphone follow-up suggestions' })
+    .getByRole('switch', { name: 'Enable microphone follow-up suggestions' })
     .click();
   await page
     .getByRole('dialog')

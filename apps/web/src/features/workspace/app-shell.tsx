@@ -5,7 +5,14 @@ import { DemoToolbar } from '../demo/demo-home';
 import { WorkspaceStream } from '../continuity/live-updates';
 import { OverlayProvider } from '../overlay/overlay-context';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import {
+  Suspense,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { PageTitleContext } from '../../components/page-title';
 import { MobileNavigation } from './mobile-navigation';
 import {
   BookOpen,
@@ -60,7 +67,23 @@ function Shell({
     : route === 'community'
       ? 'publications'
       : route;
-  const title =
+  const [pageTitle, setPageTitle] = useState<ReactNode>(null);
+  const header = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const element = header.current;
+    const workspace = element?.closest<HTMLElement>('.workspace');
+    if (!element || !workspace) return;
+    const measure = () =>
+      workspace.style.setProperty(
+        '--workspace-header',
+        `${Math.ceil(element.getBoundingClientRect().height)}px`,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [route]);
+  const fallbackTitle =
     route === 'guide'
       ? 'Demo guide'
       : route === 'chat'
@@ -88,71 +111,84 @@ function Shell({
         <span>{label}</span>
       </Link>
     ));
+  if (preview && route === 'community') return <>{children}</>;
   return (
-    <div className="workspace">
-      <aside className="sidebar">
-        <Brand />
-        <MobileNavigation user={session.user} preview={preview}>
-          {links}
-        </MobileNavigation>
-        <nav aria-label="Community navigation">{links}</nav>
-        <Link
-          href={href('account')}
-          className="sidebar-account"
-          aria-label="Your account"
-        >
-          <Avatar name={session.user.login} size={35} />
-          <div>
-            <strong>{session.user.displayName}</strong>
-            <small>{preview ? 'Demo account' : 'Your account'}</small>
-          </div>
-        </Link>
-      </aside>
-      <div className="workspace-content">
-        <header className="workspace-topbar">
-          <div className="current-page">{title}</div>
-          <div className="topbar-actions">
-            {channels.length > 0 && (
-              <label className="channel-picker">
-                <span className="sr-only">Selected channel</span>
-                <Select
-                  aria-label="Selected channel"
-                  value={selected?.id || ''}
-                  onValueChange={(event) => selectChannel(event)}
-                >
-                  {channels.map((channel) => (
-                    <option key={channel.id} value={channel.id}>
-                      {channel.displayName}
-                    </option>
-                  ))}
-                </Select>
-              </label>
+    <PageTitleContext.Provider value={setPageTitle}>
+      <div className="workspace">
+        <aside className="sidebar">
+          <Brand />
+          <MobileNavigation
+            user={session.user}
+            preview={preview}
+            secondary={links.filter((link) =>
+              ['overlay', 'settings', 'team', 'account'].includes(
+                String(link.key),
+              ),
             )}
-            <ThemeToggle />
-            <Link href={href('account')} aria-label="Open your account">
-              <Avatar name={session.user.login} size={34} />
-            </Link>
-          </div>
-        </header>
-        <main id="main-content">
-          {preview && (
-            <div className="demo-session-bar">
-              <span>
-                <strong>Demo fixture</strong> · Simulated actions
-              </span>
-              <div className="demo-session-actions">
-                <DemoToolbar />
-                <Link href="/login">
-                  Sign in <ArrowUpRight size={12} aria-hidden="true" />
-                </Link>
-              </div>
+            secondaryActive={[
+              'overlay',
+              'settings',
+              'team',
+              'account',
+            ].includes(current)}
+          >
+            {links.filter(
+              (link) =>
+                !['overlay', 'settings', 'team', 'account'].includes(
+                  String(link.key),
+                ),
+            )}
+          </MobileNavigation>
+          <nav aria-label="Community navigation">{links}</nav>
+        </aside>
+        <div className="workspace-content">
+          <header className="workspace-topbar" ref={header}>
+            <h1 className="workspace-page-title">
+              {pageTitle ?? fallbackTitle}
+            </h1>
+            <div className="topbar-actions">
+              {channels.length > 0 && (
+                <label className="channel-picker">
+                  <span className="sr-only">Selected channel</span>
+                  <Select
+                    aria-label="Selected channel"
+                    value={selected?.id || ''}
+                    onValueChange={(event) => selectChannel(event)}
+                  >
+                    {channels.map((channel) => (
+                      <option key={channel.id} value={channel.id}>
+                        {channel.displayName}
+                      </option>
+                    ))}
+                  </Select>
+                </label>
+              )}
+              <ThemeToggle />
+              <Link href={href('account')} aria-label="Open your account">
+                <Avatar name={session.user.login} size={34} />
+              </Link>
             </div>
-          )}
-          <WorkspaceStream />
-          {children}
-        </main>
+          </header>
+          <main id="main-content">
+            {preview && (
+              <div className="demo-session-bar">
+                <span>
+                  <strong>Demo fixture</strong> · Simulated actions
+                </span>
+                <div className="demo-session-actions">
+                  <DemoToolbar />
+                  <Link href="/login">
+                    Sign in <ArrowUpRight size={12} aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
+            )}
+            <WorkspaceStream />
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </PageTitleContext.Provider>
   );
 }
 export function AppShell({

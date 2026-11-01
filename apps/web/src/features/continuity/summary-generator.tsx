@@ -64,10 +64,12 @@ export function SummaryGenerator({
       {open && (
         <>
           <p>
-            Choose 1–10 already-published entries. Gemini receives only these
-            public texts. Review the result, edit it and save it as a draft
-            before publication approval. Google may use free-tier inputs and
-            outputs to improve its products.
+            Select up to 10 published stories to draft a recap. Review and edit
+            the result before saving; generation never publishes.
+          </p>
+          <p className="muted">
+            Only selected public text is sent to Gemini. Google may use
+            free-tier inputs and outputs to improve its products.
           </p>
           {preview ? (
             <p className="notice">

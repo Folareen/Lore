@@ -1,4 +1,5 @@
 'use client';
+import { formatDateTime } from '../../lib/date-time';
 import { useState } from 'react';
 import { recordRuleChangeSchema, type ModerationDesk } from '@lore/shared';
 import { useModeration } from './moderation-context';
@@ -97,8 +98,7 @@ export function RuleChanges({
             <p className="case-prose">{r.changeSummary}</p>
             <p className="case-prose">{r.ruleText}</p>
             <p className="muted">
-              Twitch user {r.actorTwitchUserId} ·{' '}
-              {new Date(r.createdAt).toLocaleString()}
+              Twitch user {r.actorTwitchUserId} · {formatDateTime(r.createdAt)}
             </p>
           </article>
         ))}

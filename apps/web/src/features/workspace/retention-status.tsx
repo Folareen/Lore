@@ -1,4 +1,7 @@
 'use client';
+import { RefreshCw } from 'lucide-react';
+import { IconButton } from '../../components/icon-button';
+import { formatDateTime } from '../../lib/date-time';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { retentionStatusSchema, type Channel } from '@lore/shared';
@@ -94,9 +97,7 @@ export function RetentionStatus({ channel }: { channel: Channel }) {
           <p>
             Last successful purge:{' '}
             {status.lastPurgedAt
-              ? new Date(status.lastPurgedAt).toLocaleString('en-GB', {
-                  timeZone: 'UTC',
-                }) + ' UTC'
+              ? formatDateTime(status.lastPurgedAt)
               : 'not recorded yet'}
             .
           </p>
@@ -116,16 +117,16 @@ export function RetentionStatus({ channel }: { channel: Channel }) {
         >
           {busy ? 'Purging…' : 'Purge expired chat now'}
         </button>
-        <button
-          className="button secondary"
+        <IconButton
+          label="Refresh retention status"
           disabled={busy}
           onClick={() => {
             setError('');
             setRevision((v) => v + 1);
           }}
         >
-          Refresh retention status
-        </button>
+          <RefreshCw size={18} aria-hidden="true" />
+        </IconButton>
       </div>
       <p className="muted">
         Runs automatically every minute. Shortening retention also purges

@@ -1,4 +1,7 @@
 'use client';
+import { IconButton } from '../../components/icon-button';
+import { formatDateTime } from '../../lib/date-time';
+import { PageTitle } from '../../components/page-title';
 import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
@@ -22,7 +25,7 @@ export function OpenLoopsScreen({ focusId }: { focusId?: string }) {
     <>
       <div className="page-heading">
         <div>
-          <h1>Promises</h1>
+          <PageTitle>Promises</PageTitle>
           <p>Keep track of what you said you’d do.</p>
         </div>
         <Link className="button secondary" href={href('brief')}>
@@ -172,14 +175,13 @@ function LoopsPanel({
             ))}
           </Select>
         </div>
-        <button
-          className="button secondary"
-          aria-label="Refresh promises"
+        <IconButton
+          label="Refresh promises"
           disabled={loading || busy}
           onClick={() => setRevision((value) => value + 1)}
         >
-          <RefreshCw size={16} aria-hidden="true" /> Refresh
-        </button>
+          <RefreshCw size={18} aria-hidden="true" />
+        </IconButton>
       </div>
       {loading && <p role="status">Loading your promises…</p>}
       {error && (
@@ -353,7 +355,7 @@ function OpenLoopCard({
                 <strong>{openLoopLabels[entry.toStatus]}</strong>
                 <span>
                   Twitch user {entry.actorTwitchUserId} ·{' '}
-                  {new Date(entry.occurredAt).toLocaleString()}
+                  {formatDateTime(entry.occurredAt)}
                 </span>
                 {entry.reason && <p>{entry.reason}</p>}
               </li>

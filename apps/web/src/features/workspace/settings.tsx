@@ -1,12 +1,12 @@
 'use client';
+import { PageTitle } from '../../components/page-title';
 import { SectionTabs } from '../../components/section-tabs';
 import { Select } from '../../components/select';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Check, Link2, Radio } from 'lucide-react';
+import { Check, Radio } from 'lucide-react';
 import type { Channel } from '@lore/shared';
 import { useWorkspace } from './workspace-context';
-import { Avatar } from '../../components/avatar';
 import { ConfirmDialog } from '../../components/confirm-dialog';
 import { RetentionStatus } from './retention-status';
 import { FeatureControls } from '../continuity/feature-controls';
@@ -18,7 +18,7 @@ export function ChannelSettings() {
       <>
         <div className="page-heading">
           <div>
-            <h1>Channel settings</h1>
+            <PageTitle>Channel settings</PageTitle>
             <p>Capture, retention and channel access.</p>
           </div>
         </div>
@@ -97,14 +97,14 @@ function SettingsPanel({ channel }: { channel: Channel }) {
     <>
       <div className="page-heading">
         <div>
-          <h1>Channel settings</h1>
+          <PageTitle>Channel settings</PageTitle>
           <p>Connection and privacy preferences for {channel.displayName}.</p>
         </div>
-        <span className="status purple">
-          {owner ? 'Channel owner' : 'Owner-managed settings'}
+        <span className={`status ${channel.connected ? '' : 'neutral'}`}>
+          {channel.connected ? 'Twitch connected' : 'Disconnected'}
         </span>
       </div>
-      <div className="content-stack">
+      <div className="content-stack settings-content">
         {error && (
           <p className="notice error" role="alert">
             {error}
@@ -130,29 +130,6 @@ function SettingsPanel({ channel }: { channel: Channel }) {
                     key={`${channel.id}-${channel.connected}`}
                     channel={channel}
                   />
-                  <section className="panel">
-                    <div className="panel-title">
-                      <h2>Twitch connection</h2>
-                      <Link2 size={19} />
-                    </div>
-                    <div className="connection-row">
-                      <div className="connection-identity">
-                        <Avatar name={channel.displayName} size={48} />
-                        <div>
-                          <strong>{channel.displayName}</strong>
-                          <small>
-                            Twitch user ID {channel.twitchChannelId}
-                          </small>
-                        </div>
-                      </div>
-                      <span
-                        className={`status ${channel.connected ? '' : 'neutral'}`}
-                      >
-                        <i />
-                        {channel.connected ? 'Connected' : 'Disconnected'}
-                      </span>
-                    </div>
-                  </section>
                 </div>
               ),
             },
@@ -175,7 +152,7 @@ function SettingsPanel({ channel }: { channel: Channel }) {
                       retention also shortens existing deadlines. Retained
                       evidence is kept separately.
                     </p>
-                    <form onSubmit={save}>
+                    <form onSubmit={save} className="retention-form">
                       <div className="field">
                         <label htmlFor="retention">
                           Ordinary chat retention

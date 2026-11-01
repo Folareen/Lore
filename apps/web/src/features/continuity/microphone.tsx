@@ -1,4 +1,5 @@
 'use client';
+import { formatDateTime } from '../../lib/date-time';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { FeatureControls } from './feature-controls';
@@ -241,15 +242,14 @@ function MicrophoneCapturePanel() {
       {open && (
         <>
           <p>
-            Record up to 30 seconds, listen back, then explicitly send the clip
-            to Gemini. Lore does not store raw audio. Transcripts are
-            AI-generated and may be wrong; suggestions stay unconfirmed until a
-            person reviews them.
+            Record up to 30 seconds, play it back, then submit it to Gemini.
+            Review the transcript and each suggestion before confirming a
+            promise.
           </p>
           <p className="muted">
-            Recording stops when this panel closes, the tab is hidden or you
-            leave this channel. Transcripts follow channel retention. Google may
-            use free-tier inputs and outputs to improve its products.
+            Raw audio is not stored. Recording stops when you leave or hide this
+            panel. Transcripts follow channel retention; Google may use
+            free-tier inputs and outputs to improve its products.
           </p>
           {preview ? (
             <p className="notice">
@@ -379,7 +379,7 @@ function VoiceReview({
         {capture.transcript ?? 'Transcript unavailable'}
       </p>
       <p className="muted">
-        {capture.model} · expires {new Date(capture.expiresAt).toLocaleString()}
+        {capture.model} · expires {formatDateTime(capture.expiresAt)}
       </p>
       {!capture.drafts?.length && <p>No reviewable follow-ups found.</p>}
       {capture.drafts?.map((draft, index) => (

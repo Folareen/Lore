@@ -1,18 +1,19 @@
 'use client';
+import { IconButton } from './icon-button';
 import { Moon, Sun, Monitor } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   return (
-    <button
+    <IconButton
       className="icon-button theme-toggle"
-      aria-label="Toggle light and dark mode"
+      label="Toggle light and dark mode"
       onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
     >
       <Sun className="sun-icon" size={19} />
       <Moon className="moon-icon" size={19} />
-    </button>
+    </IconButton>
   );
 }
 export function ThemeChoices() {

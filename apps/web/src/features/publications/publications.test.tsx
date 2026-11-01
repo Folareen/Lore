@@ -109,10 +109,13 @@ it('keeps a new draft out of visitor catch-up until an explicit human publicatio
     screen.getByRole('button', { name: 'View fixture publisher' }),
   );
   const card = await screen.findByRole('article', { name: title });
+  await user.click(within(card).getByRole('button', { name: 'Open draft' }));
   await user.click(
     within(card).getByRole('button', { name: 'Review for publication' }),
   );
-  const dialog = screen.getByRole('dialog');
+  const dialog = screen.getByRole('dialog', {
+    name: /Publish this exact wording/,
+  });
   expect(
     within(dialog).getByText(
       'Chat chose a new garden path. Everyone is welcome to help name it.',
@@ -160,6 +163,7 @@ it('withdraws published sources and dependent newcomer summaries when a public s
   const user = userEvent.setup();
   const source = previewPublications[0];
   const card = await screen.findByRole('article', { name: source.title });
+  await user.click(within(card).getByRole('button', { name: 'Manage story' }));
   await user.click(within(card).getByRole('button', { name: 'Edit as draft' }));
   await user.clear(screen.getByLabelText('Public story'));
   await user.type(
@@ -184,7 +188,7 @@ it('withdraws published sources and dependent newcomer summaries when a public s
   await user.click(
     screen.getByRole('button', { name: 'View fixture visitor' }),
   );
-  await screen.findByText('No catch-up summary published yet.');
+  await screen.findByText('No catch-up published yet');
   expect(screen.queryByText(source.title)).toBeNull();
   expect(screen.queryByText(previewPublications[2].body)).toBeNull();
   expect(fetchMock).not.toHaveBeenCalled();
@@ -194,6 +198,7 @@ it('requires reasoned deletion and removes the entry from visitor views', async 
   const user = userEvent.setup();
   const source = previewPublications[1];
   const card = await screen.findByRole('article', { name: source.title });
+  await user.click(within(card).getByRole('button', { name: 'Manage story' }));
   await user.click(within(card).getByText('More actions'));
   await user.click(within(card).getByRole('button', { name: 'Delete entry' }));
   await user.type(
@@ -214,6 +219,13 @@ it('requires reasoned deletion and removes the entry from visitor views', async 
 });
 it('shows the exact short catch-up wording and keeps chat sending disabled in the fixture preview', async () => {
   setup();
+  await userEvent.click(
+    within(
+      await screen.findByRole('article', {
+        name: previewPublications[2].title,
+      }),
+    ).getByRole('button', { name: 'Manage story' }),
+  );
   expect(
     await screen.findByText(previewPublications[2].chatSummary),
   ).toBeTruthy();
@@ -292,6 +304,7 @@ it('sends a CSRF-protected versioned approval and keeps a conflict visible witho
   });
   setup('owner', false);
   const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Open draft' }));
   await screen.findByRole('button', { name: 'Review for publication' });
   await user.click(
     screen.getByRole('button', { name: 'Review for publication' }),
@@ -301,7 +314,9 @@ it('sends a CSRF-protected versioned approval and keeps a conflict visible witho
     'Keep this review rationale.',
   );
   await user.click(screen.getByRole('button', { name: 'Approve & publish' }));
-  const dialog = screen.getByRole('dialog');
+  const dialog = screen.getByRole('dialog', {
+    name: /Publish this exact wording/,
+  });
   await within(dialog).findByRole('alert');
   expect(
     (screen.getByLabelText('Publication review reason') as HTMLTextAreaElement)

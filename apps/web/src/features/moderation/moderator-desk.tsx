@@ -1,4 +1,8 @@
 'use client';
+import { RefreshCw } from 'lucide-react';
+import { IconButton } from '../../components/icon-button';
+import { formatDateTime } from '../../lib/date-time';
+import { PageTitle } from '../../components/page-title';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -18,7 +22,7 @@ export function ModeratorDeskScreen() {
       </Link>
       <div className="page-heading">
         <div>
-          <h1>Shift desk</h1>
+          <PageTitle>Shift desk</PageTitle>
           <p>Handoffs, consistency reviews and follow-up actions.</p>
         </div>
       </div>
@@ -206,13 +210,13 @@ function WorkflowDesk({ record }: { record?: CaseDetail }) {
             }
           </button>
         ))}
-        <button
-          className="button secondary"
+        <IconButton
+          label="Refresh desk"
           disabled={loading || busy}
           onClick={refresh}
         >
-          Refresh desk
-        </button>
+          <RefreshCw size={18} aria-hidden="true" />
+        </IconButton>
       </div>
       {notice && (
         <p className="notice" role="status">
@@ -279,7 +283,7 @@ function WorkflowDesk({ record }: { record?: CaseDetail }) {
                   <strong>{a.action.replaceAll('_', ' ')}</strong>
                   <p className="muted">
                     Twitch user {a.actorTwitchUserId} ·{' '}
-                    {new Date(a.occurredAt).toLocaleString()}
+                    {formatDateTime(a.occurredAt)}
                   </p>
                   {a.assigneeId && (
                     <p className="muted">

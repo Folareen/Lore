@@ -1,4 +1,5 @@
 'use client';
+import { PageTitle } from '../../components/page-title';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
@@ -80,7 +81,7 @@ export function Overview() {
     <>
       <div className="page-heading">
         <div>
-          <h1>Hey, {session.user.displayName}.</h1>
+          <PageTitle>Hey, {session.user.displayName}.</PageTitle>
           <p>
             {selected
               ? `Here’s what’s next for ${selected.displayName}.`

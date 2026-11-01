@@ -1,4 +1,5 @@
 'use client';
+import { PageTitle } from '../../components/page-title';
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useDemo } from './demo-seed-context';
@@ -73,8 +74,7 @@ export function DemoHome() {
     <div className="content-stack demo-guide">
       <div className="page-heading">
         <div>
-          <p className="record-meta">Demo fixture · About three minutes</p>
-          <h1>The next stream remembers.</h1>
+          <PageTitle>The next stream remembers.</PageTitle>
           <p>
             Meet cozybyte’s community: an island garden, a promise to finish the
             tour, and a spoiler appeal that needs a human decision.
@@ -82,9 +82,8 @@ export function DemoHome() {
         </div>
       </div>
       <p className="notice">
-        Everything here is synthetic. You can edit and review it freely. Changes
-        stay in this tab and reset on refresh. No Twitch account or provider key
-        is needed.
+        Explore a sample community. Changes stay in this tab and reset on
+        refresh. Nothing is sent to Twitch.
       </p>
       <ol className="demo-journey">
         <li>
@@ -101,10 +100,6 @@ export function DemoHome() {
             <Link className="button secondary" href="/demo?view=chat">
               Simulate !promise / !catchup
             </Link>
-            <Link className="button secondary" href={href('candidates')}>
-              Review a suggestion
-            </Link>
-            <Link href={href('brief')}>Next-stream brief →</Link>
           </div>
         </li>
         <li>
@@ -133,16 +128,9 @@ export function DemoHome() {
               Catch up as a newcomer
             </Link>
             <Link href={href('publications')}>Public stories →</Link>
-            <Link href={href('overlay')}>Preview the OBS selection →</Link>
           </div>
         </li>
       </ol>
-      <p className="notice">
-        The demo starts with {demo.data.loops.length} promises,{' '}
-        {demo.data.cases.length} cases, a consistency concern, a repair action
-        and a saved handoff. Provider results, chat and OBS credentials are
-        simulations; no external action is performed.
-      </p>
     </div>
   );
 }

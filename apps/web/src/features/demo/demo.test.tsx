@@ -220,13 +220,18 @@ it('updates simulated catch-up after human source withdrawal and restores the re
   const source = await screen.findByRole('article', {
     name: 'What is the moss club?',
   });
+  await user.click(
+    within(source).getByRole('button', { name: 'Manage story' }),
+  );
   await user.click(within(source).getByRole('button', { name: 'Unpublish' }));
   await user.type(
     screen.getByLabelText('Publication review reason'),
     'Withdraw this synthetic source.',
   );
   await user.click(
-    within(screen.getByRole('dialog')).getByRole('button', {
+    within(
+      screen.getByRole('dialog', { name: 'Withdraw this entry?' }),
+    ).getByRole('button', {
       name: 'Withdraw community entry',
     }),
   );

@@ -45,7 +45,6 @@ export function MarketingFooter() {
           GitHub <ArrowUpRight size={14} aria-hidden="true" />
         </a>
       </nav>
-      <span>Codex × TwitchCon Hackathon submission</span>
     </footer>
   );
 }

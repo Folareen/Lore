@@ -1,4 +1,5 @@
 'use client';
+import { PageTitle } from '../../components/page-title';
 import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
@@ -25,7 +26,7 @@ export function ModerationScreen() {
     <div className="moderation-page content-stack">
       <div className="page-heading">
         <div>
-          <h1>Moderation cases</h1>
+          <PageTitle>Moderation cases</PageTitle>
           <p>Review evidence, applicable rules and earlier decisions.</p>
         </div>
         {canManage && (

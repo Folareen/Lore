@@ -83,7 +83,7 @@ it('requires an explicit owner confirmation and CSRF before enabling event impor
     ).getAttribute('href'),
   ).toBe('/api/auth/twitch/moderation');
   await userEvent.click(
-    await screen.findByRole('button', {
+    await screen.findByRole('switch', {
       name: 'Enable import moderation events',
     }),
   );

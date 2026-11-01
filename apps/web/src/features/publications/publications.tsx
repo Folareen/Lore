@@ -1,4 +1,9 @@
 'use client';
+import { RefreshCw } from 'lucide-react';
+import { IconButton } from '../../components/icon-button';
+import { formatDate, formatDateTime } from '../../lib/date-time';
+import { PageTitle } from '../../components/page-title';
+import { RecordDialog } from '../../components/record-dialog';
 import { SectionTabs } from '../../components/section-tabs';
 import { useSearchParams } from 'next/navigation';
 import { FeatureControls } from '../continuity/feature-controls';
@@ -116,7 +121,7 @@ function PublishingDesk({ promiseId }: { promiseId?: string }) {
     <div className="content-stack">
       <div className="page-heading">
         <div>
-          <h1>Public stories</h1>
+          <PageTitle>Public stories</PageTitle>
           <p>
             Share community moments. Review each draft before anyone can see it.
           </p>
@@ -174,13 +179,13 @@ function PublishingDesk({ promiseId }: { promiseId?: string }) {
                       <option value="unpublished">Unpublished</option>
                     </Select>
                   </label>
-                  <button
-                    className="button secondary"
+                  <IconButton
+                    label="Refresh entries"
                     onClick={refresh}
                     disabled={loading}
                   >
-                    Refresh entries
-                  </button>
+                    <RefreshCw size={18} aria-hidden="true" />
+                  </IconButton>
                 </div>
                 {creating && (
                   <PublicationForm
@@ -338,6 +343,7 @@ function PublicationCard({
 }) {
   const api = usePublications();
   const { selected, preview, href } = useWorkspace();
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [editing, setEditing] = useState(false),
     [action, setAction] = useState<'publish' | 'unpublish' | 'delete' | null>(
       null,
@@ -349,244 +355,268 @@ function PublicationCard({
       z.infer<typeof publicationHistorySchema>[] | null
     >(null);
   return (
-    <article className="panel content-stack" aria-label={r.title}>
+    <article className="queue-record publication-record" aria-label={r.title}>
       <div className="panel-title">
         <p className="record-meta">{publicationLabels[r.kind]}</p>
         <span className="status purple">{r.status}</span>
       </div>
       <h2>{r.title}</h2>
-      <p className="case-prose">{r.body}</p>
-      {r.kind === 'summary' && (
-        <div className="candidate-source">
-          <h3>Short chat wording</h3>
-          <p className="case-prose">{r.chatSummary}</p>
-        </div>
-      )}
-      <p className="muted publication-date">
-        {r.publishedAt
-          ? `Published ${new Date(r.publishedAt).toLocaleDateString()}`
-          : 'Private draft · not visible to viewers'}
-        {r.sourceIds.length
-          ? ` · ${r.sourceIds.length} public ${r.sourceIds.length === 1 ? 'source' : 'sources'}`
-          : ''}
-      </p>
-      <details className="publication-details">
-        <summary>Publication details</summary>
-        <p className="muted">
-          v{r.version}
+      <p className="queue-excerpt">{r.body}</p>
+      <div className="candidate-row-footer">
+        <span className="muted">
           {r.publishedAt
-            ? ` · Published ${new Date(r.publishedAt).toLocaleString()} by Twitch user ${r.approvedByTwitchUserId}`
-            : ' · Private until publication review'}
+            ? `Published ${formatDate(r.publishedAt)}`
+            : 'Private draft · not visible to viewers'}
+        </span>
+        <button
+          className="button secondary"
+          onClick={() => setReviewOpen(true)}
+        >
+          {r.status === 'published' ? 'Manage story' : 'Open draft'}
+        </button>
+      </div>
+      <RecordDialog
+        open={reviewOpen}
+        title={
+          r.status === 'published' ? 'Manage public story' : 'Review draft'
+        }
+        busy={busy}
+        onClose={() => setReviewOpen(false)}
+      >
+        <h3 className="review-subject">{r.title}</h3>
+        <p className="case-prose">{r.body}</p>
+        {r.kind === 'summary' && (
+          <div className="candidate-source">
+            <h3>Short chat wording</h3>
+            <p className="case-prose">{r.chatSummary}</p>
+          </div>
+        )}
+        <p className="muted publication-date">
+          {r.publishedAt
+            ? `Published ${formatDate(r.publishedAt)}`
+            : 'Private draft · not visible to viewers'}
           {r.sourceIds.length
-            ? ` · ${r.sourceIds.length} public citations`
+            ? ` · ${r.sourceIds.length} public ${r.sourceIds.length === 1 ? 'source' : 'sources'}`
             : ''}
-          {r.promiseId ? ' · Private promise drafting source' : ''}
         </p>
-      </details>
-      {editing ? (
-        <PublicationForm
-          initial={r}
-          onCancel={() => setEditing(false)}
-          onSave={async (fields) => {
-            await api.edit(
-              r,
-              editPublicationSchema.parse({
-                ...fields,
-                expectedVersion: r.version,
-              }),
-            );
-            setEditing(false);
-            onChanged();
-          }}
-        />
-      ) : (
-        <div className="button-row">
-          <button
-            className="button secondary"
-            disabled={!connected || (r.status === 'published' && !canReview)}
-            onClick={() => setEditing(true)}
-          >
-            {r.status === 'published' ? 'Edit as draft' : 'Edit draft'}
-          </button>
-          {canReview && r.status !== 'published' && (
-            <button
-              className="button primary"
-              disabled={!connected}
-              onClick={() => {
-                setReason('');
-                setError('');
-                setAction('publish');
-              }}
-            >
-              Review for publication
-            </button>
-          )}
-          {canReview && r.status === 'published' && (
+        <details className="publication-details">
+          <summary>Publication details</summary>
+          <p className="muted">
+            v{r.version}
+            {r.publishedAt
+              ? ` · Published ${formatDateTime(r.publishedAt)} by Twitch user ${r.approvedByTwitchUserId}`
+              : ' · Private until publication review'}
+            {r.sourceIds.length
+              ? ` · ${r.sourceIds.length} public citations`
+              : ''}
+            {r.promiseId ? ' · Private promise drafting source' : ''}
+          </p>
+        </details>
+        {editing ? (
+          <PublicationForm
+            initial={r}
+            onCancel={() => setEditing(false)}
+            onSave={async (fields) => {
+              await api.edit(
+                r,
+                editPublicationSchema.parse({
+                  ...fields,
+                  expectedVersion: r.version,
+                }),
+              );
+              setEditing(false);
+              onChanged();
+            }}
+          />
+        ) : (
+          <div className="button-row">
             <button
               className="button secondary"
-              onClick={() => {
-                setReason('');
-                setError('');
-                setAction('unpublish');
-              }}
+              disabled={!connected || (r.status === 'published' && !canReview)}
+              onClick={() => setEditing(true)}
             >
-              Unpublish
+              {r.status === 'published' ? 'Edit as draft' : 'Edit draft'}
             </button>
-          )}
-          {r.status === 'published' && selected && (
-            <Link
-              className="text-link"
-              href={
-                preview
-                  ? `${href('community')}&entry=${r.id}`
-                  : `/c/${selected.slug}/entries/${r.id}`
-              }
-              prefetch={false}
-            >
-              View public story ↗
-            </Link>
-          )}
-          <details className="record-more">
-            <summary>More actions</summary>
-            <div className="button-row">
-              {(canReview || r.status === 'draft') && (
-                <button
-                  className="button danger"
-                  onClick={() => {
-                    setReason('');
-                    setError('');
-                    setAction('delete');
-                  }}
-                >
-                  Delete entry
-                </button>
-              )}
+            {canReview && r.status !== 'published' && (
+              <button
+                className="button primary"
+                disabled={!connected}
+                onClick={() => {
+                  setReason('');
+                  setError('');
+                  setAction('publish');
+                }}
+              >
+                Review for publication
+              </button>
+            )}
+            {canReview && r.status === 'published' && (
               <button
                 className="button secondary"
                 onClick={() => {
+                  setReason('');
                   setError('');
-                  void api
-                    .history(r)
-                    .then(setHistory)
-                    .catch((e: unknown) =>
-                      setError(
-                        e instanceof Error
-                          ? e.message
-                          : 'Could not load history.',
-                      ),
-                    );
+                  setAction('unpublish');
                 }}
               >
-                Review history
+                Unpublish
               </button>
-            </div>
-          </details>
-        </div>
-      )}
-      {error && !action && (
-        <p className="notice error" role="alert">
-          {error}
-        </p>
-      )}
-      {history && (
-        <ol className="case-history">
-          {history.map((h) => (
-            <li key={h.id}>
-              <strong>{h.action.replaceAll('_', ' ')}</strong> · v{h.version}
-              <p className="muted">
-                Twitch user {h.actorTwitchUserId} ·{' '}
-                {new Date(h.occurredAt).toLocaleString()}
-              </p>
-              {h.reason && <p className="case-prose">{h.reason}</p>}
-            </li>
-          ))}
-        </ol>
-      )}
-      {action && (
-        <ConfirmDialog
-          tone={action === 'publish' ? 'primary' : 'danger'}
-          title={
-            action === 'publish'
-              ? 'Publish this exact wording?'
-              : action === 'delete'
-                ? 'Delete this community entry?'
-                : 'Withdraw this entry?'
-          }
-          confirmLabel={
-            action === 'publish'
-              ? 'Approve & publish'
-              : action === 'delete'
-                ? 'Delete community entry'
-                : 'Withdraw community entry'
-          }
-          busy={busy}
-          onCancel={() => setAction(null)}
-          onConfirm={() => {
-            if (!reason.trim()) {
-              setError('Record a review reason first.');
-              return;
-            }
-            setBusy(true);
-            setError('');
-            void api
-              .action(
-                r,
-                publicationActionSchema.parse({
-                  expectedVersion: r.version,
-                  action,
-                  reason,
-                }),
-              )
-              .then(() => {
-                setAction(null);
-                onChanged();
-              })
-              .catch((e: unknown) =>
-                setError(
-                  e instanceof Error
-                    ? e.message
-                    : 'Could not save this review.',
-                ),
-              )
-              .finally(() => setBusy(false));
-          }}
-        >
-          <h3>{r.title}</h3>
-          <p className="case-prose">{r.body}</p>
-          {r.chatSummary && (
-            <p className="case-prose">
-              <strong>Chat reply:</strong> {r.chatSummary}
-            </p>
-          )}
-          <p>
-            {action === 'publish'
-              ? 'Visitors can read and copy this text. Confirm it contains only information your community agreed to share.'
-              : action === 'delete'
-                ? 'The entry’s text will be cleared. Dependent summaries will be withdrawn for review. This cannot be undone.'
-                : 'This entry and any dependent published summaries will leave public pages and future catch-up replies.'}
+            )}
+            {r.status === 'published' && selected && (
+              <Link
+                className="text-link"
+                href={
+                  preview
+                    ? `${href('community')}&entry=${r.id}`
+                    : `/c/${selected.slug}/entries/${r.id}`
+                }
+                prefetch={false}
+              >
+                View public story ↗
+              </Link>
+            )}
+            <details className="record-more">
+              <summary>More actions</summary>
+              <div className="button-row">
+                {(canReview || r.status === 'draft') && (
+                  <button
+                    className="button danger"
+                    onClick={() => {
+                      setReason('');
+                      setError('');
+                      setAction('delete');
+                    }}
+                  >
+                    Delete entry
+                  </button>
+                )}
+                <button
+                  className="button secondary"
+                  onClick={() => {
+                    setError('');
+                    void api
+                      .history(r)
+                      .then(setHistory)
+                      .catch((e: unknown) =>
+                        setError(
+                          e instanceof Error
+                            ? e.message
+                            : 'Could not load history.',
+                        ),
+                      );
+                  }}
+                >
+                  Review history
+                </button>
+              </div>
+            </details>
+          </div>
+        )}
+        {error && !action && (
+          <p className="notice error" role="alert">
+            {error}
           </p>
-          {r.sourceIds.length > 0 && (
+        )}
+        {history && (
+          <ol className="case-history">
+            {history.map((h) => (
+              <li key={h.id}>
+                <strong>{h.action.replaceAll('_', ' ')}</strong> · v{h.version}
+                <p className="muted">
+                  Twitch user {h.actorTwitchUserId} ·{' '}
+                  {formatDateTime(h.occurredAt)}
+                </p>
+                {h.reason && <p className="case-prose">{h.reason}</p>}
+              </li>
+            ))}
+          </ol>
+        )}
+        {action && (
+          <ConfirmDialog
+            tone={action === 'publish' ? 'primary' : 'danger'}
+            title={
+              action === 'publish'
+                ? 'Publish this exact wording?'
+                : action === 'delete'
+                  ? 'Delete this community entry?'
+                  : 'Withdraw this entry?'
+            }
+            confirmLabel={
+              action === 'publish'
+                ? 'Approve & publish'
+                : action === 'delete'
+                  ? 'Delete community entry'
+                  : 'Withdraw community entry'
+            }
+            busy={busy}
+            onCancel={() => setAction(null)}
+            onConfirm={() => {
+              if (!reason.trim()) {
+                setError('Record a review reason first.');
+                return;
+              }
+              setBusy(true);
+              setError('');
+              void api
+                .action(
+                  r,
+                  publicationActionSchema.parse({
+                    expectedVersion: r.version,
+                    action,
+                    reason,
+                  }),
+                )
+                .then(() => {
+                  setAction(null);
+                  onChanged();
+                })
+                .catch((e: unknown) =>
+                  setError(
+                    e instanceof Error
+                      ? e.message
+                      : 'Could not save this review.',
+                  ),
+                )
+                .finally(() => setBusy(false));
+            }}
+          >
+            <h3>{r.title}</h3>
+            <p className="case-prose">{r.body}</p>
+            {r.chatSummary && (
+              <p className="case-prose">
+                <strong>Chat reply:</strong> {r.chatSummary}
+              </p>
+            )}
             <p>
-              Confirm the {r.sourceIds.length} selected public sources still
-              support this wording.
+              {action === 'publish'
+                ? 'Visitors can read and copy this text. Confirm it contains only information your community agreed to share.'
+                : action === 'delete'
+                  ? 'The entry’s text will be cleared. Dependent summaries will be withdrawn for review. This cannot be undone.'
+                  : 'This entry and any dependent published summaries will leave public pages and future catch-up replies.'}
             </p>
-          )}
-          <label className="field">
-            Publication review reason
-            <textarea
-              required
-              maxLength={1000}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          </label>
-          {error && (
-            <p className="notice error" role="alert">
-              {error}
-            </p>
-          )}
-        </ConfirmDialog>
-      )}
+            {r.sourceIds.length > 0 && (
+              <p>
+                Confirm the {r.sourceIds.length} selected public sources still
+                support this wording.
+              </p>
+            )}
+            <label className="field">
+              Publication review reason
+              <textarea
+                required
+                maxLength={1000}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </label>
+            {error && (
+              <p className="notice error" role="alert">
+                {error}
+              </p>
+            )}
+          </ConfirmDialog>
+        )}
+      </RecordDialog>
     </article>
   );
 }
@@ -623,13 +653,12 @@ function CatchupSettings() {
         </span>
       </div>
       <p>
-        Reply with the latest approved short recap, or a neutral response when
-        none is published. Replies are posted as your connected broadcaster,
-        only to this channel, at most once per minute.
+        Send the latest approved recap and a public link when someone types
+        !catchup. Replies use your broadcaster account, at most once per minute.
       </p>
       <p className="muted">
-        Turn on capture, authorize sending, then enable replies below. These
-        permissions are separate from sign-in. Stopping capture stops replies.
+        Capture and chat authorization are required. Sign-in alone never enables
+        replies.
       </p>
       {error && (
         <p className="notice error" role="alert">
@@ -648,8 +677,8 @@ function CatchupSettings() {
             <>
               {!state.configured && (
                 <p className="notice">
-                  Configure your Twitch application and EventSub in the README
-                  first.
+                  Chat replies are unavailable. The server’s Twitch connection
+                  needs configuration.
                 </p>
               )}
               {state.missingScopes.length > 0 && (
@@ -705,18 +734,19 @@ function CatchupSettings() {
                 ? 'Disable !catchup replies'
                 : 'Enable !catchup replies'}
             </button>
-            <button
-              className="button secondary"
+            <IconButton
+              label="Refresh chat status"
+
               onClick={() => setRevision((r) => r + 1)}
             >
-              Refresh chat status
-            </button>
+              <RefreshCw size={18} aria-hidden="true" />
+            </IconButton>
           </div>
           {state.recent.length > 0 && (
             <ul>
               {state.recent.map((r) => (
                 <li key={r.id}>
-                  {r.status} · {new Date(r.createdAt).toLocaleString()}
+                  {r.status} · {formatDateTime(r.createdAt)}
                 </li>
               ))}
             </ul>

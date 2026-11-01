@@ -30,7 +30,7 @@ for (const width of [390, 1440]) {
       }, theme);
       for (const view of views) {
         await page.goto(`/demo?view=${view}`);
-        await expect(page.locator('main h1')).toBeVisible();
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
         await expect(page.locator('main')).not.toContainText(
           'coming in later chapters',
         );
@@ -168,6 +168,10 @@ test('mobile workspace navigation opens, closes with Escape and follows a destin
     page.getByRole('dialog', { name: 'Community menu' }),
   ).toBeVisible();
   await page
+    .getByRole('dialog', { name: 'Community menu' })
+    .getByText('More tools & settings', { exact: true })
+    .click();
+  await page
     .getByRole('navigation', { name: 'Community navigation' })
     .getByRole('link', { name: 'Account', exact: true })
     .focus();
@@ -208,7 +212,7 @@ test('narrow phones and tablets keep marketing and core tasks within the viewpor
       '/demo?view=publications',
     ]) {
       await page.goto(path);
-      await expect(page.locator('main h1')).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect
         .poll(() =>
           page.evaluate(
@@ -290,7 +294,7 @@ test('case detail and sign-in remain readable on phones and desktops', async ({
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/demo?view=moderation');
     await page.locator('.case-list-row').first().click();
-    await expect(page.locator('main h1')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect
       .poll(() =>
         page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
@@ -327,7 +331,7 @@ test('marketing headers stay fixed and tour layout and anchor navigation stay cl
     for (const path of ['/', '/how-it-works']) {
       await page.goto(path);
       const header = page.locator('.marketing-header');
-      const title = page.locator('main h1');
+      const title = page.getByRole('heading', { level: 1 });
       const initialHeader = await header.boundingBox();
       const heading = await title.boundingBox();
       expect(heading!.y).toBeGreaterThanOrEqual(initialHeader!.height);
@@ -393,9 +397,16 @@ test('demo uses the real workspace, fixed headers and keyboard-accessible custom
     await expect(page.locator('.demo-session-bar')).toBeVisible();
     await expect(page.locator('.demo-toolbar')).toHaveCount(0);
     const header = page.locator('.workspace-topbar');
-    const heading = await page.locator('main h1').boundingBox();
+    const heading = await page.getByRole('heading', { level: 1 }).boundingBox();
     const top = await header.boundingBox();
-    expect(heading!.y).toBeGreaterThanOrEqual(top!.y + top!.height);
+    expect(heading!.y).toBeGreaterThanOrEqual(top!.y);
+    expect(heading!.y + heading!.height).toBeLessThanOrEqual(
+      top!.y + top!.height,
+    );
+    await expect(page.locator('main h1')).toHaveCount(0);
+    expect(
+      (await page.locator('main').boundingBox())!.y,
+    ).toBeGreaterThanOrEqual(top!.y + top!.height);
     await page.evaluate(() => scrollTo(0, 600));
     await expect
       .poll(async () => (await header.boundingBox())!.y)
