@@ -1,15 +1,18 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { ConfirmDialog } from '../../components/confirm-dialog';
 import { useWorkspace } from '../workspace/workspace-context';
 export function WorkspaceStream() {
   const { selected, preview } = useWorkspace();
   const pathname = usePathname();
   const dirty = useRef(false);
   const [pending, setPending] = useState(false);
+  const [confirmRefresh, setConfirmRefresh] = useState(false);
   useEffect(() => {
     dirty.current = false;
     setPending(false);
+    setConfirmRefresh(false);
   }, [pathname, selected?.id]);
   useEffect(() => {
     const edited = (event: Event) => {
@@ -73,15 +76,29 @@ export function WorkspaceStream() {
         {status}
       </p>
       {pending && (
-        <p className="notice">
-          Updates are available. Your edits have been preserved.{' '}
+        <div className="notice live-update-notice">
+          <div role="status">
+            <strong>New channel updates</strong>
+            <p>Save any changes, then refresh to see the latest activity.</p>
+          </div>
           <button
-            className="button secondary"
-            onClick={() => window.location.reload()}
+            className="button secondary compact"
+            onClick={() => setConfirmRefresh(true)}
           >
-            Reload page and discard unsaved edits
+            Refresh
           </button>
-        </p>
+        </div>
+      )}
+      {confirmRefresh && (
+        <ConfirmDialog
+          title="Refresh this page?"
+          confirmLabel="Refresh page"
+          busy={false}
+          onCancel={() => setConfirmRefresh(false)}
+          onConfirm={() => window.location.reload()}
+        >
+          <p>Any unsaved changes will be lost. Cancel to keep editing.</p>
+        </ConfirmDialog>
       )}
     </div>
   ) : null;

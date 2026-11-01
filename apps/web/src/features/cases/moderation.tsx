@@ -4,7 +4,7 @@ import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FolderOpen, Plus } from 'lucide-react';
+import { ArrowUpRight, FolderOpen, Plus, RefreshCw } from 'lucide-react';
 import {
   caseOutcomeLabels,
   caseStatusSchema,
@@ -15,14 +15,34 @@ import { useWorkspace } from '../workspace/workspace-context';
 import { useCases } from './cases-context';
 import { CaseForm } from './case-form';
 export function ModerationScreen() {
-  const { selected, href } = useWorkspace();
+  const { selected } = useWorkspace();
+  const [draft, setDraft] = useState<{
+    channelId: string;
+    requestId: string;
+  } | null>(null);
+  const canManage = selected && ['owner', 'moderator'].includes(selected.role);
   return (
-    <>
+    <div className="moderation-page content-stack">
       <div className="page-heading">
         <div>
           <h1>Moderation cases</h1>
           <p>Review evidence, applicable rules and earlier decisions.</p>
         </div>
+        {canManage && (
+          <button
+            className="button primary"
+            disabled={!selected.connected}
+            onClick={() =>
+              setDraft({
+                channelId: selected.id,
+                requestId: crypto.randomUUID(),
+              })
+            }
+          >
+            <Plus size={16} aria-hidden="true" />
+            New case
+          </button>
+        )}
       </div>
       {!selected ? (
         <p className="notice">Choose a channel first.</p>
@@ -31,18 +51,23 @@ export function ModerationScreen() {
           Cases are private to owners and approved moderators.
         </p>
       ) : (
-        <>
-          <Link className="button secondary" href={href('workflows')}>
-            Shift desk · reviews & repair actions
-          </Link>
-          <CasesList key={selected.id} />
-        </>
+        <CasesList
+          key={selected.id}
+          requestId={draft?.channelId === selected.id ? draft.requestId : null}
+          onCancel={() => setDraft(null)}
+        />
       )}
-    </>
+    </div>
   );
 }
-function CasesList() {
-  const { selected } = useWorkspace();
+function CasesList({
+  requestId,
+  onCancel,
+}: {
+  requestId: string | null;
+  onCancel: () => void;
+}) {
+  const { selected, href } = useWorkspace();
   const { list, create, caseHref } = useCases();
   const router = useRouter();
   const [rows, setRows] = useState<CaseSummary[]>([]);
@@ -52,8 +77,6 @@ function CasesList() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const channelId = selected!.id;
   useLiveRefresh(channelId, () => setRevision((value) => value + 1));
   useEffect(() => {
@@ -88,18 +111,7 @@ function CasesList() {
           This channel is disconnected. Saved cases are read-only.
         </p>
       )}
-      <div className="button-row">
-        <button
-          className="button primary"
-          disabled={!selected?.connected}
-          onClick={() => {
-            setRequestId(crypto.randomUUID());
-            setCreating(true);
-          }}
-        >
-          <Plus size={16} aria-hidden="true" />
-          New case
-        </button>
+      <div className="cases-toolbar">
         <label className="field">
           Case status
           <Select
@@ -118,22 +130,31 @@ function CasesList() {
         </label>
         <button
           className="button secondary"
+          aria-label="Refresh cases"
           disabled={loading || busy}
           onClick={() => setRevision((r) => r + 1)}
         >
-          Refresh cases
+          <RefreshCw size={16} aria-hidden="true" />
+          Refresh
         </button>
+        <Link
+          className="button secondary cases-shift-link"
+          href={href('workflows')}
+        >
+          Shift desk
+          <ArrowUpRight size={16} aria-hidden="true" />
+        </Link>
       </div>
-      {creating && (
+      {requestId && (
         <CaseForm
           label="Create case"
-          onCancel={() => setCreating(false)}
+          onCancel={onCancel}
           onSave={async (fields) => {
             const record = await create(
               channelId,
               createCaseSchema.parse({ ...fields, requestId }),
             );
-            setCreating(false);
+            onCancel();
             router.push(caseHref(record.id, channelId));
           }}
         />
@@ -145,12 +166,13 @@ function CasesList() {
       )}
       {loading && <p role="status">Loading cases…</p>}
       {!loading && !error && !rows.length && (
-        <div className="empty-state">
+        <div className="empty-state cases-empty-state">
           <FolderOpen aria-hidden="true" />
-          <h2>No cases here yet.</h2>
+          <h2>{filter === 'all' ? 'No cases yet' : 'No matching cases'}</h2>
           <p>
-            Start with what happened, the rule in effect, and the evidence you
-            actually have.
+            {filter === 'all'
+              ? 'Create a case to keep the incident, rule and evidence together.'
+              : 'Try another status to find the case you need.'}
           </p>
         </div>
       )}

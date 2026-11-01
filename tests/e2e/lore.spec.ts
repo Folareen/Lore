@@ -163,6 +163,174 @@ test('demo evidence, precedent and human decision remain connected across naviga
     page.getByRole('heading', { name: 'Previously, in our corner of chat…' }),
   ).toBeVisible();
 });
+test('team rows keep names readable and controls usable', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  const names = ['folareen_', 'A_very_long_community_member_name'];
+  await page.route('**/api/channels/*/members', (route) =>
+    route.fulfill({
+      json: names.map((displayName, index) => ({
+        userId: `00000000-0000-4000-8000-00000000000${index + 1}`,
+        twitchUserId: String(100 + index),
+        login: displayName.toLowerCase(),
+        displayName,
+        role: 'moderator',
+        verificationState: 'owner_approved',
+      })),
+    }),
+  );
+  for (const width of [320, 390, 1440]) {
+    await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light' });
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/app/team');
+    for (const name of names) {
+      await expect(page.getByText(name, { exact: true })).toBeVisible();
+      const identity = await page
+        .getByText(name, { exact: true })
+        .boundingBox();
+      expect(identity!.width).toBeGreaterThan(110);
+      await expect(
+        page.getByRole('combobox', { name: `Role for ${name}` }),
+      ).toBeVisible();
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`team-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await page.getByRole('combobox', { name: 'Role for folareen_' }).click();
+  await expect(
+    page.getByRole('option', { name: 'Team member', exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('button', { name: 'Remove folareen_', exact: true })
+    .click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByText('folareen_', { exact: true })).toBeVisible();
+});
+
+test('moderation list has aligned controls and useful empty states', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  await page.route(/\/api\/channels\/[^/]+\/cases\?/, (route) =>
+    route.fulfill({ json: { items: [], nextCursor: null } }),
+  );
+  for (const width of [320, 390, 1440]) {
+    await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light' });
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/app/moderation');
+    await expect(
+      page.getByRole('heading', { name: 'No cases yet', exact: true }),
+    ).toBeVisible();
+    const filter = page.getByRole('combobox', { name: 'Case status' });
+    const refresh = page.getByRole('button', { name: 'Refresh cases' });
+    await expect(filter).toBeVisible();
+    await expect(refresh).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    if (width === 1440) {
+      const selectBox = await filter.boundingBox();
+      const refreshBox = await refresh.boundingBox();
+      expect(
+        Math.abs(
+          selectBox!.y + selectBox!.height - refreshBox!.y - refreshBox!.height,
+        ),
+      ).toBeLessThan(2);
+    }
+    await page.screenshot({
+      path: info.outputPath(`moderation-empty-${width}.png`),
+      fullPage: true,
+    });
+    await chooseSelect(page, filter, 'open');
+    await expect(
+      page.getByRole('heading', { name: 'No matching cases' }),
+    ).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'New case', exact: true }).click();
+  await expect(page.getByLabel('Case title')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByLabel('Case title')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Shift desk', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/moderation\/workflows/);
+});
+
+test('channel updates preserve editing until refresh is confirmed', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'EventSource', {
+      value: class extends EventTarget {
+        constructor() {
+          super();
+          window.addEventListener('qa:revision', (event) => {
+            this.dispatchEvent(
+              new MessageEvent('changed', {
+                data: JSON.stringify({
+                  revision: (event as CustomEvent).detail,
+                }),
+              }),
+            );
+          });
+        }
+        close() {}
+      },
+    });
+  });
+  await page.goto('/app/streamer');
+  const wording = page.getByLabel('What did we promise?');
+  await wording.fill('Keep this unsaved promise');
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('qa:revision', { detail: 1 }));
+    window.dispatchEvent(new CustomEvent('qa:revision', { detail: 2 }));
+  });
+  await expect(
+    page.getByText('New channel updates', { exact: true }),
+  ).toBeVisible();
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(
+      page.getByRole('button', { name: 'Refresh', exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`update-notice-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Refresh this page?' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(wording).toHaveValue('Keep this unsaved promise');
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Refresh page', exact: true }).click();
+  await expect(wording).toHaveValue('');
+  await expect(
+    page.getByText('New channel updates', { exact: true }),
+  ).toHaveCount(0);
+});
+
 test('authenticated promise capture, retention and publication use real API data', async ({
   page,
   context,

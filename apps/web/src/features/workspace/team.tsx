@@ -181,7 +181,7 @@ export function Team() {
               </span>
             </div>
             <div className="member-list">
-              <div className="member-row">
+              <div className="member-row member-row-owner">
                 <Avatar name={session.user.login} />
                 <div className="member-identity">
                   <strong>

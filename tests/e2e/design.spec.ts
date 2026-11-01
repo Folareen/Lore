@@ -217,7 +217,7 @@ test('narrow phones and tablets keep marketing and core tasks within the viewpor
   }
 });
 
-test('sign-in keeps its primary action in view on small phones', async ({
+test('sign-in stays balanced on phones and tall desktops', async ({
   page,
 }, info) => {
   await page.route('**/api/auth/status', (route) =>
@@ -230,6 +230,7 @@ test('sign-in keeps its primary action in view on small phones', async ({
       { width: 390, height: 660 },
       { width: 768, height: 900 },
       { width: 1440, height: 900 },
+      { width: 1280, height: 1347 },
     ]) {
       await page.setViewportSize(viewport);
       await page.goto('/login');
@@ -244,6 +245,15 @@ test('sign-in keeps its primary action in view on small phones', async ({
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
+      if (viewport.width > 600) {
+        const story = await page.locator('.auth-story > div').boundingBox();
+        const form = await page.locator('.auth-form').boundingBox();
+        expect(story).not.toBeNull();
+        expect(form).not.toBeNull();
+        expect(
+          Math.abs(story!.y + story!.height / 2 - form!.y - form!.height / 2),
+        ).toBeLessThan(2);
+      }
       await page.screenshot({
         path: info.outputPath(`login-${viewport.width}-${theme}.png`),
         fullPage: true,
