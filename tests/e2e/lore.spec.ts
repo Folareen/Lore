@@ -163,6 +163,69 @@ test('demo evidence, precedent and human decision remain connected across naviga
     page.getByRole('heading', { name: 'Previously, in our corner of chat…' }),
   ).toBeVisible();
 });
+test('channel updates preserve editing until refresh is confirmed', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'EventSource', {
+      value: class extends EventTarget {
+        constructor() {
+          super();
+          window.addEventListener('qa:revision', (event) => {
+            this.dispatchEvent(
+              new MessageEvent('changed', {
+                data: JSON.stringify({
+                  revision: (event as CustomEvent).detail,
+                }),
+              }),
+            );
+          });
+        }
+        close() {}
+      },
+    });
+  });
+  await page.goto('/app/streamer');
+  const wording = page.getByLabel('What did we promise?');
+  await wording.fill('Keep this unsaved promise');
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('qa:revision', { detail: 1 }));
+    window.dispatchEvent(new CustomEvent('qa:revision', { detail: 2 }));
+  });
+  await expect(
+    page.getByText('New channel updates', { exact: true }),
+  ).toBeVisible();
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(
+      page.getByRole('button', { name: 'Refresh', exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`update-notice-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Refresh this page?' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(wording).toHaveValue('Keep this unsaved promise');
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Refresh page', exact: true }).click();
+  await expect(wording).toHaveValue('');
+  await expect(
+    page.getByText('New channel updates', { exact: true }),
+  ).toHaveCount(0);
+});
+
 test('authenticated promise capture, retention and publication use real API data', async ({
   page,
   context,

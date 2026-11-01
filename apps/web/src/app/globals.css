@@ -2627,6 +2627,21 @@ details[open] > summary {
 .workspace-stream .notice {
   align-self: stretch;
 }
+.live-update-notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  background: var(--surface);
+}
+.live-update-notice > div {
+  flex: 1 1 240px;
+}
+.live-update-notice strong {
+  display: block;
+  color: var(--text);
+  margin-bottom: 2px;
+}
 .overview-shortcuts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));

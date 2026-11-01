@@ -251,5 +251,17 @@ it('refreshes clean views while protecting unsaved input, and still refreshes co
     'value',
     'Keep this edit',
   );
-  expect(screen.getByText(/Your edits have been preserved/)).toBeTruthy();
+  expect(screen.getByText('New channel updates')).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+  expect(
+    screen.getByRole('dialog', { name: 'Refresh this page?' }),
+  ).toBeTruthy();
+  expect(screen.getByText(/Any unsaved changes will be lost/)).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(screen.getByLabelText('Unsaved wording')).toHaveProperty(
+    'value',
+    'Keep this edit',
+  );
+  expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
 });
