@@ -63,6 +63,12 @@ export function CommunityPreview() {
         feedHref={feedHref}
         catchupHref={catchupHref}
         query={query}
+        onTabChange={(kind) => {
+          const filters = new URLSearchParams(query);
+          if (kind) filters.set('kind', kind);
+          else filters.delete('kind');
+          setQuery(filters.toString());
+        }}
         onSearch={(event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);

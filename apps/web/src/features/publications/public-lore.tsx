@@ -22,11 +22,12 @@ import { CommunityContent, type PublicView } from './public-content';
 import { CommunityAssistant } from './community-assistant';
 export function PublicReader({
   initial,
-  query = '',
+  query: initialQuery = '',
 }: {
   initial: PublicView;
   query?: string;
 }) {
+  const [query, setQuery] = useState(initialQuery);
   const [view, setView] = useState<PublicView | null>(initial),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
@@ -65,10 +66,12 @@ export function PublicReader({
       if (!signal?.aborted && sequence === requestSequence.current) {
         setView(next);
         setError('');
+        setBusy(false);
       }
     } catch (e) {
       if (!signal?.aborted && sequence === requestSequence.current) {
         setView(null);
+        setBusy(false);
         setError(
           e instanceof Error
             ? e.message
@@ -115,6 +118,24 @@ export function PublicReader({
           feedHref={`/c/${slug}`}
           catchupHref={`/c/${slug}/catch-up`}
           busy={busy}
+          onTabChange={(kind) => {
+            const params = new URLSearchParams(query);
+            if (kind) params.set('kind', kind);
+            else params.delete('kind');
+            params.delete('cursor');
+            if (params.toString() === query) return;
+            ++requestSequence.current;
+            setBusy(true);
+            setView((current) =>
+              current?.mode === 'feed'
+                ? {
+                    mode: 'feed',
+                    data: { ...current.data, items: [], nextCursor: null },
+                  }
+                : current,
+            );
+            setQuery(params.toString());
+          }}
           onMore={
             view.mode === 'feed'
               ? () => {

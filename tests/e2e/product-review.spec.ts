@@ -117,6 +117,23 @@ for (const width of [390, 1440]) {
       await expect(
         page.getByRole('heading', { name: 'Community stories', exact: true }),
       ).toBeVisible();
+      const communityUrl = page.url();
+      await page.getByRole('tab', { name: 'Inside references' }).click();
+      await expect(
+        page.getByRole('tab', { name: 'Inside references' }),
+      ).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('.reader-story')).toHaveCount(1);
+      await expect(page.locator('.reader-story')).toContainText(
+        'What is the moss club?',
+      );
+      await expect(page).toHaveURL(communityUrl);
+      await page.getByRole('tab', { name: 'Plans & promises' }).click();
+      await expect(page.locator('.reader-story')).toHaveCount(1);
+      await expect(page.locator('.reader-story')).toContainText(
+        'Finish the community island tour',
+      );
+      await expect(page).toHaveURL(communityUrl);
+      await page.getByRole('tab', { name: 'Stories', exact: true }).click();
       await page.locator('.reader-footer').scrollIntoViewIfNeeded();
       await expect
         .poll(() =>

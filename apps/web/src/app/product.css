@@ -1676,21 +1676,29 @@ dialog::backdrop {
 .reader-community-identity .avatar {
   flex-shrink: 0;
 }
-.reader-community-nav {
+.reader-community-tabs .section-tab-list {
   display: flex;
   gap: 24px;
   overflow-x: auto;
   margin: 24px 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
   border-bottom: 1px solid var(--raised);
 }
-.reader-community-nav a {
+.reader-community-tabs .section-tab-list [role='tab'] {
   white-space: nowrap;
   padding: 12px 0;
   font-size: 14px;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
 }
-.reader-community-nav a:first-child {
+.reader-community-tabs .section-tab-list [role='tab'][aria-selected='true'] {
   color: var(--purple-ink);
-  border-bottom: 2px solid var(--primary);
+  border-bottom-color: var(--primary);
+  background: transparent;
+  box-shadow: none;
 }
 .reader-shell .reader-feed-title {
   font-size: 22px;
@@ -1711,7 +1719,7 @@ dialog::backdrop {
     width: 56px;
     height: 56px;
   }
-  .reader-community-nav {
+  .reader-community-tabs .section-tab-list {
     gap: 20px;
   }
   .reader-shell .reader-story > p {

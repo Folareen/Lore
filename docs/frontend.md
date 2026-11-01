@@ -53,4 +53,4 @@ Public catch-up groups published plans, community references and stories beneath
 
 `/discover` uses server-rendered public results and a GET search form, keeping search and pagination in shareable URLs. It links to the existing channel public pages and catch-up, with loading, error, invalid-query and empty states. Discover is reachable from desktop/mobile marketing navigation and community navigation; mobile uses a labeled compass link to preserve room for Stories and Catch up. Result cards use only public previews, never generated channel descriptions or private workspace counts.
 
-Community home leads with channel identity, a linked recap and compact story previews. The public header stays pinned while scrolling; anchored sections reserve its mobile height.
+Community home leads with channel identity, a linked recap and compact story previews. Stories, Inside references and Plans & promises are accessible in-page tabs; kind-scoped public queries retain search and paginate within the active category. Full entries and catch-up remain navigation links. The public header stays pinned while scrolling; anchored sections reserve its mobile height.

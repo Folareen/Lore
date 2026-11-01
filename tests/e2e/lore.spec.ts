@@ -1341,6 +1341,21 @@ test('public community guide answers signed-out viewers with public citations an
   await context.clearCookies();
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
+    await page.goto('/c/browser-test');
+    await page.getByRole('tab', { name: 'Inside references' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'The pond committee', exact: true }),
+    ).toBeVisible();
+    await expect(page).toHaveURL(/\/c\/browser-test$/);
+    await expect(page.locator('.reader-story .reader-kind')).toHaveText([
+      'Inside reference',
+    ]);
+    await page.getByRole('tab', { name: 'Plans & promises' }).click();
+    await expect(
+      page.getByRole('tab', { name: 'Plans & promises' }),
+    ).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('status')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/c\/browser-test$/);
     await page.goto('/c/browser-test/catch-up');
     await expect(
       page.getByRole('heading', { name: 'Know the references', exact: true }),

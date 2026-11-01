@@ -7,6 +7,7 @@ import { Brand } from '../../components/brand';
 import { Avatar } from '../../components/avatar';
 import { ThemeToggle } from '../../components/theme-control';
 import { Select } from '../../components/select';
+import { SectionTabs } from '../../components/section-tabs';
 export const publicationLabels = {
   milestone: 'Milestone',
   reference: 'Inside reference',
@@ -81,6 +82,7 @@ export function CommunityContent({
   busy = false,
   onMore,
   onSearch,
+  onTabChange,
 }: {
   view: PublicView;
   link: (id: string) => string;
@@ -89,6 +91,7 @@ export function CommunityContent({
   query?: string;
   busy?: boolean;
   onMore?: () => void;
+  onTabChange?: (kind: string) => void;
   onSearch?: React.FormEventHandler<HTMLFormElement>;
 }) {
   if (view.mode === 'entry')
@@ -152,61 +155,15 @@ export function CommunityContent({
       ),
     },
   ];
-  return (
-    <div className="reader-content">
-      <div
-        className={`reader-intro${view.mode === 'feed' ? ' reader-community-hero' : ''}`}
-      >
-        <div>
-          {view.mode === 'feed' && (
-            <div className="reader-community-identity">
-              <Avatar name={view.data.channel.displayName} size={72} />
-              <span>Welcome to the community</span>
-            </div>
-          )}
-          <h1>
-            {view.mode === 'feed'
-              ? view.data.channel.displayName
-              : `Catch up with ${view.data.channel.displayName}`}
-          </h1>
-          <p>
-            {view.mode === 'feed'
-              ? `The moments, plans and inside references from ${view.data.channel.displayName}’s community.`
-              : 'Missed a stream? Here’s what to know before you jump into chat.'}
-          </p>
-        </div>
-        {view.mode === 'feed' && (
-          <Link href={catchupHref} className="button primary" prefetch={false}>
-            Get caught up <ArrowRight size={16} />
-          </Link>
-        )}
-      </div>
-      {view.mode === 'catchup' && (
-        <nav className="reader-jump-links" aria-label="In this catch-up">
-          {view.data.summary && <a href="#latest-catchup">Latest recap</a>}
-          {sections
-            .filter((section) => section.items.length)
-            .map((section) => (
-              <a key={section.id} href={`#${section.id}`}>
-                {section.title}
-              </a>
-            ))}
-        </nav>
-      )}
-      {view.mode === 'feed' && (
-        <nav
-          className="reader-community-nav"
-          aria-label="Explore this community"
-        >
-          <a href="#community-feed">Stories</a>
-          <Link href={`${catchupHref}#community-references`} prefetch={false}>
-            Inside references
-          </Link>
-          <Link href={`${catchupHref}#community-plans`} prefetch={false}>
-            Plans & promises
-          </Link>
-        </nav>
-      )}
+  const kind = new URLSearchParams(query).get('kind') ?? '';
+  const activeTab = kind === 'reference' || kind === 'commitment' ? kind : '';
+  const communityTabs = [
+    { value: '', label: 'Stories' },
+    { value: 'reference', label: 'Inside references' },
+    { value: 'commitment', label: 'Plans & promises' },
+  ];
+  const content = (
+    <>
       {featured && (
         <aside className="reader-start">
           <div>
@@ -250,7 +207,13 @@ export function CommunityContent({
         ))}
       {view.mode === 'feed' ? (
         <section id="community-feed" aria-label="Community stories">
-          <h2 className="reader-feed-title">Community stories</h2>
+          <h2 className="reader-feed-title">
+            {activeTab === 'reference'
+              ? 'Inside references'
+              : activeTab === 'commitment'
+                ? 'Plans & promises'
+                : 'Community stories'}
+          </h2>
           <form className="reader-search" method="GET" onSubmit={onSearch}>
             <label className="field">
               <span className="sr-only">Search public Lore</span>
@@ -267,6 +230,7 @@ export function CommunityContent({
             <label className="field">
               <span className="sr-only">Show</span>
               <Select
+                key={kind}
                 name="kind"
                 defaultValue={new URLSearchParams(query).get('kind') ?? ''}
               >
@@ -282,11 +246,18 @@ export function CommunityContent({
           </form>
         </section>
       ) : null}
-      {!entries.length && (
+      {busy && <p role="status">Loading community stories…</p>}
+      {!entries.length && !busy && (
         <div className="reader-empty">
           <BookOpen size={28} />
           <h2>
-            {view.mode === 'feed' ? 'No stories found' : 'You’re all caught up'}
+            {view.mode === 'feed'
+              ? activeTab === 'reference'
+                ? 'No references found'
+                : activeTab === 'commitment'
+                  ? 'No plans or promises found'
+                  : 'No stories found'
+              : 'You’re all caught up'}
           </h2>
           <p>
             {view.mode === 'feed'
@@ -345,6 +316,64 @@ export function CommunityContent({
         >
           {busy ? 'Loading…' : 'More community stories'}
         </button>
+      )}
+    </>
+  );
+  return (
+    <div className="reader-content">
+      <div
+        className={`reader-intro${view.mode === 'feed' ? ' reader-community-hero' : ''}`}
+      >
+        <div>
+          {view.mode === 'feed' && (
+            <div className="reader-community-identity">
+              <Avatar name={view.data.channel.displayName} size={72} />
+              <span>Welcome to the community</span>
+            </div>
+          )}
+          <h1>
+            {view.mode === 'feed'
+              ? view.data.channel.displayName
+              : `Catch up with ${view.data.channel.displayName}`}
+          </h1>
+          <p>
+            {view.mode === 'feed'
+              ? `The moments, plans and inside references from ${view.data.channel.displayName}’s community.`
+              : 'Missed a stream? Here’s what to know before you jump into chat.'}
+          </p>
+        </div>
+        {view.mode === 'feed' && (
+          <Link href={catchupHref} className="button primary" prefetch={false}>
+            Get caught up <ArrowRight size={16} />
+          </Link>
+        )}
+      </div>
+      {view.mode === 'catchup' && (
+        <nav className="reader-jump-links" aria-label="In this catch-up">
+          {view.data.summary && <a href="#latest-catchup">Latest recap</a>}
+          {sections
+            .filter((section) => section.items.length)
+            .map((section) => (
+              <a key={section.id} href={`#${section.id}`}>
+                {section.title}
+              </a>
+            ))}
+        </nav>
+      )}
+      {view.mode === 'feed' ? (
+        <div className="reader-community-tabs">
+          <SectionTabs
+            label="Explore this community"
+            value={activeTab}
+            onValueChange={(kind) => onTabChange?.(kind)}
+            tabs={communityTabs.map((tab) => ({
+              ...tab,
+              content: tab.value === activeTab ? content : null,
+            }))}
+          />
+        </div>
+      ) : (
+        content
       )}
     </div>
   );
