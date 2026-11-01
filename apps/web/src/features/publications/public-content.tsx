@@ -1,7 +1,7 @@
 'use client';
 import { formatDate, formatDateTime } from '../../lib/date-time';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, BookOpen, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Search, Compass } from 'lucide-react';
 import type { PublicFeed, PublicCatchup, PublicEntry } from '@lore/shared';
 import { Brand } from '../../components/brand';
 import { Avatar } from '../../components/avatar';
@@ -46,6 +46,15 @@ export function PublicShell({
           <strong>{name}</strong>
         </Link>
         <nav aria-label="Community pages">
+          <Link
+            href="/discover"
+            className="reader-discover-nav"
+            aria-label="Discover communities"
+            title="Discover communities"
+          >
+            <Compass size={18} aria-hidden="true" />
+            <span>Discover</span>
+          </Link>
           <Link href={feedHref} prefetch={false}>
             Stories
           </Link>

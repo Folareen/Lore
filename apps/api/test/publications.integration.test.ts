@@ -10,6 +10,7 @@ import { Queue } from 'bullmq';
 import { beforeAll, afterAll, expect, it } from 'vitest';
 import {
   demoDatasetSchema,
+  discoverPageSchema,
   demoSeed,
   overlaySettingsSchema,
   overlayTokenSchema,
@@ -1287,4 +1288,143 @@ it('revokes anonymous pages on disconnect while retaining owner withdrawal acces
     ).status,
   ).toBe(200);
   expect((await overlayRead()).status).toBe(404);
+});
+
+it('discovers only connected, non-demo communities with published previews and stable anonymous pagination', async () => {
+  const batch = randomBytes(5).toString('hex');
+  const name = `Discover Garden ${batch}`;
+  const visible: string[] = [];
+  async function seed(
+    slug: string,
+    state = 'published',
+    originType = 'live_twitch',
+    connected = true,
+    disconnected = false,
+    displayName = name,
+  ) {
+    const id = randomUUID();
+    const twitch = BigInt('0x' + randomBytes(6).toString('hex')).toString();
+    const identity = await pool.query(
+      'INSERT INTO users(twitch_user_id,login,display_name) VALUES($1,$2,$2) RETURNING id',
+      [twitch, slug],
+    );
+    await pool.query(
+      'INSERT INTO channels(id,slug,display_name,origin,connected_at,disconnected_at,owner_user_id,twitch_channel_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
+      [
+        id,
+        slug,
+        displayName,
+        originType,
+        connected ? new Date() : null,
+        disconnected ? new Date() : null,
+        identity.rows[0].id,
+        twitch,
+      ],
+    );
+    const result = await pool.query(
+      "INSERT INTO public_entries(channel_id,request_id,input_fingerprint,kind,title,body,chat_summary,status,approved_by_twitch_user_id,published_at) VALUES($1,gen_random_uuid(),'discover-fixture','story',$2,$3,'',$4,$5,$6) RETURNING id",
+      [
+        id,
+        state === 'published'
+          ? 'Welcome to the public garden'
+          : 'PRIVATE-QA-ONLY draft title',
+        state === 'published' ? '🌱'.repeat(240) : 'PRIVATE-QA-ONLY body',
+        state,
+        state === 'published' ? '100' : null,
+        state === 'published' ? new Date() : null,
+      ],
+    );
+    return { id, entryId: result.rows[0].id };
+  }
+  let firstId = '';
+  for (let i = 0; i < 14; i++) {
+    const slug = `discover-${batch}-${String(i).padStart(2, '0')}`;
+    const channel = await seed(slug);
+    if (i === 0) firstId = channel.id;
+    visible.push(slug);
+  }
+  for (const state of ['draft', 'unpublished', 'deleted'])
+    await seed(`hidden-${state}-${batch}`, state);
+  await seed(`hidden-demo-${batch}`, 'published', 'demo_fixture');
+  await seed(
+    `hidden-disconnected-${batch}`,
+    'published',
+    'live_twitch',
+    true,
+    true,
+  );
+  await seed(
+    `hidden-never-connected-${batch}`,
+    'published',
+    'live_twitch',
+    false,
+  );
+  await pool.query(
+    "INSERT INTO public_entries(channel_id,request_id,input_fingerprint,kind,title,body,chat_summary,status) VALUES($1,gen_random_uuid(),'private-latest','story','PRIVATE-QA-ONLY','PRIVATE-QA-ONLY','','draft')",
+    [firstId],
+  );
+  const endpoint = `${origin}/api/public/channels`;
+  const firstResponse = await fetch(
+    `${endpoint}?q=${encodeURIComponent(name.toUpperCase())}`,
+  );
+  expect(firstResponse.status).toBe(200);
+  const first = discoverPageSchema.parse(await firstResponse.json());
+  expect(first.items).toHaveLength(12);
+  expect(first.items.map((item) => item.slug)).toEqual(visible.slice(0, 12));
+  expect(first.items[0].storyCount).toBe(1);
+  expect(first.items[0].latest.excerpt).toBe('🌱'.repeat(240));
+  expect(JSON.stringify(first)).not.toMatch(
+    /PRIVATE-QA-ONLY|ownerUserId|twitchUserId|promiseId|hidden-/,
+  );
+  const second = discoverPageSchema.parse(
+    await (
+      await fetch(
+        `${endpoint}?q=${encodeURIComponent(name)}&cursor=${first.nextCursor}`,
+      )
+    ).json(),
+  );
+  expect(second.items.map((item) => item.slug)).toEqual(visible.slice(12));
+  expect(second.nextCursor).toBeNull();
+  const handleSearch = discoverPageSchema.parse(
+    await (
+      await fetch(`${endpoint}?q=${encodeURIComponent('@' + name)}`)
+    ).json(),
+  );
+  expect(handleSearch.items).toHaveLength(12);
+  const publicPage = await fetch(`${endpoint}/${first.items[0].slug}`);
+  expect(publicFeedSchema.parse(await publicPage.json()).items[0].id).toBe(
+    first.items[0].latest.id,
+  );
+  await pool.query(
+    "UPDATE public_entries SET status='unpublished', published_at=null, approved_by_twitch_user_id=null WHERE channel_id=$1",
+    [firstId],
+  );
+  const refreshed = discoverPageSchema.parse(
+    await (await fetch(`${endpoint}?q=${encodeURIComponent(name)}`)).json(),
+  );
+  expect(refreshed.items.map((item) => item.slug)).not.toContain(visible[0]);
+  await seed(
+    `literal-${batch}`,
+    'published',
+    'live_twitch',
+    true,
+    false,
+    `Literal%_Garden ${batch}`,
+  );
+  const literal = discoverPageSchema.parse(
+    await (
+      await fetch(
+        `${endpoint}?q=${encodeURIComponent('Literal%_Garden ' + batch)}`,
+      )
+    ).json(),
+  );
+  expect(literal.items.map((item) => item.slug)).toEqual([`literal-${batch}`]);
+  expect((await fetch(`${endpoint}?cursor=not-a-valid-cursor`)).status).toBe(
+    400,
+  );
+  expect((await fetch(`${endpoint}?q=${'x'.repeat(101)}`)).status).toBe(400);
+  const empty = discoverPageSchema.parse(
+    await (await fetch(`${endpoint}?q=PRIVATE-QA-ONLY`)).json(),
+  );
+  expect(empty.items).toEqual([]);
 });

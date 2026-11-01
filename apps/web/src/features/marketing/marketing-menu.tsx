@@ -24,6 +24,9 @@ export function MarketingMenu() {
         <Link className="button primary" href="/login" onClick={close}>
           Sign in
         </Link>
+        <Link href="/discover" onClick={close}>
+          Discover communities
+        </Link>
         <Link href="/how-it-works" onClick={close}>
           How it works
         </Link>

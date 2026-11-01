@@ -9,6 +9,7 @@ export function MarketingHeader() {
       <div className="marketing-header-content">
         <Brand />
         <nav className="marketing-nav" aria-label="Main navigation">
+          <Link href="/discover">Discover</Link>
           <Link href="/how-it-works">How it works</Link>
           <Link href="/#your-crew">For your crew</Link>
           <Link href="/#questions">Questions</Link>
@@ -29,6 +30,7 @@ export function MarketingFooter() {
     <footer className="site-footer marketing-footer">
       <Brand />
       <nav aria-label="Footer navigation">
+        <Link href="/discover">Discover</Link>
         <Link href="/how-it-works">How it works</Link>
         <Link href="/demo">Explore the demo</Link>
         <a
