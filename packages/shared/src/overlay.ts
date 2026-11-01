@@ -13,10 +13,13 @@ export const updateOverlaySchema = z
     enabled: z.boolean(),
     mode: overlayModeSchema,
     entryIds: z.array(z.uuid()).max(3),
+    entryVersions: z.record(z.uuid(), z.number().int().positive()),
   })
   .superRefine((v, ctx) => {
     if (
       new Set(v.entryIds).size !== v.entryIds.length ||
+      Object.keys(v.entryVersions).length !== v.entryIds.length ||
+      v.entryIds.some((id) => v.entryVersions[id] === undefined) ||
       (v.enabled &&
         (v.entryIds.length === 0 ||
           (v.mode === 'recap' && v.entryIds.length !== 1)))

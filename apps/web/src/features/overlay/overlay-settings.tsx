@@ -95,6 +95,11 @@ function OverlayDesk() {
         : [];
     }),
   };
+  const entryVersions = Object.fromEntries(
+    choices
+      .filter((entry) => ids.includes(entry.id))
+      .map((entry) => [entry.id, entry.version]),
+  );
   async function act() {
     if (!settings || !confirm) return;
     setBusy(true);
@@ -107,6 +112,7 @@ function OverlayDesk() {
           enabled,
           mode,
           entryIds: ids,
+          entryVersions,
         });
         setSettings(await api.save(channel.id, input));
         setNotice('Overlay selection approved and saved.');
@@ -117,7 +123,7 @@ function OverlayDesk() {
           confirm === 'rotate',
         );
         setSettings(result.settings);
-        setEnabled(result.settings.enabled);
+        if (confirm === 'revoke') setEnabled(false);
         setUrl(
           result.token
             ? `${window.location.origin}/overlay/${encodeURIComponent(channel.slug)}#token=${result.token}`
@@ -295,6 +301,7 @@ function OverlayDesk() {
                     enabled,
                     mode,
                     entryIds: ids,
+                    entryVersions,
                   }).success ||
                   ids.some((id) => !choices.some((e) => e.id === id))
                 }

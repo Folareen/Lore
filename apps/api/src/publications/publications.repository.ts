@@ -38,6 +38,7 @@ import {
   oauthConnections,
   catchupReplies,
   chatMessages,
+  overlayTokens,
 } from '../database/schema';
 import {
   fingerprint,
@@ -226,6 +227,33 @@ export class PublicationsRepository {
     const affected = await tx.execute<{ id: string }>(
       sql`WITH RECURSIVE affected(id) AS (SELECT ${id}::uuid UNION SELECT s.entry_id FROM public_entry_sources s JOIN affected a ON s.source_id=a.id WHERE s.channel_id=${channelId}) SELECT e.id FROM public_entries e JOIN affected a ON a.id=e.id WHERE e.channel_id=${channelId} AND e.id<>${id} AND e.status='published'`,
     );
+    const invalidated = new Set([id, ...affected.rows.map((row) => row.id)]);
+    const [overlay] = await tx
+      .select()
+      .from(overlayTokens)
+      .where(eq(overlayTokens.channelId, channelId));
+    if (overlay?.entryIds.some((entryId) => invalidated.has(entryId))) {
+      const entryIds = overlay.entryIds.filter(
+        (entryId) => !invalidated.has(entryId),
+      );
+      const enabled = overlay.enabled && entryIds.length > 0;
+      await tx
+        .update(overlayTokens)
+        .set({
+          entryIds,
+          enabled,
+          version: overlay.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(eq(overlayTokens.channelId, channelId));
+      await tx.insert(auditEvents).values({
+        channelId,
+        actorId: actor.id,
+        targetId: channelId,
+        action: 'overlay.sources_invalidated',
+        details: { overlay: { entryIds, enabled, mode: overlay.mode } },
+      });
+    }
     if (!affected.rows.length) return;
     const rows = await tx
       .update(publicEntries)

@@ -10,6 +10,7 @@ import {
   type updateOverlaySchema,
 } from '@lore/shared';
 import { useWorkspace } from '../workspace/workspace-context';
+import { usePublications } from '../publications/publications-context';
 import { apiRequest, ApiError } from '../../lib/api';
 const initial: OverlaySettings = {
   version: 0,
@@ -34,6 +35,7 @@ const Context = createContext<Api | null>(null);
 export function OverlayProvider({ children }: { children: React.ReactNode }) {
   const { session, channels, preview } = useWorkspace(),
     router = useRouter();
+  const publications = usePublications();
   const [fixtures, setFixtures] = useState<Record<string, OverlaySettings>>(
     useDemo()?.data.overlays ?? {},
   );
@@ -86,6 +88,23 @@ export function OverlayProvider({ children }: { children: React.ReactNode }) {
           input,
         );
       if (!c.connected) throw new Error('Reconnect the channel first.');
+      const published = (await publications.list(id, { status: 'published' }))
+        .items;
+      if (
+        input.entryIds.some(
+          (entryId) =>
+            !published.some(
+              (entry) =>
+                entry.id === entryId &&
+                entry.version === input.entryVersions[entryId] &&
+                entry.kind ===
+                  (input.mode === 'recap' ? 'summary' : 'commitment'),
+            ),
+        )
+      )
+        throw new Error(
+          'Selected entries changed or are unavailable. Reload and review the current preview.',
+        );
       const row = fixtures[id] ?? initial;
       if (input.expectedVersion !== row.version)
         throw new Error('Overlay changed. Reload before saving.');
