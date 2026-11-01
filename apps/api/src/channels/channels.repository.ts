@@ -260,7 +260,7 @@ export class ChannelsRepository {
         const token = await this.moderatorToken(tx, userId);
         if (!token || !channel.twitchChannelId)
           throw new ForbiddenException(
-            'Authorize Twitch moderator management in Teams before assigning Moderator.',
+            'Twitch moderator permission is required before assigning Moderator.',
           );
         await this.twitchModerators.ensure(
           token,

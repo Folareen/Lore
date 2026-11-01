@@ -99,6 +99,10 @@ export class AuthController {
       ...stateOptions,
       maxAge: oauthMaxAge,
     });
+    response.cookie('lore_team_return', login.browser, {
+      ...stateOptions,
+      maxAge: oauthMaxAge,
+    });
     response.redirect(login.url);
   }
   @Get('twitch/callback')
@@ -116,6 +120,18 @@ export class AuthController {
     const browser = cookieValue(request, 'lore_oauth');
     if (!browser || !/^[a-f0-9]{64}$/.test(browser))
       throw new UnauthorizedException('OAuth browser binding missing');
+    const teamReturn = cookieValue(request, 'lore_team_return') === browser;
+    response.clearCookie('lore_team_return', stateOptions);
+    if (teamReturn && parsed.data.error) {
+      // Consume the denied state, but never resume a pending role change.
+      try {
+        await this.auth.completeLogin(parsed.data.state, browser);
+      } catch (error) {
+        if (!(error instanceof UnauthorizedException)) throw error;
+      }
+      response.redirect(`${env.APP_ORIGIN}/app/team?moderator=cancelled`);
+      return;
+    }
     const token = await this.auth.completeLogin(
       parsed.data.state,
       browser,
@@ -126,7 +142,9 @@ export class AuthController {
       ...options,
       maxAge: sessionMaxAge,
     });
-    response.redirect(`${env.APP_ORIGIN}/app`);
+    response.redirect(
+      `${env.APP_ORIGIN}${teamReturn ? '/app/team?moderator=resume' : '/app'}`,
+    );
   }
   @Get('status')
   status() {

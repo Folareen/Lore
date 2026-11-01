@@ -225,8 +225,13 @@ async function begin(
   )!;
   const cookie = response.headers
     .getSetCookie()
-    .find((value) => value.startsWith('lore_oauth='))!
-    .split(';')[0];
+    .filter(
+      (value) =>
+        value.startsWith('lore_oauth=') ||
+        value.startsWith('lore_team_return='),
+    )
+    .map((value) => value.split(';')[0])
+    .join('; ');
   return { state, cookie };
 }
 async function login(
@@ -243,7 +248,9 @@ async function login(
     { Cookie: start.cookie },
   );
   expect(response.status).toBe(302);
-  expect(response.headers.get('location')).toBe(`${origin}/app`);
+  expect(response.headers.get('location')).toBe(
+    `${origin}${purpose === 'team' ? '/app/team?moderator=resume' : '/app'}`,
+  );
   const rawCookie = response.headers
     .getSetCookie()
     .find((value) => value.startsWith('lore_session='))!;
@@ -605,6 +612,29 @@ describe('Twitch auth, channel management and EventSub over HTTP, PostgreSQL and
         })
       ).status,
     ).toBe(404);
+  });
+  it('returns a cancelled team authorization to Teams and consumes the OAuth state', async () => {
+    const start = await begin(owner, 'team');
+    const cancelled = await request(
+      `/auth/twitch/callback?state=${start.state}&error=access_denied`,
+      undefined,
+      'GET',
+      undefined,
+      { Cookie: start.cookie },
+    );
+    expect(cancelled.status).toBe(302);
+    expect(cancelled.headers.get('location')).toBe(
+      `${origin}/app/team?moderator=cancelled`,
+    );
+    const replay = await request(
+      `/auth/twitch/callback?state=${start.state}&code=owner`,
+      undefined,
+      'GET',
+      undefined,
+      { Cookie: start.cookie },
+    );
+    expect(replay.status).toBe(401);
+    expect(moderatorWrites).toBe(0);
   });
   it('requires owner authorization for automatic Twitch promotion and fails closed on provider rejection', async () => {
     expect(

@@ -338,17 +338,22 @@ describe('Lore interface behavior', () => {
     );
     workspace(<Team />);
     const user = userEvent.setup();
+    await waitFor(() =>
+      expect(
+        screen.getByRole<HTMLButtonElement>('button', { name: 'Add to team' })
+          .disabled,
+      ).toBe(false),
+    );
     expect(
-      (
-        await screen.findByRole('link', {
-          name: 'Authorize Twitch moderator management',
-        })
-      ).getAttribute('href'),
-    ).toBe('/api/auth/twitch/team');
+      screen.queryByRole('link', {
+        name: 'Authorize Twitch moderator management',
+      }),
+    ).toBeNull();
     expect(
-      screen.getByRole<HTMLButtonElement>('button', { name: 'Add to team' })
-        .disabled,
-    ).toBe(true);
+      screen.getByText(
+        'When you choose Moderator, Twitch will ask you to approve the permission before Lore saves it.',
+      ),
+    ).toBeTruthy();
     await user.type(screen.getByLabelText('Twitch user ID'), '300');
     await selectValue(user, screen.getByLabelText('Role'), 'team');
     await user.click(screen.getByRole('button', { name: 'Add to team' }));

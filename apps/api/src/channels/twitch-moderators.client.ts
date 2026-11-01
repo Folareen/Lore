@@ -39,7 +39,7 @@ export class TwitchModeratorsClient {
     }
     if (response.status === 401 || response.status === 403)
       throw new ForbiddenException(
-        'Authorize Twitch moderator management again in Teams.',
+        'Twitch moderator permission is required. Try assigning Moderator again.',
       );
     if (response.status === 429)
       throw new ServiceUnavailableException(

@@ -318,23 +318,39 @@ test('Moderator assignment promotes on Twitch and legacy roles can be synced exp
   );
   await page.goto('/app/team');
   await expect(
-    page.getByRole('link', { name: 'Authorize Twitch moderator management' }),
-  ).toHaveAttribute('href', '/api/auth/twitch/team');
-  await expect(
     page.getByRole('button', { name: 'Add to team', exact: true }),
-  ).toBeDisabled();
+  ).toBeEnabled();
+  await expect(
+    page.getByRole('heading', { name: 'Moderator access', exact: true }),
+  ).toHaveCount(0);
   await page.screenshot({
-    path: info.outputPath('teams-authorize.png'),
+    path: info.outputPath('teams-before-promotion.png'),
     fullPage: true,
   });
-  await page.unroute('**/members/twitch');
-  await page.goto('/app/team');
+  let promotions = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/members'))
+      promotions++;
+  });
+  await page.route('**/api/auth/twitch/team', async (route) => {
+    await page.unroute('**/members/twitch');
+    await route.fulfill({
+      status: 302,
+      headers: { location: '/app/team?moderator=resume' },
+    });
+  });
   await page
     .getByRole('button', { name: 'Enable on Twitch', exact: true })
     .click();
   await expect(
     page.getByText('Moderator in Lore and Twitch', { exact: true }),
   ).toHaveCount(1);
+  expect(promotions).toBe(1);
+  await page.reload();
+  await expect(
+    page.getByText('Moderator in Lore and Twitch', { exact: true }),
+  ).toHaveCount(1);
+  expect(promotions).toBe(1);
   await chooseSelect(
     page,
     page.getByRole('combobox', { name: 'Role for user300', exact: true }),
@@ -360,6 +376,65 @@ test('Moderator assignment promotes on Twitch and legacy roles can be synced exp
       fullPage: true,
     });
   }
+  await chooseSelect(
+    page,
+    page.getByRole('combobox', { name: 'Role for user300', exact: true }),
+    'team',
+  );
+  await expect(
+    page.getByText('Lore role updated. Twitch roles are unchanged.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test('adding a moderator handles Twitch cancellation and resumes approval once', async ({
+  page,
+  context,
+}) => {
+  await signIn(context);
+  await page.route('**/members/twitch', (route) =>
+    route.fulfill({ json: { authorized: false, moderators: [] } }),
+  );
+  await page.goto('/app/team');
+  let approved = false;
+  let writes = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/members'))
+      writes++;
+  });
+  await page.route('**/api/auth/twitch/team', async (route) => {
+    if (approved) await page.unroute('**/members/twitch');
+    await route.fulfill({
+      status: 302,
+      headers: {
+        location: `/app/team?moderator=${approved ? 'resume' : 'cancelled'}`,
+      },
+    });
+  });
+  await page.getByLabel('Twitch user ID', { exact: true }).fill('300');
+  await page.getByRole('button', { name: 'Add to team', exact: true }).click();
+  await expect(
+    page.getByText('Twitch authorization was cancelled. No role was changed.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(writes).toBe(0);
+  expect(
+    await page.evaluate(() => sessionStorage.getItem('lore:pending-moderator')),
+  ).toBeNull();
+  approved = true;
+  await page.getByLabel('Twitch user ID', { exact: true }).fill('300');
+  await page.getByRole('button', { name: 'Add to team', exact: true }).click();
+  await expect(
+    page.getByText('Moderator enabled in Lore and Twitch.', { exact: true }),
+  ).toBeVisible();
+  expect(writes).toBe(1);
+  await page.reload();
+  await expect(
+    page.getByRole('combobox', { name: 'Role for user300', exact: true }),
+  ).toContainText('Moderator');
+  expect(writes).toBe(1);
   await chooseSelect(
     page,
     page.getByRole('combobox', { name: 'Role for user300', exact: true }),
