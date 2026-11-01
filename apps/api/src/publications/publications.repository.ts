@@ -39,6 +39,7 @@ import {
   catchupReplies,
   chatMessages,
   overlayTokens,
+  publicationImages,
 } from '../database/schema';
 import {
   fingerprint,
@@ -121,7 +122,21 @@ export class PublicationsRepository {
         ),
       )
       .orderBy(asc(publicEntrySources.sourceId));
+    const [image] = r.screenshotId
+      ? await tx
+          .select({ id: publicationImages.id, alt: publicationImages.alt })
+          .from(publicationImages)
+          .where(
+            and(
+              eq(publicationImages.id, r.screenshotId),
+              eq(publicationImages.channelId, r.channelId),
+              eq(publicationImages.state, 'ready'),
+            ),
+          )
+      : [];
     return {
+      clipId: r.clipId,
+      screenshot: image ?? null,
       id: r.id,
       channelId: r.channelId,
       kind: r.kind,
@@ -379,6 +394,7 @@ export class PublicationsRepository {
           body: input.body,
           kind: input.kind,
           chatSummary: input.chatSummary,
+          clipId: input.clipId ?? null,
           promiseId: input.promiseId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -411,6 +427,7 @@ export class PublicationsRepository {
           title: input.title,
           body: input.body,
           chatSummary: input.chatSummary,
+          clipId: input.clipId ?? null,
           promiseId: input.promiseId,
           status: 'draft',
           approvedByTwitchUserId: null,
@@ -471,14 +488,30 @@ export class PublicationsRepository {
           publishedAt: input.action === 'publish' ? new Date() : null,
           updatedAt: new Date(),
           ...(input.action === 'delete'
-            ? { title: '', body: '', chatSummary: '', promiseId: null }
+            ? {
+                title: '',
+                body: '',
+                chatSummary: '',
+                clipId: null,
+                screenshotId: null,
+                promiseId: null,
+              }
             : {}),
         })
         .where(
           and(eq(publicEntries.channelId, channelId), eq(publicEntries.id, id)),
         )
         .returning();
-      if (input.action === 'delete')
+      if (input.action === 'delete') {
+        await tx
+          .update(publicationImages)
+          .set({ state: 'removed' })
+          .where(
+            and(
+              eq(publicationImages.channelId, channelId),
+              eq(publicationImages.entryId, id),
+            ),
+          );
         await tx
           .delete(publicEntrySources)
           .where(
@@ -490,8 +523,146 @@ export class PublicationsRepository {
               ),
             ),
           );
+      }
       await this.history(tx, updated, actor, input.action, input.reason);
       return this.managed(tx, updated);
+    });
+  }
+  private async screenshotEdit(
+    tx: CaseTx,
+    channelId: string,
+    actor: CaseActor,
+    id: string,
+    version: number,
+  ) {
+    const { role } = await this.authorize(tx, channelId, actor.id, true);
+    const row = await this.find(tx, channelId, id);
+    if (row.version !== version)
+      throw new ConflictException(
+        'Story changed. Reload before changing its screenshot.',
+      );
+    if (row.status === 'published' && role === 'team')
+      throw new NotFoundException('Owner or moderator review required');
+    return row;
+  }
+  async reserveScreenshot(
+    channelId: string,
+    actor: CaseActor,
+    id: string,
+    version: number,
+    alt: string,
+  ) {
+    return this.infrastructure.db.transaction(async (tx) => {
+      await this.screenshotEdit(tx, channelId, actor, id, version);
+      const [image] = await tx
+        .insert(publicationImages)
+        .values({
+          channelId,
+          entryId: id,
+          alt,
+          expiresAt: new Date(Date.now() + 600000),
+        })
+        .returning();
+      const key = `community-images/${channelId}/${id}/${image.id}.webp`;
+      await tx
+        .update(publicationImages)
+        .set({ storageKey: key })
+        .where(eq(publicationImages.id, image.id));
+      return { id: image.id, key };
+    });
+  }
+  async finishScreenshot(
+    channelId: string,
+    actor: CaseActor,
+    id: string,
+    version: number,
+    imageId: string | null,
+  ) {
+    return this.infrastructure.db.transaction(async (tx) => {
+      const row = await this.screenshotEdit(tx, channelId, actor, id, version);
+      if (imageId) {
+        const [image] = await tx
+          .select()
+          .from(publicationImages)
+          .where(
+            and(
+              eq(publicationImages.id, imageId),
+              eq(publicationImages.channelId, channelId),
+              eq(publicationImages.entryId, id),
+            ),
+          );
+        if (!image || image.state !== 'pending' || image.expiresAt < new Date())
+          throw new ConflictException('Screenshot upload expired. Try again.');
+        await tx
+          .update(publicationImages)
+          .set({ state: 'ready' })
+          .where(eq(publicationImages.id, imageId));
+      }
+      await this.invalidate(tx, channelId, id, actor);
+      if (row.screenshotId)
+        await tx
+          .update(publicationImages)
+          .set({ state: 'removed' })
+          .where(
+            and(
+              eq(publicationImages.id, row.screenshotId),
+              eq(publicationImages.channelId, channelId),
+            ),
+          );
+      const [updated] = await tx
+        .update(publicEntries)
+        .set({
+          screenshotId: imageId,
+          status: 'draft',
+          approvedByTwitchUserId: null,
+          publishedAt: null,
+          version: row.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(publicEntries.id, id), eq(publicEntries.channelId, channelId)),
+        )
+        .returning();
+      await this.history(
+        tx,
+        updated,
+        actor,
+        imageId ? 'screenshot_attached' : 'screenshot_removed',
+        null,
+      );
+      return this.managed(tx, updated);
+    });
+  }
+  async screenshot(
+    channel: string,
+    entryId: string,
+    imageId: string,
+    userId?: string,
+  ) {
+    return this.infrastructure.db.transaction(async (tx) => {
+      const channelId = userId
+        ? (await this.authorize(tx, channel, userId)).channel.id
+        : (await this.publicChannel(tx, channel)).id;
+      const row = await this.find(tx, channelId, entryId);
+      if (
+        row.screenshotId !== imageId ||
+        (!userId && row.status !== 'published')
+      )
+        throw new NotFoundException('Screenshot unavailable');
+      const [image] = await tx
+        .select()
+        .from(publicationImages)
+        .where(
+          and(
+            eq(publicationImages.id, imageId),
+            eq(publicationImages.channelId, channelId),
+            eq(publicationImages.entryId, entryId),
+            eq(publicationImages.state, 'ready'),
+          ),
+        );
+      if (!image?.storageKey)
+        throw new NotFoundException('Screenshot unavailable');
+      return image;
     });
   }
   private async publicChannel(tx: CaseTx, slug: string) {
@@ -547,7 +718,24 @@ export class PublicationsRepository {
           )
           .orderBy(asc(publicEntries.id))
       : [];
+    const images = rows.length
+      ? await tx
+          .select({ id: publicationImages.id, alt: publicationImages.alt })
+          .from(publicationImages)
+          .where(
+            and(
+              eq(publicationImages.channelId, channelId),
+              eq(publicationImages.state, 'ready'),
+              inArray(
+                publicationImages.entryId,
+                rows.map((row) => row.id),
+              ),
+            ),
+          )
+      : [];
     return rows.map((r) => ({
+      clipId: r.clipId,
+      screenshot: images.find((image) => image.id === r.screenshotId) ?? null,
       id: r.id,
       kind: r.kind,
       title: r.title,

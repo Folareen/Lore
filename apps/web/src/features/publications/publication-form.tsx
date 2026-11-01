@@ -4,6 +4,7 @@ import type { z } from 'zod';
 import { useEffect, useState } from 'react';
 import {
   publicationFieldsSchema,
+  twitchClipIdFromUrl,
   type ManagedPublication,
   summaryDraftSchema,
   type PublicationFields,
@@ -35,6 +36,9 @@ export function PublicationForm({
     ),
     [title, setTitle] = useState(initial?.title ?? suggested?.title ?? ''),
     [body, setBody] = useState(initial?.body ?? suggested?.body ?? ''),
+    [clipUrl, setClipUrl] = useState(
+      initial?.clipId ? `https://clips.twitch.tv/${initial.clipId}` : '',
+    ),
     [chatSummary, setChatSummary] = useState(
       initial?.chatSummary ?? suggested?.chatSummary ?? '',
     ),
@@ -105,6 +109,7 @@ export function PublicationForm({
               kind,
               title,
               body,
+              clipId: twitchClipIdFromUrl(clipUrl),
               chatSummary: kind === 'summary' ? chatSummary : '',
               sourceIds: [...sources],
               promiseId: promiseId || null,
@@ -219,6 +224,22 @@ export function PublicationForm({
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
+        </label>
+        <label className="field">
+          Twitch clip link (optional)
+          <input
+            type="url"
+            value={clipUrl}
+            maxLength={500}
+            placeholder="https://clips.twitch.tv/…"
+            onChange={(event) => setClipUrl(event.target.value)}
+          />
+          <span className="muted">
+            Paste a clip link. It will be included in publication review.{' '}
+            {initial
+              ? 'Manage the screenshot in the story review.'
+              : 'Save this draft to attach a screenshot.'}
+          </span>
         </label>
         {kind === 'summary' && (
           <label className="field">

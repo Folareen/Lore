@@ -1,6 +1,6 @@
 'use client';
 import { useDemo } from '../demo/demo-seed-context';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import {
@@ -29,6 +29,12 @@ type Query = {
   cursor?: string;
 };
 type PublicationsWorkspace = {
+  screenshot: (
+    record: ManagedPublication,
+    file: File | null,
+    alt: string,
+  ) => Promise<void>;
+  imageHref: (channelId: string, entryId: string, imageId: string) => string;
   list: (
     channelId: string,
     query?: Query,
@@ -63,6 +69,14 @@ export function PublicationsProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const [images, setImages] = useState<Record<string, string>>({});
+  const localImages = useRef(new Set<string>());
+  useEffect(
+    () => () => {
+      for (const url of localImages.current) URL.revokeObjectURL(url);
+    },
+    [],
+  );
   const { session, channels, preview } = useWorkspace(),
     router = useRouter();
   const [entries, setEntries] = useState(
@@ -182,6 +196,61 @@ export function PublicationsProvider({
   return (
     <Context.Provider
       value={{
+        imageHref: (channelId, entryId, imageId) =>
+          preview
+            ? (images[imageId] ?? '')
+            : `/api/channels/${channelId}/publications/${entryId}/screenshot/${imageId}`,
+        screenshot: async (record, file, alt) => {
+          if (!preview) {
+            const data = new FormData();
+            data.set('expectedVersion', String(record.version));
+            data.set('alt', alt);
+            if (file) data.set('file', file);
+            await request(
+              `/channels/${record.channelId}/publications/${record.id}/screenshot`,
+              managedPublicationSchema,
+              file ? 'POST' : 'DELETE',
+              file ? data : { expectedVersion: record.version },
+            );
+            return;
+          }
+          const old = saved(record, record.version);
+          access(old.channelId, true, old.status === 'published');
+          let screenshot = null;
+          if (file) {
+            if (
+              !['image/png', 'image/jpeg', 'image/webp'].includes(file.type) ||
+              file.size > 5 * 1024 * 1024 ||
+              !file.size ||
+              !alt.trim()
+            )
+              throw new Error('Choose an image up to 5 MB and describe it.');
+            const id = crypto.randomUUID();
+            const url = URL.createObjectURL(file);
+            localImages.current.add(url);
+            setImages((current) => ({ ...current, [id]: url }));
+            screenshot = { id, alt: alt.trim() };
+          }
+          const next: ManagedPublication = {
+            ...old,
+            screenshot,
+            status: 'draft',
+            version: old.version + 1,
+            approvedByTwitchUserId: null,
+            publishedAt: null,
+            updatedAt: new Date().toISOString(),
+          };
+          setEntries((current) =>
+            invalidate(current, old.id).map((entry) =>
+              entry.id === old.id ? next : entry,
+            ),
+          );
+          log(
+            next,
+            screenshot ? 'screenshot_attached' : 'screenshot_removed',
+            null,
+          );
+        },
         list: async (id, query = {}, signal) => {
           if (!preview)
             return request(

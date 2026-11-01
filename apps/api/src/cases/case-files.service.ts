@@ -109,6 +109,13 @@ export class CaseFileStorage implements OnApplicationShutdown {
       }),
     );
   }
+  async read(key: string) {
+    const object = await this.required().send(
+      new GetObjectCommand({ Bucket: env.R2_BUCKET, Key: key }),
+    );
+    if (!object.Body) throw new NotFoundException('Image unavailable');
+    return Buffer.from(await object.Body.transformToByteArray());
+  }
   async remove(key: string) {
     await this.required().send(
       new DeleteObjectCommand({ Bucket: env.R2_BUCKET, Key: key }),

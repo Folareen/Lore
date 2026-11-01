@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { twitchClipIdSchema, storyScreenshotSchema } from './story-media';
 export const publicationKindSchema = z.enum([
   'milestone',
   'reference',
@@ -27,6 +28,7 @@ export const publicationFieldsSchema = z
     title: z.string().trim().min(1).max(180),
     body: z.string().trim().min(1).max(6000),
     chatSummary: z.string().trim().max(360),
+    clipId: twitchClipIdSchema.nullable().optional(),
     sourceIds: z
       .array(z.uuid())
       .max(10)
@@ -61,6 +63,7 @@ export const publicationHistorySchema = z.strictObject({
 });
 export const managedPublicationSchema = z.strictObject({
   ...publicationFieldsSchema.shape,
+  screenshot: storyScreenshotSchema.nullable().optional(),
   title: z.string(),
   body: z.string(),
   id: z.uuid(),
@@ -82,6 +85,8 @@ export const publicEntrySchema = z.strictObject({
   title: z.string(),
   body: z.string(),
   chatSummary: z.string(),
+  clipId: twitchClipIdSchema.nullable().optional(),
+  screenshot: storyScreenshotSchema.nullable().optional(),
   publishedAt: z.iso.datetime(),
   sources: z.array(z.strictObject({ id: z.uuid(), title: z.string() })),
 });

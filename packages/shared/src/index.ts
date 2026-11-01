@@ -32,3 +32,5 @@ export * from './promise-command';
 export * from './continuity';
 
 export * from './discover';
+
+export * from './story-media';

@@ -28,7 +28,27 @@ const children: ChildProcess[] = [];
 let stopping = false;
 let stage = 'create database';
 const twitchModerators = new Map<string, Set<string>>();
+const imageObjects = new Map<string, Buffer>();
 const mock = createServer(async (req, res) => {
+  if (req.url?.startsWith('/test-bucket/')) {
+    const key = new URL(req.url, 'http://test.local').pathname;
+    if (req.method === 'PUT') {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(Buffer.from(chunk));
+      imageObjects.set(key, Buffer.concat(chunks));
+      return void res.writeHead(200).end();
+    }
+    if (req.method === 'DELETE') {
+      imageObjects.delete(key);
+      return void res.writeHead(204).end();
+    }
+    const image = imageObjects.get(key);
+    if (!image) return void res.writeHead(404).end();
+    res.setHeader('Content-Type', 'image/webp');
+    res.setHeader('Content-Length', image.length);
+    return void res.end(image);
+  }
+
   res.setHeader('Content-Type', 'application/json');
   const url = new URL(req.url || '/', 'http://test.local');
   if (url.pathname === '/helix/moderation/moderators') {
@@ -265,10 +285,11 @@ async function main() {
     GEMINI_API_KEY: 'synthetic',
     GEMINI_MODEL: 'test-model',
     AI_TEST_BASE_URL: `http://127.0.0.1:${address.port}`,
-    R2_ACCOUNT_ID: '',
-    R2_BUCKET: '',
-    R2_ACCESS_KEY_ID: '',
-    R2_SECRET_ACCESS_KEY: '',
+    R2_ACCOUNT_ID: 'a'.repeat(32),
+    R2_BUCKET: 'test-bucket',
+    R2_ACCESS_KEY_ID: 'mock-key',
+    R2_SECRET_ACCESS_KEY: 'mock-secret',
+    R2_TEST_ENDPOINT: `http://127.0.0.1:${address.port}`,
   });
   for (let i = 0; i < 100; i++) {
     try {

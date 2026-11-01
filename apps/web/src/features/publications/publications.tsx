@@ -1,4 +1,6 @@
 'use client';
+import { StoryMedia } from './story-media';
+import { StoryScreenshotEditor } from './story-screenshot-editor';
 import { RefreshCw } from 'lucide-react';
 import { IconButton } from '../../components/icon-button';
 import { formatDate, formatDateTime } from '../../lib/date-time';
@@ -362,6 +364,12 @@ function PublicationCard({
       </div>
       <h2>{r.title}</h2>
       <p className="queue-excerpt">{r.body}</p>
+      {(r.clipId || r.screenshot) && (
+        <div className="record-meta button-row">
+          {r.clipId && <span>Twitch clip attached</span>}
+          {r.screenshot && <span>Screenshot attached</span>}
+        </div>
+      )}
       <div className="candidate-row-footer">
         <span className="muted">
           {r.publishedAt
@@ -385,6 +393,25 @@ function PublicationCard({
       >
         <h3 className="review-subject">{r.title}</h3>
         <p className="case-prose">{r.body}</p>
+        {reviewOpen && (
+          <StoryMedia
+            entry={r}
+            preview
+            imageHref={
+              r.screenshot
+                ? api.imageHref(r.channelId, r.id, r.screenshot.id)
+                : undefined
+            }
+          />
+        )}
+        <StoryScreenshotEditor
+          key={`${r.id}-${r.version}`}
+          record={r}
+          disabled={
+            !connected || (r.status === 'published' && !canReview) || busy
+          }
+          onChanged={onChanged}
+        />
         {r.kind === 'summary' && (
           <div className="candidate-source">
             <h3>Short chat wording</h3>
@@ -582,6 +609,15 @@ function PublicationCard({
           >
             <h3>{r.title}</h3>
             <p className="case-prose">{r.body}</p>
+            <StoryMedia
+              entry={r}
+              preview
+              imageHref={
+                r.screenshot
+                  ? api.imageHref(r.channelId, r.id, r.screenshot.id)
+                  : undefined
+              }
+            />
             {r.chatSummary && (
               <p className="case-prose">
                 <strong>Chat reply:</strong> {r.chatSummary}

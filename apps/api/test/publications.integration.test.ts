@@ -52,6 +52,9 @@ const channelId = randomUUID(),
   key = randomBytes(32).toString('base64'),
   secret = 'synthetic-webhook-secret-32-characters',
   callback = 'https://lore-test.example/api/webhooks/twitch';
+const imageObjects = new Map<string, Buffer>();
+let holdImageReads = false;
+let releaseImageRead: (() => void) | undefined;
 let api: ChildProcess,
   mock: Server,
   origin: string,
@@ -292,6 +295,29 @@ beforeAll(async () => {
       [channelId, user.id, role, owner.id],
     );
   mock = createServer(async (req, res) => {
+    if (req.url?.startsWith('/test-bucket/')) {
+      const key = new URL(req.url, 'http://test.local').pathname;
+      if (req.method === 'PUT') {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) chunks.push(Buffer.from(chunk));
+        imageObjects.set(key, Buffer.concat(chunks));
+        return void res.writeHead(200).end();
+      }
+      if (req.method === 'DELETE') {
+        imageObjects.delete(key);
+        return void res.writeHead(204).end();
+      }
+      const image = imageObjects.get(key);
+      if (!image) return void res.writeHead(404).end();
+      if (holdImageReads && req.method === 'GET')
+        await new Promise<void>((resolve) => {
+          releaseImageRead = resolve;
+        });
+      res.setHeader('Content-Type', 'image/webp');
+      res.setHeader('Content-Length', image.length);
+      return void res.end(image);
+    }
+
     const chunks: Buffer[] = [];
     for await (const chunk of req) chunks.push(Buffer.from(chunk));
     const raw = Buffer.concat(chunks).toString();
@@ -398,10 +424,11 @@ beforeAll(async () => {
       TWITCH_EVENTSUB_SECRET: secret,
       TWITCH_EVENTSUB_CALLBACK_URL: callback,
       GEMINI_API_KEY: '',
-      R2_ACCOUNT_ID: '',
-      R2_BUCKET: '',
-      R2_ACCESS_KEY_ID: '',
-      R2_SECRET_ACCESS_KEY: '',
+      R2_ACCOUNT_ID: 'a'.repeat(32),
+      R2_BUCKET: 'test-bucket',
+      R2_ACCESS_KEY_ID: 'mock-key',
+      R2_SECRET_ACCESS_KEY: 'mock-secret',
+      R2_TEST_ENDPOINT: `http://127.0.0.1:${mockPort}`,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -1317,6 +1344,107 @@ it('rejects stale preview versions and requires fresh overlay approval after a s
   expect(
     overlayDisplaySchema.parse(await (await overlayRead()).json()).items[0].id,
   ).toBe(recap.id);
+});
+
+it('publishes clip and screenshot attachments only after review and revokes old image access on edits or withdrawal', async () => {
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWOY6PYfjhiI4wAA9TIdYRk26IEAAAAASUVORK5CYII=',
+    'base64',
+  );
+  let story = await create({
+    title: 'The visual garden',
+    clipId: 'GardenCrew-abc_123',
+  });
+  const upload = async (
+    record: ManagedPublication,
+    user = owner,
+    csrf = true,
+  ) => {
+    const form = new FormData();
+    form.set('expectedVersion', String(record.version));
+    form.set('alt', 'A purple garden screenshot');
+    form.set('file', new Blob([png], { type: 'image/png' }), 'garden.png');
+    return fetch(
+      `${origin}/api/channels/${channelId}/publications/${record.id}/screenshot`,
+      {
+        method: 'POST',
+        headers: {
+          Cookie: `lore_session=${user.token}`,
+          Origin: origin,
+          ...(csrf ? { 'X-CSRF-Token': csrfToken(user.token) } : {}),
+        },
+        body: form,
+      },
+    );
+  };
+  expect((await upload(story, outsider)).status).toBe(404);
+  expect((await upload(story, owner, false)).status).toBe(403);
+  const attached = await upload(story);
+  expect(attached.status).toBe(200);
+  story = managedPublicationSchema.parse(await attached.json());
+  expect(story.status).toBe('draft');
+  expect(story.clipId).toBe('GardenCrew-abc_123');
+  const imageId = story.screenshot!.id;
+  const publicImage = `/entries/${story.id}/screenshot/${imageId}`;
+  expect((await publicRequest(publicImage)).status).toBe(404);
+  const privateImage = await request(
+    `/publications/${story.id}/screenshot/${imageId}`,
+    'GET',
+  );
+  expect(privateImage.status).toBe(200);
+  expect(privateImage.headers.get('content-type')).toContain('image/webp');
+  expect(
+    (
+      await request(
+        `/publications/${story.id}/screenshot/${imageId}`,
+        'GET',
+        undefined,
+        outsider,
+      )
+    ).status,
+  ).toBe(404);
+  story = await action(story, 'publish');
+  const projection = publicEntrySchema.parse(
+    (
+      (await (await publicRequest(`/entries/${story.id}`)).json()) as {
+        entry: unknown;
+      }
+    ).entry,
+  );
+  expect(projection.screenshot).toEqual({
+    id: imageId,
+    alt: 'A purple garden screenshot',
+  });
+  expect(projection.clipId).toBe('GardenCrew-abc_123');
+  expect(JSON.stringify(projection)).not.toMatch(
+    /storageKey|community-images|test-bucket/,
+  );
+  const visible = await publicRequest(publicImage);
+  expect(visible.status).toBe(200);
+  expect(visible.headers.get('cache-control')).toBe('no-store');
+  expect((await visible.arrayBuffer()).byteLength).toBeGreaterThan(0);
+  expect((await upload(story, team)).status).toBe(404);
+  expect((await publicRequest(publicImage)).status).toBe(200);
+  const replaced = await upload(story);
+  expect(replaced.status).toBe(200);
+  story = managedPublicationSchema.parse(await replaced.json());
+  expect((await publicRequest(publicImage)).status).toBe(404);
+  expect(story.screenshot!.id).not.toBe(imageId);
+  story = await action(story, 'publish');
+  const currentImage = `/entries/${story.id}/screenshot/${story.screenshot!.id}`;
+  expect((await publicRequest(currentImage)).status).toBe(200);
+  holdImageReads = true;
+  releaseImageRead = undefined;
+  const inflightImage = publicRequest(currentImage);
+  await eventually(async () => Boolean(releaseImageRead));
+  story = await action(story, 'unpublish');
+  holdImageReads = false;
+  releaseImageRead!();
+  expect((await inflightImage).status).toBe(404);
+  expect((await publicRequest(currentImage)).status).toBe(404);
+  story = await action(story, 'delete');
+  expect(story.clipId).toBeNull();
+  expect(story.screenshot).toBeNull();
 });
 
 it('revokes anonymous pages on disconnect while retaining owner withdrawal access', async () => {

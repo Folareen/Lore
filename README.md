@@ -157,6 +157,14 @@ In **Channel settings → Features → Optional features**, each owner-controlle
 
 Extraction, microphone and recap calls share `AI_DAILY_CALL_LIMIT`; this does not override Google's free-tier quotas. Live workspace SSE uses the existing session and streams only invalidations; reverse proxies must preserve streaming and avoid buffering `/api/channels/:id/stream`.
 
+### Story clips and screenshots
+
+Each public story can include one manually pasted Twitch clip link and one uploaded screenshot. Add the clip while writing the draft; save the draft, open it and use **Attach a screenshot** to upload a PNG, JPEG or WebP (up to 5 MB and 16 megapixels) with a short description. Screenshot changes return the story to draft; publication review includes the image and clip link. Existing R2 configuration is reused with a separate `community-images/` prefix. Apply migration 0014 before starting the updated API.
+
+Screenshots are decoded, resized to at most 2400 × 2400 and converted to WebP without metadata. Private R2 objects are served through uncached Lore endpoints that check current publication/access before and after storage reads. Replaced/deleted/abandoned uploads are cleaned up automatically. Keep the R2 bucket private; no public bucket URL or signed image URL is returned. The chatbot, recap generator, chat replies and OBS continue to use approved text only.
+
+Clip video remains on Twitch. Full stories load the Twitch player only after a viewer chooses **Load Twitch clip**, with autoplay disabled and the current hostname supplied as Twitch’s `parent` parameter. Narrow screens use **Open on Twitch** to respect the player’s minimum size. If playback or an image fails, the written story remains usable. Demo screenshot uploads stay in browser memory and never call R2. No Twitch clip import/browsing, video hosting or automatic screenshot capture is included. [Twitch clip embed requirements](https://dev.twitch.tv/docs/embed/video-and-clips/).
+
 ### Public community Q&A
 
 **Community Q&A assistant** is enabled by default; owners can turn it off in Channel settings → Features. It uses only published stories from that channel; publishing a viewer-safe introduction and inside references helps it answer newcomers. Visitors need no login. AI answers link to public sources and are not approved announcements. Questions go to Google Gemini; do not enter personal information. Conversations stay in page memory and clear on navigation; questions are not stored by Lore.

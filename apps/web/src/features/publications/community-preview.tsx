@@ -63,6 +63,11 @@ export function CommunityPreview() {
         feedHref={feedHref}
         catchupHref={catchupHref}
         query={query}
+        imageLink={(entry) =>
+          entry.screenshot
+            ? api.imageHref(selected.id, entry.id, entry.screenshot.id)
+            : ''
+        }
         onTabChange={(kind) => {
           const filters = new URLSearchParams(query);
           if (kind) filters.set('kind', kind);

@@ -10,6 +10,8 @@ export function previewPublicEntry(
     title: entry.title,
     body: entry.body,
     chatSummary: entry.chatSummary,
+    clipId: entry.clipId ?? null,
+    screenshot: entry.screenshot ?? null,
     publishedAt: entry.publishedAt!,
     sources: entry.sourceIds.flatMap((id) => {
       const r = all.find(
