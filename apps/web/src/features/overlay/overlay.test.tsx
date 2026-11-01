@@ -178,6 +178,7 @@ it('sends CSRF-protected approvals and retains an actionable version-conflict er
     enabled: false,
     mode: 'recap',
     entryIds: [],
+    entryVersions: {},
   });
 });
 it('keeps an unauthenticated browser source blank without calling the API', async () => {
@@ -242,4 +243,46 @@ it('expires displayed text even when a later request hangs', async () => {
     await vi.advanceTimersByTimeAsync(6501);
   });
   expect(screen.queryByText('Reviewed community recap')).toBeNull();
+});
+
+it('clears old overlay text immediately when its fragment credential changes', async () => {
+  window.history.replaceState(null, '', `/overlay/demo#token=${token}`);
+  fetchMock
+    .mockResolvedValueOnce(response(data))
+    .mockImplementation(() => new Promise(() => {}));
+  render(<OverlayDisplay slug="demo" />);
+  await screen.findByText('Reviewed community recap');
+  window.history.replaceState(
+    null,
+    '',
+    `/overlay/demo#token=${'b'.repeat(64)}`,
+  );
+  fireEvent(window, new Event('hashchange'));
+  expect(screen.queryByText('Reviewed community recap')).toBeNull();
+  expect(fetchMock.mock.calls.at(-1)?.[1]?.headers).toEqual({
+    Authorization: `Bearer ${'b'.repeat(64)}`,
+  });
+});
+it('keeps unsaved visibility choices when creating an OBS link', async () => {
+  setup();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole('checkbox', {
+      name: 'Previously, in our corner of chat…',
+    }),
+  );
+  const enabled = screen.getByRole('checkbox', {
+    name: 'Show the approved selection on stream',
+  });
+  await user.click(enabled);
+  expect((enabled as HTMLInputElement).checked).toBe(true);
+  await user.click(screen.getByRole('button', { name: 'Create overlay link' }));
+  await user.click(
+    within(screen.getByRole('dialog')).getByRole('button', {
+      name: 'Create new link',
+    }),
+  );
+  await screen.findByLabelText('Copy-once browser-source URL');
+  expect((enabled as HTMLInputElement).checked).toBe(true);
+  expect(fetchMock).not.toHaveBeenCalled();
 });

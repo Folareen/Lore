@@ -30,6 +30,8 @@ export function OverlayDisplay({ slug }: { slug: string }) {
   useEffect(() => {
     let sequence = 0,
       stopped = false;
+    setData(null);
+    let credential: string | null = null;
     let controller: AbortController | undefined;
     let expiry: ReturnType<typeof setTimeout> | undefined;
     async function refresh() {
@@ -44,6 +46,11 @@ export function OverlayDisplay({ slug }: { slug: string }) {
       const token = new URLSearchParams(window.location.hash.slice(1)).get(
         'token',
       );
+      if (token !== credential) {
+        credential = token;
+        clearTimeout(expiry);
+        setData(null);
+      }
       if (!token || !/^[a-f0-9]{64}$/.test(token)) {
         setData(null);
         clearTimeout(timeout);

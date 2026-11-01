@@ -1110,6 +1110,7 @@ it('projects only selected approved recap or commitment text and drops withdrawn
             enabled: true,
             mode: 'recap',
             entryIds: [id],
+            entryVersions: { [id]: 1 },
           },
           moderator,
         )
@@ -1123,6 +1124,7 @@ it('projects only selected approved recap or commitment text and drops withdrawn
         enabled: true,
         mode: 'recap',
         entryIds: [commitment.id],
+        entryVersions: { [commitment.id]: commitment.version },
       })
     ).status,
   ).toBe(409);
@@ -1133,6 +1135,7 @@ it('projects only selected approved recap or commitment text and drops withdrawn
         enabled: true,
         mode: 'recap',
         entryIds: [recap.id],
+        entryVersions: { [recap.id]: recap.version },
         tokenHash: 'injected',
       })
     ).status,
@@ -1144,6 +1147,7 @@ it('projects only selected approved recap or commitment text and drops withdrawn
         enabled: true,
         mode: 'recap',
         entryIds: [],
+        entryVersions: {},
       })
     ).status,
   ).toBe(400);
@@ -1152,6 +1156,7 @@ it('projects only selected approved recap or commitment text and drops withdrawn
     enabled: true,
     mode: 'recap',
     entryIds: [recap.id],
+    entryVersions: { [recap.id]: recap.version },
   };
   expect((await request('/overlay', 'POST', input, team)).status).toBe(404);
   expect(
@@ -1172,7 +1177,13 @@ it('projects only selected approved recap or commitment text and drops withdrawn
   expect(
     overlayDisplaySchema.parse(await (await overlayRead()).json()).items,
   ).toEqual([]);
+  const withdrawnSettings = await overlaySettings();
+  expect(withdrawnSettings.entryIds).toEqual([]);
+  expect(withdrawnSettings.enabled).toBe(false);
   await action(recap, 'publish');
+  expect(
+    overlayDisplaySchema.parse(await (await overlayRead()).json()).items,
+  ).toEqual([]);
   settings = await overlaySettings();
   expect(
     (
@@ -1181,6 +1192,7 @@ it('projects only selected approved recap or commitment text and drops withdrawn
         enabled: true,
         mode: 'open_loops',
         entryIds: [commitment.id],
+        entryVersions: { [commitment.id]: commitment.version },
       })
     ).status,
   ).toBe(200);
@@ -1245,6 +1257,66 @@ it('immediately rejects rotated and revoked overlay credentials without restorin
   expect((await overlayRead(overlayToken)).status).toBe(404);
   overlayToken = regenerated.token;
   expect((await overlayRead()).status).toBe(200);
+});
+
+it('rejects stale preview versions and requires fresh overlay approval after a source edit and republish', async () => {
+  let source = await action(
+    await create({ kind: 'milestone', title: 'Overlay source' }),
+    'publish',
+  );
+  let recap = await action(
+    await create({
+      kind: 'summary',
+      title: 'Versioned OBS recap',
+      chatSummary: 'The exact reviewed wording.',
+      sourceIds: [source.id],
+    }),
+    'publish',
+  );
+  let settings = await overlaySettings();
+  const approve = (version: number) =>
+    request('/overlay', 'POST', {
+      expectedVersion: settings.version,
+      enabled: true,
+      mode: 'recap',
+      entryIds: [recap.id],
+      entryVersions: { [recap.id]: version },
+    });
+  const oldVersion = recap.version;
+  const edited = await request(`/publications/${recap.id}`, 'PATCH', {
+    ...fields('Changed OBS recap'),
+    kind: 'summary',
+    chatSummary: 'Changed reviewed wording.',
+    sourceIds: [source.id],
+    expectedVersion: recap.version,
+  });
+  expect(edited.status).toBe(200);
+  recap = await action(
+    managedPublicationSchema.parse(await edited.json()),
+    'publish',
+  );
+  expect((await approve(oldVersion)).status).toBe(409);
+  expect((await approve(recap.version)).status).toBe(200);
+  expect(
+    overlayDisplaySchema.parse(await (await overlayRead()).json()).items[0]
+      .text,
+  ).toBe('Changed reviewed wording.');
+  settings = await overlaySettings();
+  source = await action(source, 'unpublish');
+  expect(
+    overlayDisplaySchema.parse(await (await overlayRead()).json()).items,
+  ).toEqual([]);
+  expect((await overlaySettings()).version).toBeGreaterThan(settings.version);
+  await action(source, 'publish');
+  recap = await action((await get(recap)).entry, 'publish');
+  expect(
+    overlayDisplaySchema.parse(await (await overlayRead()).json()).items,
+  ).toEqual([]);
+  settings = await overlaySettings();
+  expect((await approve(recap.version)).status).toBe(200);
+  expect(
+    overlayDisplaySchema.parse(await (await overlayRead()).json()).items[0].id,
+  ).toBe(recap.id);
 });
 
 it('revokes anonymous pages on disconnect while retaining owner withdrawal access', async () => {

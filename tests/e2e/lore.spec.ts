@@ -1401,3 +1401,224 @@ test('public community guide answers signed-out viewers with public citations an
     ).toBeFocused();
   }
 });
+test('OBS setup displays only reviewed selections and clears withdrawn or revoked content', async ({
+  page,
+  context,
+  browser,
+}, info) => {
+  test.setTimeout(90000);
+  await signIn(context);
+  const auth = await (await page.request.get('/api/auth/session')).json();
+  const headers = {
+    Origin: 'http://127.0.0.1:4322',
+    'X-CSRF-Token': auth.csrfToken,
+  };
+  async function publish(
+    kind: 'commitment' | 'summary',
+    title: string,
+    chatSummary = '',
+  ) {
+    const draftResponse = await page.request.post(
+      `/api/channels/${channelId}/publications`,
+      {
+        headers,
+        data: {
+          requestId: crypto.randomUUID(),
+          kind,
+          title,
+          body: 'PUBLIC_BODY_NOT_SELECTED_FOR_OBS',
+          chatSummary,
+          sourceIds: [],
+          promiseId: null,
+        },
+      },
+    );
+    expect(draftResponse.ok()).toBe(true);
+    const draft = await draftResponse.json();
+    const reviewed = await page.request.post(
+      `/api/channels/${channelId}/publications/${draft.id}/review`,
+      {
+        headers,
+        data: {
+          expectedVersion: draft.version,
+          action: 'publish',
+          reason: 'Approved synthetic OBS test copy.',
+        },
+      },
+    );
+    expect(reviewed.ok()).toBe(true);
+    return reviewed.json();
+  }
+  const recap = await publish(
+    'summary',
+    'OBS reviewed recap',
+    'The garden is ready. Next up: naming the pond.',
+  );
+  const pond = await publish('commitment', 'OBS name the pond');
+  const greenhouse = await publish('commitment', 'OBS greenhouse reveal');
+  const current = await (
+    await page.request.get(`/api/channels/${channelId}/overlay`)
+  ).json();
+  expect(
+    (
+      await page.request.post(`/api/channels/${channelId}/overlay`, {
+        headers,
+        data: {
+          expectedVersion: current.version,
+          enabled: false,
+          mode: 'recap',
+          entryIds: [],
+          entryVersions: {},
+        },
+      })
+    ).ok(),
+  ).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/app/overlay');
+  await page.getByRole('checkbox', { name: recap.title, exact: true }).check();
+  const visibility = page.getByRole('checkbox', {
+    name: 'Show the approved selection on stream',
+  });
+  await visibility.check();
+  async function approve() {
+    await page
+      .getByRole('button', { name: 'Review overlay selection' })
+      .click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Approve and save' })
+      .click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(
+      page.getByText('Overlay selection approved and saved.', { exact: true }),
+    ).toBeVisible();
+  }
+  async function rotate() {
+    await page
+      .getByRole('button', {
+        name: /^(Create overlay link|Regenerate overlay link)$/,
+      })
+      .click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Create new link' })
+      .click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    return page.getByLabel('Copy-once browser-source URL').inputValue();
+  }
+  await approve();
+  let url = await rotate();
+  expect(new URL(url).hash).toMatch(/^#token=[a-f0-9]{64}$/);
+  const sourceContext = await browser.newContext({
+    viewport: { width: 720, height: 720 },
+  });
+  try {
+    const source = await sourceContext.newPage();
+    const apiRead = source.waitForResponse((response) =>
+      response.url().endsWith('/api/overlay/browser-test'),
+    );
+    await source.goto(url);
+    const response = await apiRead;
+    expect(response.headers()['cache-control']).toBe('no-store');
+    expect(response.request().headers().cookie).toBeUndefined();
+    expect(new URL(response.url()).search).toBe('');
+    const card = source.getByRole('region', { name: 'Community overlay' });
+    await expect(
+      card.getByText(recap.chatSummary, { exact: true }),
+    ).toBeVisible();
+    await expect(card).not.toContainText('PUBLIC_BODY_NOT_SELECTED_FOR_OBS');
+    expect(
+      await source
+        .locator('body')
+        .evaluate((body) => getComputedStyle(body).backgroundColor),
+    ).toBe('rgba(0, 0, 0, 0)');
+    expect(
+      await card.evaluate(
+        (element) => element.getBoundingClientRect().bottom <= innerHeight,
+      ),
+    ).toBe(true);
+    await source.screenshot({
+      path: info.outputPath('obs-recap-720.png'),
+      omitBackground: true,
+    });
+    await chooseSelect(
+      page,
+      page.getByRole('combobox', { name: 'Display', exact: true }),
+      'open_loops',
+    );
+    await page
+      .getByRole('checkbox', { name: greenhouse.title, exact: true })
+      .check();
+    await page.getByRole('checkbox', { name: pond.title, exact: true }).check();
+    await approve();
+    await expect(card.getByRole('heading')).toHaveText(
+      [greenhouse.title, pond.title],
+      { timeout: 10000 },
+    );
+    await source.screenshot({
+      path: info.outputPath('obs-commitments-720.png'),
+      omitBackground: true,
+    });
+    await visibility.uncheck();
+    await approve();
+    await expect(card).toHaveCount(0, { timeout: 10000 });
+    await visibility.check();
+    await approve();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    const withdrawnResponse = await page.request.post(
+      `/api/channels/${channelId}/publications/${pond.id}/review`,
+      {
+        headers,
+        data: {
+          expectedVersion: pond.version,
+          action: 'unpublish',
+          reason: 'Withdraw this OBS commitment.',
+        },
+      },
+    );
+    expect(withdrawnResponse.ok()).toBe(true);
+    const withdrawn = await withdrawnResponse.json();
+    await expect(card.getByRole('heading')).toHaveText([greenhouse.title], {
+      timeout: 10000,
+    });
+    expect(
+      (
+        await page.request.post(
+          `/api/channels/${channelId}/publications/${pond.id}/review`,
+          {
+            headers,
+            data: {
+              expectedVersion: withdrawn.version,
+              action: 'publish',
+              reason: 'Republish publicly without approving OBS again.',
+            },
+          },
+        )
+      ).ok(),
+    ).toBe(true);
+    await source.reload();
+    await expect(card.getByRole('heading')).toHaveText([greenhouse.title]);
+    // Source invalidation changed the overlay version; reload before rotating its credential.
+    await page
+      .getByRole('button', { name: 'Reload settings and entries' })
+      .click();
+    await expect(
+      page.getByRole('button', { name: 'Regenerate overlay link' }),
+    ).toBeVisible();
+    const oldUrl = url;
+    url = await rotate();
+    await expect(card).toHaveCount(0, { timeout: 10000 });
+    await source.goto(oldUrl);
+    await expect(card).toHaveCount(0);
+    await source.goto(url);
+    await expect(card.getByRole('heading')).toHaveText([greenhouse.title]);
+    await page.getByRole('button', { name: 'Revoke overlay link' }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Revoke link' })
+      .click();
+    await expect(card).toHaveCount(0, { timeout: 10000 });
+  } finally {
+    await sourceContext.close();
+  }
+});

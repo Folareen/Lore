@@ -78,7 +78,7 @@ export class OverlayRepository {
         throw new ConflictException('Overlay changed. Reload before saving.');
       if (input.entryIds.length) {
         const sources = await tx
-          .select({ id: publicEntries.id })
+          .select({ id: publicEntries.id, version: publicEntries.version })
           .from(publicEntries)
           .where(
             and(
@@ -91,9 +91,14 @@ export class OverlayRepository {
               inArray(publicEntries.id, input.entryIds),
             ),
           );
-        if (sources.length !== input.entryIds.length)
+        if (
+          sources.length !== input.entryIds.length ||
+          sources.some(
+            (source) => input.entryVersions[source.id] !== source.version,
+          )
+        )
           throw new ConflictException(
-            'Choose currently published entries of the selected kind.',
+            'Selected entries changed or are unavailable. Reload and review the current preview.',
           );
       }
       const value = {
