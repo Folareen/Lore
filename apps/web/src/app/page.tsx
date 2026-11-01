@@ -41,8 +41,8 @@ export default function Home() {
                 Start with Twitch
                 <ArrowUpRight size={18} aria-hidden="true" />
               </Link>
-              <Link className="quiet-link" href="/how-it-works">
-                Take a look around <ArrowRight size={15} aria-hidden="true" />
+              <Link className="button secondary" href="/demo">
+                Try the demo
               </Link>
             </div>
           </div>

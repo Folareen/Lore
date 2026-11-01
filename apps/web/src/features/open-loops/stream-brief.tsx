@@ -1,4 +1,7 @@
 'use client';
+import { IconButton } from '../../components/icon-button';
+import { formatDateTime } from '../../lib/date-time';
+import { PageTitle } from '../../components/page-title';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -11,11 +14,14 @@ export function StreamBriefScreen() {
     <>
       <div className="page-heading">
         <div>
-          <h1>Next-stream brief</h1>
-          <p>Saved promises and source-linked changes for your next stream.</p>
+          <PageTitle>Next-stream brief</PageTitle>
+          <p>
+            Pick up where you left off. Your active promises and recent updates,
+            in one place.
+          </p>
         </div>
         <Link className="button secondary" href={href('streamer')}>
-          Manage open loops
+          Manage promises
         </Link>
       </div>
       {selected ? (
@@ -63,25 +69,21 @@ function Brief({ channelId }: { channelId: string }) {
   }, [channelId, loadBrief, revision]);
   return (
     <div className="content-stack">
-      <section className="panel">
-        <div className="panel-title">
-          <h2>Your next stream</h2>
-          <ListChecks size={22} aria-hidden="true" />
-        </div>
-        <p className="panel-description">
-          In-progress promises come first. This brief uses saved records, not an
-          AI-generated recap.
+      <div className="brief-toolbar">
+        <p className="muted">
+          {brief
+            ? `${brief.activeCount} active ${brief.activeCount === 1 ? 'promise' : 'promises'}`
+            : 'Your active promises'}
         </p>
-        <button
-          className="button secondary"
+        <IconButton
+          label="Refresh brief"
           disabled={loading}
           onClick={() => setRevision((value) => value + 1)}
         >
-          <RefreshCw size={16} aria-hidden="true" />
-          {loading ? 'Loading…' : 'Refresh brief'}
-        </button>
-      </section>
-      {loading && <p role="status">Gathering your open loops…</p>}
+          <RefreshCw size={18} aria-hidden="true" />
+        </IconButton>
+      </div>
+      {loading && <p role="status">Gathering your promises…</p>}
       {error && (
         <p className="notice error" role="alert">
           {error}
@@ -89,72 +91,6 @@ function Brief({ channelId }: { channelId: string }) {
       )}
       {brief && (
         <>
-          <p className="muted">
-            {brief.activeCount} active{' '}
-            {brief.activeCount === 1 ? 'promise' : 'promises'} · Updated{' '}
-            {new Date(brief.generatedAt).toLocaleString()}
-          </p>
-          {brief.context && (
-            <section className="panel content-stack">
-              <h2>
-                Since{' '}
-                {brief.context.basis === 'previous_stream_end'
-                  ? 'the last stream ended'
-                  : 'seven days ago'}
-              </h2>
-              <p className="muted">
-                From {new Date(brief.context.since).toLocaleString()}. Only
-                retained stream events can establish a previous-stream boundary.
-              </p>
-              <h3>Promise changes</h3>
-              {brief.context.recentChanges.length ? (
-                <ul>
-                  {brief.context.recentChanges.map((item) => (
-                    <li key={item.id}>
-                      <Link
-                        href={`${href('streamer')}${preview ? '&' : '?'}loop=${item.id}#loop-${item.id}`}
-                      >
-                        {item.wording}
-                      </Link>{' '}
-                      · {openLoopLabels[item.status]} ·{' '}
-                      {new Date(item.updatedAt).toLocaleString()}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No saved promise changes in this period.</p>
-              )}
-              <h3>Published community developments</h3>
-              {brief.context.community.length ? (
-                <ul>
-                  {brief.context.community.map((item) => (
-                    <li key={item.id}>
-                      <Link
-                        href={
-                          preview
-                            ? `${href('community')}&entry=${item.id}`
-                            : `${href('community')}/entries/${item.id}`
-                        }
-                      >
-                        {item.title}
-                      </Link>
-                      <p className="case-prose">{item.body}</p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>
-                  No currently published community developments in this period.
-                </p>
-              )}
-              {brief.context.truncated && (
-                <p className="notice">
-                  Showing up to 20 promise changes and 10 public developments.
-                  Open the source pages for more.
-                </p>
-              )}
-            </section>
-          )}
           {brief.items.length === 0 ? (
             <div className="empty-state">
               <ListChecks size={28} />
@@ -170,7 +106,7 @@ function Brief({ channelId }: { channelId: string }) {
           ) : (
             <ol className="brief-list">
               {brief.items.map((loop) => (
-                <li key={loop.id} className="panel">
+                <li key={loop.id} className="brief-record">
                   <span className="status purple">
                     {openLoopLabels[loop.status]}
                   </span>
@@ -182,17 +118,21 @@ function Brief({ channelId }: { channelId: string }) {
                     </Link>
                   </h2>
                   <p>
-                    {loop.ownerLabel || 'Follow-up owner not set'} ·{' '}
-                    {loop.dueContext || 'No due context set'}
+                    {[loop.ownerLabel, loop.dueContext]
+                      .filter(Boolean)
+                      .join(' · ') || 'Ready to plan'}
                   </p>
-                  <small className="muted">
-                    {loop.origin === 'demo_fixture'
-                      ? 'Demo fixture'
-                      : loop.origin === 'live_twitch'
-                        ? 'Live Twitch'
-                        : 'Manual import'}{' '}
-                    · Saved source: {loop.source.excerpt}
-                  </small>
+                  <details className="brief-source">
+                    <summary>Saved source</summary>
+                    <p className="muted">
+                      {loop.origin === 'demo_fixture'
+                        ? 'Demo fixture'
+                        : loop.origin === 'live_twitch'
+                          ? 'Live Twitch'
+                          : 'Manual import'}{' '}
+                      · {loop.source.excerpt}
+                    </p>
+                  </details>
                 </li>
               ))}
             </ol>
@@ -200,8 +140,72 @@ function Brief({ channelId }: { channelId: string }) {
           {brief.activeCount > brief.items.length && (
             <p className="notice">
               Showing the first {brief.items.length} promises.{' '}
-              <Link href={href('streamer')}>See all open loops</Link>.
+              <Link href={href('streamer')}>See all promises</Link>.
             </p>
+          )}
+          {brief.context && (
+            <section className="panel content-stack brief-context">
+              <h2>
+                Since{' '}
+                {brief.context.basis === 'previous_stream_end'
+                  ? 'the last stream ended'
+                  : 'seven days ago'}
+              </h2>
+              <p className="muted">
+                From {formatDateTime(brief.context.since)}.
+              </p>
+              {!brief.context.recentChanges.length &&
+                !brief.context.community.length && (
+                  <p className="muted">
+                    No new promise changes or public stories in this period.
+                  </p>
+                )}
+              {brief.context.recentChanges.length > 0 && (
+                <>
+                  <h3>Promise changes</h3>
+                  <ul>
+                    {brief.context.recentChanges.map((item) => (
+                      <li key={item.id}>
+                        <Link
+                          href={`${href('streamer')}${preview ? '&' : '?'}loop=${item.id}#loop-${item.id}`}
+                        >
+                          {item.wording}
+                        </Link>{' '}
+                        · {openLoopLabels[item.status]} ·{' '}
+                        {formatDateTime(item.updatedAt)}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {brief.context.community.length > 0 && (
+                <>
+                  <h3>Community updates</h3>
+                  <ul>
+                    {brief.context.community.map((item) => (
+                      <li key={item.id}>
+                        <Link
+                          href={
+                            preview
+                              ? `${href('community')}&entry=${item.id}`
+                              : `${href('community')}/entries/${item.id}`
+                          }
+                        >
+                          {item.title}
+                        </Link>
+                        <p className="case-prose">{item.body}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {brief.context.truncated && (
+                <p className="notice">
+                  Showing up to 20 promise changes and 10 public developments.
+                  Open the source pages for more.
+                </p>
+              )}
+            </section>
           )}
         </>
       )}

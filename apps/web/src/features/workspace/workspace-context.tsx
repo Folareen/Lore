@@ -333,7 +333,7 @@ export function WorkspaceProvider({
     if (
       !channels.some((channel) => channel.id === channelId && channel.connected)
     )
-      throw new Error('Reconnect the channel before changing open loops.');
+      throw new Error('Reconnect the channel before changing promises.');
   }
   async function loadLoop(
     channelId: string,

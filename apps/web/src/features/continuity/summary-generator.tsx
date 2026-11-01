@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { FeatureControls } from './feature-controls';
 import { z } from 'zod';
 import {
   publicationPageSchema,
@@ -12,21 +13,25 @@ import { useWorkspace } from '../workspace/workspace-context';
 import { useFeatureSettings } from './feature-settings';
 export function SummaryGenerator({
   onUse,
+  canUseDraft = true,
 }: {
   onUse: (draft: z.infer<typeof summaryDraftSchema>) => void;
+  canUseDraft?: boolean;
 }) {
   const { selected, session, preview, href } = useWorkspace();
-  const [open, setOpen] = useState(false),
+  const [open, setOpen] = useState(true),
     [sources, setSources] = useState<ManagedPublication[]>([]),
     [chosen, setChosen] = useState<string[]>([]),
     [cursor, setCursor] = useState<string | null>(null),
     [draft, setDraft] = useState<z.infer<typeof summaryDraftSchema>>(),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [loading, setLoading] = useState(true);
   const { settings, error: consentError } = useFeatureSettings(open);
   useEffect(() => {
     if (!open || !selected || preview) return;
     const c = new AbortController();
+    setLoading(true);
     void apiRequest(
       `/channels/${selected.id}/publications?status=published`,
       publicationPageSchema,
@@ -43,21 +48,28 @@ export function SummaryGenerator({
           setError(
             e instanceof Error ? e.message : 'Could not load public sources.',
           );
+      })
+      .finally(() => {
+        if (!c.signal.aborted) setLoading(false);
       });
     return () => c.abort();
   }, [open, selected?.id, preview]);
   return (
     <details
       className="panel content-stack"
+      open
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary>Draft a catch-up summary with Gemini</summary>
+      <summary>Draft a recap with Gemini</summary>
       {open && (
         <>
           <p>
-            Choose 1–10 already-published entries. Gemini receives only these
-            public texts. Review the result, edit it and save it as a draft
-            before publication approval.
+            Select up to 10 published stories to draft a recap. Review and edit
+            the result before saving; generation never publishes.
+          </p>
+          <p className="muted">
+            Only selected public text is sent to Gemini. Google may use
+            free-tier inputs and outputs to improve its products.
           </p>
           {preview ? (
             <p className="notice">
@@ -72,16 +84,19 @@ export function SummaryGenerator({
                 </p>
               )}
               {!settings?.publicSummaryAiEnabled && (
-                <p className="notice">
-                  The owner must enable public summary AI in{' '}
-                  <Link href={href('settings')}>
-                    Additional channel capabilities
-                  </Link>
-                  .
-                </p>
+                <FeatureControls only={['publicSummaryAiEnabled']} expanded />
               )}
               <fieldset className="source-choices" disabled={busy}>
                 <legend>Approved public sources</legend>
+                {loading && <p role="status">Loading published stories…</p>}
+                {!loading && !sources.length && (
+                  <p className="notice">
+                    No published sources loaded.{' '}
+                    <Link href={href('publications')}>
+                      Publish a story first →
+                    </Link>
+                  </p>
+                )}
                 {sources.map((source) => (
                   <label key={source.id} className="field">
                     <span>
@@ -175,6 +190,7 @@ export function SummaryGenerator({
                   <p>Suggested chat wording: {draft.chatSummary}</p>
                   <button
                     className="button primary"
+                    disabled={!canUseDraft}
                     onClick={() => onUse(draft)}
                   >
                     Use as editable draft

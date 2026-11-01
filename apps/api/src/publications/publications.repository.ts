@@ -531,6 +531,54 @@ export class PublicationsRepository {
         .map((s) => ({ id: s.id, title: s.title })),
     }));
   }
+  // This projection is the assistant's entire data boundary: never retrieve team records.
+  async assistantContext(slug: string, question: string) {
+    return this.infrastructure.db.transaction(async (tx) => {
+      const channel = await this.publicChannel(tx, slug);
+      const [consent] = await tx
+        .select({
+          enabled: channels.communityAssistantEnabled,
+          generation: channels.featuresGeneration,
+        })
+        .from(channels)
+        .where(eq(channels.id, channel.id));
+      const rank = sql<number>`ts_rank(to_tsvector('simple', ${publicEntries.title} || ' ' || ${publicEntries.body}), plainto_tsquery('simple', ${question}))`;
+      const rows =
+        consent.enabled && question
+          ? await tx
+              .select({
+                id: publicEntries.id,
+                title: publicEntries.title,
+                body: publicEntries.body,
+                publishedAt: publicEntries.publishedAt,
+              })
+              .from(publicEntries)
+              .where(
+                and(
+                  eq(publicEntries.channelId, channel.id),
+                  eq(publicEntries.status, 'published'),
+                ),
+              )
+              .orderBy(
+                desc(rank),
+                desc(publicEntries.publishedAt),
+                desc(publicEntries.id),
+              )
+              .limit(6)
+          : [];
+      return {
+        channelId: channel.id,
+        enabled: consent.enabled,
+        generation: consent.generation,
+        sources: rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          body: row.body.slice(0, 1600),
+          publishedAt: row.publishedAt!.toISOString(),
+        })),
+      };
+    });
+  }
   async feed(slug: string, query: z.infer<typeof publicQuerySchema>) {
     return this.infrastructure.db.transaction(async (tx) => {
       const channel = await this.publicChannel(tx, slug);

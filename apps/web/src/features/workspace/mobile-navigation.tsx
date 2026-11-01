@@ -7,10 +7,14 @@ import { Avatar } from '../../components/avatar';
 
 export function MobileNavigation({
   children,
+  secondary,
+  secondaryActive = false,
   user,
   preview,
 }: {
   children: ReactNode;
+  secondary?: ReactNode;
+  secondaryActive?: boolean;
   user: Session['user'];
   preview: boolean;
 }) {
@@ -62,9 +66,11 @@ export function MobileNavigation({
         onClose={() => setOpen(false)}
         onKeyDown={(event) => {
           if (event.key !== 'Tab') return;
-          const targets = event.currentTarget.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled])',
-          );
+          const targets = Array.from(
+            event.currentTarget.querySelectorAll<HTMLElement>(
+              'a[href], button:not([disabled]), summary',
+            ),
+          ).filter((element) => element.getClientRects().length > 0);
           const first = targets[0];
           const last = targets[targets.length - 1];
           if (event.shiftKey && document.activeElement === first) {
@@ -110,6 +116,15 @@ export function MobileNavigation({
           }}
         >
           {children}
+          {secondary && (
+            <details
+              className="mobile-secondary-nav"
+              open={secondaryActive || undefined}
+            >
+              <summary>More tools &amp; settings</summary>
+              {secondary}
+            </details>
+          )}
         </nav>
         <div className="mobile-nav-account">
           <Avatar name={user.login} size={36} />

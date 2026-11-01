@@ -1,4 +1,5 @@
 'use client';
+import { formatDateTime } from '../../lib/date-time';
 import { Select } from '../../components/select';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -75,11 +76,13 @@ export function ConsistencyReviews({
           </button>
         )}
       </div>
-      <p className="muted">
-        A different outcome can be justified. Check rule version, severity,
-        context and available evidence before drawing a conclusion. Reviews
-        preserve the original decision.
-      </p>
+      {(creating || data.flags.length > 0) && (
+        <p className="muted">
+          Compare the rule version, severity and evidence before drawing a
+          conclusion. Different outcomes can be justified; reviews preserve the
+          original decision.
+        </p>
+      )}
       {creating && (
         <WorkflowForm
           label="Create review flag"
@@ -231,7 +234,7 @@ function FlagCard({
           )}
           <p className="muted">
             Reviewed by Twitch user {flag.reviewedByTwitchUserId} ·{' '}
-            {new Date(flag.reviewedAt!).toLocaleString()}
+            {formatDateTime(flag.reviewedAt!)}
           </p>
         </div>
       )}

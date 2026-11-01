@@ -1,4 +1,5 @@
 'use client';
+import { PageTitle } from '../../components/page-title';
 import { ApiError } from '../../lib/api';
 import {
   savePendingModerator,
@@ -344,7 +345,7 @@ export function Team() {
     <div className="content-stack team-page">
       <div className="page-heading">
         <div>
-          <h1>Teams</h1>
+          <PageTitle>Teams</PageTitle>
           <p>Switch communities and see your role in each team.</p>
         </div>
         {!ownChannel?.connected && (
@@ -562,7 +563,6 @@ export function Team() {
           <section className="panel">
             <div className="panel-title">
               <h2>Bring someone along</h2>
-              <Users size={19} />
             </div>
             <p className="panel-description">
               They’ll need to sign in to Lore with Twitch first. Ask for the

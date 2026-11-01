@@ -93,6 +93,17 @@ const mock = createServer(async (req, res) => {
           },
         ],
       };
+    } else if (
+      body.contents[0].parts[0].text.startsWith('<public_community_json>')
+    ) {
+      const data = JSON.parse(body.contents[0].parts[0].text.split('\n')[1]);
+      const source = data.sources[0];
+      result = data.question.includes('private')
+        ? { answer: '', citations: [] }
+        : {
+            answer: source.body.slice(0, 200),
+            citations: [{ id: source.id, quote: source.body.slice(0, 100) }],
+          };
     } else {
       const sources = JSON.parse(body.contents[0].parts[0].text.split('\n')[1]);
       result = {

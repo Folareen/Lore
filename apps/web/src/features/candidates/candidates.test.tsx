@@ -67,6 +67,9 @@ it('shows full candidate evidence and uncertainty, then carries an edited human 
   const article = await screen.findByRole('article', {
     name: previewCandidates[0].draft!.summary,
   });
+  await user.click(
+    within(article).getByRole('button', { name: 'Review suggestion' }),
+  );
   expect(
     within(article).getByText(previewCandidates[0].source.text!),
   ).toBeTruthy();
@@ -78,6 +81,7 @@ it('shows full candidate evidence and uncertainty, then carries an edited human 
   expect(screen.queryByText(previewCandidates[0].draft!.summary)).toBeNull();
   await user.click(screen.getByRole('button', { name: 'Review candidates' }));
   await screen.findByRole('article');
+  await user.click(screen.getByRole('button', { name: 'Review suggestion' }));
   await user.click(screen.getByRole('button', { name: 'Review as promise' }));
   await user.clear(screen.getByLabelText('Promise wording'));
   await user.type(
@@ -94,6 +98,7 @@ it('requires an explicit dismissal reason and preserves the reviewed decision', 
   setup();
   const user = userEvent.setup();
   await screen.findByRole('article');
+  await user.click(screen.getByRole('button', { name: 'Review suggestion' }));
   await user.click(screen.getByRole('button', { name: 'Dismiss suggestion' }));
   expect(
     (
@@ -109,6 +114,9 @@ it('requires an explicit dismissal reason and preserves the reviewed decision', 
   await user.click(screen.getByRole('button', { name: 'Confirm dismissal' }));
   await waitFor(() => expect(screen.queryByRole('article')).toBeNull());
   await selectValue(user, screen.getByLabelText('Show'), 'dismissed');
+  await user.click(
+    await screen.findByRole('button', { name: 'Review suggestion' }),
+  );
   await screen.findByText(/Just brainstorming/);
   expect(
     screen.queryByRole('button', { name: 'Review as promise' }),
@@ -118,6 +126,9 @@ it('requires an explicit dismissal reason and preserves the reviewed decision', 
 it('makes a disconnected channel read-only', async () => {
   setup(true, false);
   await screen.findByRole('article');
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Review suggestion' }),
+  );
   expect(
     (
       screen.getByRole('button', {
@@ -150,10 +161,11 @@ it('explains missing server credentials and owner-only consent without offering 
         }),
   );
   setup(false, true, 'moderator');
+  await userEvent.click(screen.getByText('Find suggestions in chat'));
   await screen.findByText(
-    'Only the channel owner can change extraction consent.',
+    'Only the channel owner can enable chat suggestions.',
   );
-  expect(screen.getByText(/Add GEMINI_API_KEY/)).toBeTruthy();
+  expect(screen.getByText(/configuration needs attention/)).toBeTruthy();
   expect(
     (
       screen.getByRole('button', {
@@ -192,6 +204,7 @@ it('sends versioned, CSRF-protected review and keeps a conflict visible for refr
   setup(false);
   const user = userEvent.setup();
   await screen.findByRole('article');
+  await user.click(screen.getByRole('button', { name: 'Review suggestion' }));
   await user.click(screen.getByRole('button', { name: 'Review as promise' }));
   await user.click(screen.getByRole('button', { name: 'Confirm promise' }));
   expect((await screen.findByRole('alert')).textContent).toContain(
@@ -216,15 +229,16 @@ it('preserves review edits while refreshed suggestions keep the same version', a
   setup(false);
   const user = userEvent.setup();
   await screen.findByRole('article');
+  await user.click(screen.getByRole('button', { name: 'Review suggestion' }));
   await user.click(screen.getByRole('button', { name: 'Review as promise' }));
   await user.clear(screen.getByLabelText('Promise wording'));
   await user.type(
     screen.getByLabelText('Promise wording'),
     'Keep my review in progress.',
   );
-  await user.click(screen.getByRole('button', { name: 'Refresh' }));
+  await user.click(screen.getByRole('button', { name: 'Refresh suggestions' }));
   await waitFor(() =>
-    expect(screen.queryByText('Loading candidates…')).toBeNull(),
+    expect(screen.queryByText('Loading suggestions…')).toBeNull(),
   );
   expect(
     (screen.getByLabelText('Promise wording') as HTMLTextAreaElement).value,

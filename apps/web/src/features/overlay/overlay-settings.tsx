@@ -1,4 +1,7 @@
 'use client';
+import { RefreshCw } from 'lucide-react';
+import { IconButton } from '../../components/icon-button';
+import { PageTitle } from '../../components/page-title';
 import { Select } from '../../components/select';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -40,6 +43,15 @@ function OverlayDesk() {
     [url, setUrl] = useState(''),
     [confirm, setConfirm] = useState<'rotate' | 'revoke' | 'save' | null>(null),
     [revision, setRevision] = useState(0);
+  const [setupOpen, setSetupOpen] = useState(true);
+  useEffect(() => {
+    const desktop = window.matchMedia?.('(min-width: 851px)');
+    if (!desktop) return;
+    const sync = () => setSetupOpen(desktop.matches);
+    sync();
+    desktop.addEventListener('change', sync);
+    return () => desktop.removeEventListener('change', sync);
+  }, []);
   useEffect(() => {
     const c = new AbortController();
     setSettings(null);
@@ -145,19 +157,14 @@ function OverlayDesk() {
     <div className="content-stack">
       <div className="page-heading">
         <div>
-          <h1>Stream overlay</h1>
+          <PageTitle>Stream overlay</PageTitle>
           <p>Choose the Lore your audience sees in OBS.</p>
         </div>
         <Link className="button secondary" href={href('publications')}>
-          Community publishing &amp; !catchup
+          Public stories
         </Link>
       </div>
-      {preview && (
-        <p className="notice">
-          Demo fixture · settings stay in this preview. Demo links cannot access
-          a live overlay.
-        </p>
-      )}
+      {preview && <p className="notice">Demo links cannot connect to OBS.</p>}
       {!channel.connected && (
         <p className="notice">
           Disconnected · the overlay is hidden. Reconnect to approve content and
@@ -174,16 +181,17 @@ function OverlayDesk() {
           {notice}
         </p>
       )}
-      <button
-        className="button secondary"
+      <IconButton
+        label="Reload settings and entries"
+
         disabled={busy}
         onClick={() => {
           setRevision((v) => v + 1);
           setNotice('');
         }}
       >
-        Reload settings and entries
-      </button>
+        <RefreshCw size={18} aria-hidden="true" />
+      </IconButton>
       {!settings && !error && <p role="status">Loading overlay…</p>}
       {settings && (
         <>
@@ -191,8 +199,8 @@ function OverlayDesk() {
             <section className="panel overlay-panel">
               <h2>Choose what goes on screen</h2>
               <p>
-                Only published Community Lore is eligible. Private promises and
-                moderation records are never sent to OBS.
+                Choose published recaps or commitments. Private records are
+                excluded.
               </p>
               <label className="overlay-field">
                 Display
@@ -204,9 +212,9 @@ function OverlayDesk() {
                     setIds([]);
                   }}
                 >
-                  <option value="recap">Previously on · one recap</option>
+                  <option value="recap">Recap · select one</option>
                   <option value="open_loops">
-                    Open loops · up to three commitments
+                    Commitments · select up to three
                   </option>
                 </Select>
               </label>
@@ -274,9 +282,8 @@ function OverlayDesk() {
                 Show the approved selection on stream
               </label>
               <p>
-                Source withdrawal removes it from OBS. Open loops show the
-                published commitment titles; keep them current in Community
-                publishing.
+                Withdrawing a story removes it from OBS. Commitments display
+                their published titles.
               </p>
               <button
                 className="button primary"
@@ -312,93 +319,102 @@ function OverlayDesk() {
               </div>
             </section>
           </div>
-          <section className="panel overlay-panel">
-            <h2>OBS browser source</h2>
-            <p>
-              {settings.tokenActive
-                ? 'A private link is active.'
-                : 'No active link.'}{' '}
-              {settings.enabled
-                ? 'The approved selection is enabled.'
-                : 'The overlay is hidden.'}
-            </p>
-            <p>
-              Add a Browser Source in OBS, paste the link and set its size to
-              720 × 720. Enable “Refresh browser source when scene becomes
-              active.” The page background is transparent.
-            </p>
-            <p>
-              The link grants access to approved overlay text only. Treat it as
-              a credential. Creating a new link immediately invalidates the old
-              one; it must be replaced in OBS.
-            </p>
-            {channel.role === 'owner' ? (
-              <div className="overlay-actions">
-                <button
-                  className="button secondary"
-                  disabled={busy || !channel.connected}
-                  onClick={() => setConfirm('rotate')}
-                >
-                  {settings.tokenActive
-                    ? 'Regenerate overlay link'
-                    : 'Create overlay link'}
-                </button>
-                <button
-                  className="button danger"
-                  disabled={busy || !settings.tokenActive}
-                  onClick={() => setConfirm('revoke')}
-                >
-                  Revoke overlay link
-                </button>
-              </div>
-            ) : (
-              <p className="notice">
-                Only the owner can create or revoke the browser-source link.
+          <details
+            className="panel overlay-panel obs-setup"
+            open={setupOpen}
+            onToggle={(event) => {
+              setSetupOpen(event.currentTarget.open);
+              if (!event.currentTarget.open) setUrl('');
+            }}
+          >
+            <summary>OBS browser source</summary>
+            <div className="content-stack">
+              <p>
+                {settings.tokenActive
+                  ? 'A private link is active.'
+                  : 'No active link.'}{' '}
+                {settings.enabled
+                  ? 'The approved selection is enabled.'
+                  : 'The overlay is hidden.'}
               </p>
-            )}
-            {url && (
-              <>
-                <label className="overlay-field">
-                  Copy-once browser-source URL
-                  <input
-                    readOnly
-                    value={url}
-                    onFocus={(e) => e.target.select()}
-                  />
-                </label>
+              <p>
+                Add a Browser Source in OBS, paste the link and set its size to
+                720 × 720. Enable “Refresh browser source when scene becomes
+                active.” The page background is transparent.
+              </p>
+              <p>
+                The link grants access to approved overlay text only. Treat it
+                as a credential. Creating a new link immediately invalidates the
+                old one; it must be replaced in OBS.
+              </p>
+              {channel.role === 'owner' ? (
                 <div className="overlay-actions">
                   <button
                     className="button secondary"
-                    onClick={() =>
-                      void navigator.clipboard
-                        .writeText(url)
-                        .then(() => setNotice('Link copied.'))
-                        .catch(() =>
-                          setError('Copy the selected URL manually.'),
-                        )
-                    }
+                    disabled={busy || !channel.connected}
+                    onClick={() => setConfirm('rotate')}
                   >
-                    Copy link
+                    {settings.tokenActive
+                      ? 'Regenerate overlay link'
+                      : 'Create overlay link'}
                   </button>
                   <button
-                    className="button secondary"
-                    onClick={() => setUrl('')}
+                    className="button danger"
+                    disabled={busy || !settings.tokenActive}
+                    onClick={() => setConfirm('revoke')}
                   >
-                    Hide link
+                    Revoke overlay link
                   </button>
                 </div>
-              </>
-            )}
-            <p>
-              OBS refreshes every five seconds. A revoked link, missing content
-              or a connection failure clears the display; previously received
-              text expires after 6.5 seconds without a successful refresh.
-            </p>
-          </section>
+              ) : (
+                <p className="notice">
+                  Only the owner can create or revoke the browser-source link.
+                </p>
+              )}
+              {url && (
+                <>
+                  <label className="overlay-field">
+                    Copy-once browser-source URL
+                    <input
+                      readOnly
+                      value={url}
+                      onFocus={(e) => e.target.select()}
+                    />
+                  </label>
+                  <div className="overlay-actions">
+                    <button
+                      className="button secondary"
+                      onClick={() =>
+                        void navigator.clipboard
+                          .writeText(url)
+                          .then(() => setNotice('Link copied.'))
+                          .catch(() =>
+                            setError('Copy the selected URL manually.'),
+                          )
+                      }
+                    >
+                      Copy link
+                    </button>
+                    <button
+                      className="button secondary"
+                      onClick={() => setUrl('')}
+                    >
+                      Hide link
+                    </button>
+                  </div>
+                </>
+              )}
+              <p>
+                OBS refreshes every five seconds. Revoked links and unavailable
+                content clear the display automatically.
+              </p>
+            </div>
+          </details>
         </>
       )}
       {confirm && (
         <ConfirmDialog
+          tone={confirm === 'save' ? 'primary' : 'danger'}
           title={
             confirm === 'save'
               ? 'Approve this overlay selection?'

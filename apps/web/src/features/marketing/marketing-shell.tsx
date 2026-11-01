@@ -15,14 +15,8 @@ export function MarketingHeader() {
         </nav>
         <div className="header-actions">
           <ThemeToggle />
-          <Link className="text-link login-link" href="/login">
+          <Link className="button primary compact login-link" href="/login">
             Sign in
-          </Link>
-          <Link
-            className="button primary compact desktop-demo-link"
-            href="/demo"
-          >
-            Try the demo <ArrowUpRight size={16} aria-hidden="true" />
           </Link>
           <MarketingMenu />
         </div>
@@ -45,7 +39,6 @@ export function MarketingFooter() {
           GitHub <ArrowUpRight size={14} aria-hidden="true" />
         </a>
       </nav>
-      <span>Codex × TwitchCon Hackathon submission</span>
     </footer>
   );
 }

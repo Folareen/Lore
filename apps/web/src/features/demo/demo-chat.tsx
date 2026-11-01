@@ -1,4 +1,5 @@
 'use client';
+import { PageTitle } from '../../components/page-title';
 import { Select } from '../../components/select';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -69,7 +70,7 @@ export function DemoChat() {
       <div className="page-heading">
         <div>
           <p className="record-meta">Demo fixture · Chat simulation</p>
-          <h1>Try a command.</h1>
+          <PageTitle>Try a command.</PageTitle>
           <p>
             Nothing is sent to Twitch. This illustrates the promise and catch-up
             flows using your current demo state.

@@ -23,6 +23,7 @@ const settings = {
   moderationImportsEnabled: false,
   promiseConfirmationsEnabled: false,
   publicSummaryAiEnabled: true,
+  communityAssistantEnabled: false,
   microphoneEnabled: true,
   missingModerationScopes: ['channel:moderate'],
   chatReady: true,
@@ -74,7 +75,7 @@ it('requires an explicit owner confirmation and CSRF before enabling event impor
     ),
   );
   setup(<FeatureControls />);
-  await userEvent.click(screen.getByText('Additional channel capabilities'));
+  await userEvent.click(screen.getByText('Optional features'));
   expect(
     (
       await screen.findByRole('link', {
@@ -83,7 +84,7 @@ it('requires an explicit owner confirmation and CSRF before enabling event impor
     ).getAttribute('href'),
   ).toBe('/api/auth/twitch/moderation');
   await userEvent.click(
-    await screen.findByRole('button', {
+    await screen.findByRole('switch', {
       name: 'Enable import moderation events',
     }),
   );
@@ -186,9 +187,6 @@ it('leaves a generated public summary unpublished until it is explicitly used as
     ),
   );
   setup(<SummaryGenerator onUse={onUse} />);
-  await userEvent.click(
-    screen.getByText('Draft a catch-up summary with Gemini'),
-  );
   await userEvent.click(await screen.findByRole('checkbox'));
   await userEvent.click(
     screen.getByRole('button', { name: 'Generate summary draft' }),

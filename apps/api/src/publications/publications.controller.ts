@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ForbiddenException,
   Controller,
   Get,
   HttpCode,
@@ -14,10 +15,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { z } from 'zod';
+import { Throttle } from '@nestjs/throttler';
+import type { Request } from 'express';
+import { env } from '../config';
+import { CommunityAssistantService } from './community-assistant.service';
 import {
   createPublicationSchema,
   editPublicationSchema,
   publicationActionSchema,
+  communityQuestionSchema,
 } from '@lore/shared';
 import { SessionGuard, type AuthenticatedRequest } from '../auth/session.guard';
 import {
@@ -114,9 +120,24 @@ export class PublicationsController {
 @Controller('public/channels/:slug')
 export class PublicLoreController {
   constructor(
+    @Inject(CommunityAssistantService)
+    private readonly assistant: CommunityAssistantService,
     @Inject(PublicationsRepository)
     private readonly repository: PublicationsRepository,
   ) {}
+  @Get('assistant') assistantStatus(@Param('slug') slug: string) {
+    return this.assistant.status(slug);
+  }
+  @Post('assistant')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  ask(@Param('slug') slug: string, @Req() req: Request, @Body() body: unknown) {
+    if (req.headers.origin !== env.APP_ORIGIN)
+      throw new ForbiddenException(
+        'Open this community page to ask a question.',
+      );
+    return this.assistant.ask(slug, parse(communityQuestionSchema, body));
+  }
   @Get() feed(@Param('slug') slug: string, @Query() query: unknown) {
     return this.repository.feed(slug, parse(publicQuerySchema, query));
   }

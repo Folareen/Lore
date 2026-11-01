@@ -30,7 +30,7 @@ for (const width of [390, 1440]) {
       }, theme);
       for (const view of views) {
         await page.goto(`/demo?view=${view}`);
-        await expect(page.locator('main h1')).toBeVisible();
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
         await expect(page.locator('main')).not.toContainText(
           'coming in later chapters',
         );
@@ -41,8 +41,27 @@ for (const width of [390, 1440]) {
             ),
           )
           .toBe(true);
+        if (view === 'brief') {
+          const toolbar = page.locator('.brief-toolbar');
+          await expect(
+            toolbar.getByRole('button', { name: 'Refresh brief' }),
+          ).toBeEnabled();
+          const centers = await toolbar.evaluate((element) => {
+            const count = element.querySelector('p')!.getBoundingClientRect();
+            const refresh = element
+              .querySelector('button')!
+              .getBoundingClientRect();
+            return Math.abs(
+              count.y + count.height / 2 - refresh.y - refresh.height / 2,
+            );
+          });
+          expect(centers).toBeLessThan(1);
+        }
         if (
           [
+            'overview',
+            'brief',
+            'candidates',
             'streamer',
             'publications',
             'community',
@@ -106,8 +125,10 @@ test('landing content, optional memory game, FAQ and tour work on mobile', async
     fullPage: true,
     animations: 'disabled',
   });
+  await page.getByLabel('Explore Lore', { exact: true }).click();
   await page
-    .getByRole('link', { name: 'Take a look around', exact: true })
+    .getByRole('navigation', { name: 'Mobile site navigation' })
+    .getByRole('link', { name: 'How it works', exact: true })
     .click();
   await expect(page).toHaveURL(/\/how-it-works$/);
   await expect(
@@ -166,6 +187,10 @@ test('mobile workspace navigation opens, closes with Escape and follows a destin
     page.getByRole('dialog', { name: 'Community menu' }),
   ).toBeVisible();
   await page
+    .getByRole('dialog', { name: 'Community menu' })
+    .getByText('More tools & settings', { exact: true })
+    .click();
+  await page
     .getByRole('navigation', { name: 'Community navigation' })
     .getByRole('link', { name: 'Account', exact: true })
     .focus();
@@ -174,10 +199,10 @@ test('mobile workspace navigation opens, closes with Escape and follows a destin
   await trigger.click();
   await page
     .getByRole('navigation', { name: 'Community navigation' })
-    .getByRole('link', { name: 'Open loops', exact: true })
+    .getByRole('link', { name: 'Promises', exact: true })
     .click();
   await expect(
-    page.getByRole('heading', { name: 'Open loops', exact: true }),
+    page.getByRole('heading', { name: 'Promises', exact: true }),
   ).toBeVisible();
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   const card = page.getByRole('article').first();
@@ -185,6 +210,7 @@ test('mobile workspace navigation opens, closes with Escape and follows a destin
   await card.getByText('Change status', { exact: true }).click();
   await chooseSelect(page, card.getByLabel('Next status'), 'fulfilled');
   await expect(card.getByLabel('Reason (required)')).toBeVisible();
+  await page.getByText('New promise', { exact: true }).click();
   const input = page.getByLabel('What did we promise?');
   expect(
     await input.evaluate((element) =>
@@ -205,7 +231,7 @@ test('narrow phones and tablets keep marketing and core tasks within the viewpor
       '/demo?view=publications',
     ]) {
       await page.goto(path);
-      await expect(page.locator('main h1')).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect
         .poll(() =>
           page.evaluate(
@@ -287,7 +313,7 @@ test('case detail and sign-in remain readable on phones and desktops', async ({
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/demo?view=moderation');
     await page.locator('.case-list-row').first().click();
-    await expect(page.locator('main h1')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect
       .poll(() =>
         page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
@@ -324,7 +350,7 @@ test('marketing headers stay fixed and tour layout and anchor navigation stay cl
     for (const path of ['/', '/how-it-works']) {
       await page.goto(path);
       const header = page.locator('.marketing-header');
-      const title = page.locator('main h1');
+      const title = page.getByRole('heading', { level: 1 });
       const initialHeader = await header.boundingBox();
       const heading = await title.boundingBox();
       expect(heading!.y).toBeGreaterThanOrEqual(initialHeader!.height);
@@ -390,9 +416,16 @@ test('demo uses the real workspace, fixed headers and keyboard-accessible custom
     await expect(page.locator('.demo-session-bar')).toBeVisible();
     await expect(page.locator('.demo-toolbar')).toHaveCount(0);
     const header = page.locator('.workspace-topbar');
-    const heading = await page.locator('main h1').boundingBox();
+    const heading = await page.getByRole('heading', { level: 1 }).boundingBox();
     const top = await header.boundingBox();
-    expect(heading!.y).toBeGreaterThanOrEqual(top!.y + top!.height);
+    expect(heading!.y).toBeGreaterThanOrEqual(top!.y);
+    expect(heading!.y + heading!.height).toBeLessThanOrEqual(
+      top!.y + top!.height,
+    );
+    await expect(page.locator('main h1')).toHaveCount(0);
+    expect(
+      (await page.locator('main').boundingBox())!.y,
+    ).toBeGreaterThanOrEqual(top!.y + top!.height);
     await page.evaluate(() => scrollTo(0, 600));
     await expect
       .poll(async () => (await header.boundingBox())!.y)
@@ -490,13 +523,27 @@ test('the illustrative story loops, can be paused, and respects reduced motion',
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
   const header = page.locator('.marketing-header');
-  await expect(header.locator('.desktop-demo-link')).toBeHidden();
+  await expect(header.locator('.login-link')).toBeHidden();
+  await expect(header.locator('.login-link')).toHaveClass(/primary/);
+  await expect(
+    header.getByRole('link', { name: 'Try the demo', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .locator('.hero-actions')
+      .getByRole('link', { name: 'Try the demo', exact: true }),
+  ).toHaveAttribute('href', '/demo');
   await page.getByLabel('Explore Lore', { exact: true }).click();
   await expect(
     page
       .getByRole('navigation', { name: 'Mobile site navigation' })
       .getByRole('link', { name: 'Try the demo', exact: true }),
   ).toHaveAttribute('href', '/demo');
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Mobile site navigation' })
+      .getByRole('link', { name: 'Sign in', exact: true }),
+  ).toBeVisible();
   await page.keyboard.press('Escape');
   const story = page.getByRole('region', {
     name: 'An illustrative Lore story',
@@ -504,6 +551,8 @@ test('the illustrative story loops, can be paused, and respects reduced motion',
   const chapters = story.getByRole('group', { name: 'Story chapters' });
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
+    if (width === 1440)
+      await expect(header.locator('.login-link')).toBeVisible();
     // Measure both in one frame while their shared entrance animation runs.
     const { controlsBottom, sceneTop } = await story.evaluate((element) => {
       const controls = element.querySelector('.chapter-nav');

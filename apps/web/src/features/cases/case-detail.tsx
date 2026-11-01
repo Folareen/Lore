@@ -1,4 +1,9 @@
 'use client';
+import { RefreshCw } from 'lucide-react';
+import { IconButton } from '../../components/icon-button';
+import { formatDateTime } from '../../lib/date-time';
+import { PageTitle } from '../../components/page-title';
+import { SectionTabs } from '../../components/section-tabs';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -55,6 +60,19 @@ function CaseFile({ id }: { id: string }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
+  const [section, setSection] = useState('incident');
+  useEffect(() => {
+    const sync = () => {
+      const hash = window.location.hash;
+      if (hash.includes('repair') || hash.includes('follow-up'))
+        setSection('followup');
+      else if (hash.includes('decision')) setSection('decision');
+      else if (hash.includes('evidence')) setSection('evidence');
+    };
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
   const [editing, setEditing] = useState(false);
   const channelId = selected!.id;
   useLiveRefresh(channelId, () => setRevision((value) => value + 1));
@@ -86,12 +104,12 @@ function CaseFile({ id }: { id: string }) {
         <p className="notice error" role="alert">
           {error}
         </p>
-        <button
-          className="button secondary"
+        <IconButton
+          label="Refresh case"
           onClick={() => setRevision((r) => r + 1)}
         >
-          Refresh case
-        </button>
+          <RefreshCw size={18} aria-hidden="true" />
+        </IconButton>
       </div>
     );
   if (!record) return null;
@@ -108,7 +126,7 @@ function CaseFile({ id }: { id: string }) {
                 ? 'Twitch event import'
                 : 'Manual import'}
           </p>
-          <h1>{record.title}</h1>
+          <PageTitle>{record.title}</PageTitle>
           {record.origin === 'live_twitch' && (
             <p className="notice">
               Imported Twitch event · review the source evidence and record the
@@ -121,12 +139,12 @@ function CaseFile({ id }: { id: string }) {
             <span className="status purple">{record.status}</span>
           </p>
         </div>
-        <button
-          className="button secondary"
+        <IconButton
+          label="Refresh case"
           onClick={() => setRevision((r) => r + 1)}
         >
-          Refresh case
-        </button>
+          <RefreshCw size={18} aria-hidden="true" />
+        </IconButton>
       </div>
       {!selected?.connected && (
         <p className="notice">
@@ -144,7 +162,7 @@ function CaseFile({ id }: { id: string }) {
           )}
           <p className="muted">
             Recorded by Twitch user {record.decidedByTwitchUserId} ·{' '}
-            {new Date(record.decidedAt!).toLocaleString()}
+            {formatDateTime(record.decidedAt!)}
             {record.aiDisposition
               ? ` · AI suggestion ${record.aiDisposition}`
               : ''}
@@ -155,85 +173,147 @@ function CaseFile({ id }: { id: string }) {
           </p>
         </section>
       )}
-      <section className="panel content-stack">
-        <div className="panel-title">
-          <h2>The incident & appeal</h2>
-          {editable && (
-            <button
-              className="button secondary"
-              onClick={() => setEditing(!editing)}
-            >
-              Edit case
-            </button>
-          )}
-        </div>
-        <p className="muted">
-          {record.incidentAt
-            ? new Date(record.incidentAt).toLocaleString()
-            : 'Incident time not recorded'}
-        </p>
-        <p className="case-prose">{record.incident}</p>
-        <h3>Appeal</h3>
-        <p className="case-prose">
-          {record.appeal || 'No appeal text was supplied.'}
-        </p>
-        <div className="candidate-source">
-          <h3>
-            {record.ruleTitle} · version {record.ruleVersion}
-          </h3>
-          <p className="case-prose">{record.ruleText}</p>
-        </div>
-      </section>
-      {editing && editable && (
-        <CaseForm
-          initial={record}
-          label="Save case changes"
-          onCancel={() => setEditing(false)}
-          onSave={async (fields) => {
-            setRecord(
-              await update(
-                record,
-                updateCaseSchema.parse({
-                  ...fields,
-                  expectedVersion: record.version,
-                  status:
-                    record.status === 'open' ? 'reviewing' : record.status,
-                }),
-              ),
-            );
-            setEditing(false);
-          }}
-        />
-      )}
-      <CaseEvidencePanel
-        key={`evidence-${record.version}`}
-        record={record}
-        editable={editable}
-        onChanged={setRecord}
+      <SectionTabs
+        label="Case sections"
+        value={section}
+        onValueChange={setSection}
+        tabs={[
+          {
+            value: 'incident',
+            label: 'Incident & rule',
+            content: (
+              <div className="content-stack">
+                {' '}
+                <section className="panel content-stack" id="case-incident">
+                  <div className="panel-title">
+                    <h2>The incident & appeal</h2>
+                    {editable && (
+                      <button
+                        className="button secondary"
+                        onClick={() => setEditing(!editing)}
+                      >
+                        Edit case
+                      </button>
+                    )}
+                  </div>
+                  <p className="muted">
+                    {record.incidentAt
+                      ? formatDateTime(record.incidentAt)
+                      : 'Incident time not recorded'}
+                  </p>
+                  <p className="case-prose">{record.incident}</p>
+                  <h3>Appeal</h3>
+                  <p className="case-prose">
+                    {record.appeal || 'No appeal text was supplied.'}
+                  </p>
+                  <div className="candidate-source">
+                    <h3>
+                      {record.ruleTitle} · version {record.ruleVersion}
+                    </h3>
+                    <p className="case-prose">{record.ruleText}</p>
+                  </div>
+                </section>
+                {editing && editable && (
+                  <CaseForm
+                    initial={record}
+                    label="Save case changes"
+                    onCancel={() => setEditing(false)}
+                    onSave={async (fields) => {
+                      setRecord(
+                        await update(
+                          record,
+                          updateCaseSchema.parse({
+                            ...fields,
+                            expectedVersion: record.version,
+                            status:
+                              record.status === 'open'
+                                ? 'reviewing'
+                                : record.status,
+                          }),
+                        ),
+                      );
+                      setEditing(false);
+                    }}
+                  />
+                )}
+              </div>
+            ),
+          },
+          {
+            value: 'evidence',
+            label: 'Evidence',
+            content: (
+              <>
+                {' '}
+                <div id="case-evidence">
+                  <CaseEvidencePanel
+                    key={`evidence-${record.version}`}
+                    record={record}
+                    editable={editable}
+                    onChanged={setRecord}
+                  />
+                </div>
+              </>
+            ),
+          },
+          {
+            value: 'decision',
+            label: 'Review & decision',
+            content: (
+              <>
+                {' '}
+                <div id="case-decision">
+                  <CasePrecedents
+                    key={`review-${record.version}`}
+                    record={record}
+                    editable={editable}
+                    onDecided={setRecord}
+                  />
+                </div>
+              </>
+            ),
+          },
+          {
+            value: 'followup',
+            label: 'Follow-up',
+            content: (
+              <>
+                {' '}
+                <div id="case-follow-up">
+                  <CaseWorkflowPanel record={record} />
+                </div>
+              </>
+            ),
+          },
+          {
+            value: 'history',
+            label: 'History',
+            content: (
+              <>
+                {' '}
+                <details className="panel">
+                  <summary>Case history</summary>
+                  <ol className="case-history">
+                    {record.history.map((item) => (
+                      <li key={item.id}>
+                        <strong>{item.action.replaceAll('_', ' ')}</strong> · v
+                        {item.version}
+                        <p className="muted">
+                          Twitch user {item.actorTwitchUserId} ·{' '}
+                          {formatDateTime(item.occurredAt)}
+                        </p>
+                        {item.reason && (
+                          <p className="case-prose">{item.reason}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              </>
+            ),
+          },
+        ]}
       />
-      <CasePrecedents
-        key={`review-${record.version}`}
-        record={record}
-        editable={editable}
-        onDecided={setRecord}
-      />
-      <section className="panel">
-        <h2>Case history</h2>
-        <ol className="case-history">
-          {record.history.map((item) => (
-            <li key={item.id}>
-              <strong>{item.action.replaceAll('_', ' ')}</strong> · v
-              {item.version}
-              <p className="muted">
-                Twitch user {item.actorTwitchUserId} ·{' '}
-                {new Date(item.occurredAt).toLocaleString()}
-              </p>
-              {item.reason && <p className="case-prose">{item.reason}</p>}
-            </li>
-          ))}
-        </ol>
-      </section>
-      <CaseWorkflowPanel record={record} />
     </div>
   );
 }

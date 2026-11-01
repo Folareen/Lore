@@ -1,4 +1,5 @@
 'use client';
+import { formatDateTime } from '../../lib/date-time';
 import { Select } from '../../components/select';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -138,9 +139,7 @@ export function RepairActions({
               (action.assigneeId
                 ? 'previous moderator · access unavailable'
                 : 'nobody yet')}
-            {action.dueAt
-              ? ` · Due ${new Date(action.dueAt).toLocaleString()}`
-              : ''}
+            {action.dueAt ? ` · Due ${formatDateTime(action.dueAt)}` : ''}
           </p>
           {action.completionNote && (
             <p className="case-prose">

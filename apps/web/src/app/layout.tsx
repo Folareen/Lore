@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import '@fontsource-variable/dm-sans';
 import '@fontsource-variable/space-grotesk';
 import './globals.css';
+import './product.css';
 import { Providers } from '../components/providers';
 export const metadata: Metadata = {
   title: {

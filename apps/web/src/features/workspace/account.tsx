@@ -1,6 +1,8 @@
 'use client';
+import { IconButton } from '../../components/icon-button';
+import { PageTitle } from '../../components/page-title';
 import { useState } from 'react';
-import { Copy, Check, LogOut, ShieldCheck } from 'lucide-react';
+import { Copy, Check, LogOut } from 'lucide-react';
 import { useWorkspace } from './workspace-context';
 import { Avatar } from '../../components/avatar';
 import { ThemeChoices } from '../../components/theme-control';
@@ -36,7 +38,7 @@ export function Account() {
     <>
       <div className="page-heading">
         <div>
-          <h1>Account</h1>
+          <PageTitle>Account</PageTitle>
           <p>Your Twitch account and appearance preferences.</p>
         </div>
       </div>
@@ -49,7 +51,6 @@ export function Account() {
         <section className="panel">
           <div className="panel-title">
             <h2>Your Twitch account</h2>
-            <ShieldCheck size={19} />
           </div>
           <div className="connection-identity">
             <Avatar name={session.user.login} size={60} />
@@ -58,16 +59,7 @@ export function Account() {
               <small>@{session.user.login}</small>
             </div>
           </div>
-          <div className="form-grid" style={{ marginTop: 26 }}>
-            <div className="field">
-              <label htmlFor="display-name">Display name</label>
-              <input
-                id="display-name"
-                value={session.user.displayName}
-                readOnly
-              />
-              <small>Synced when you sign in with Twitch.</small>
-            </div>
+          <div className="account-identifier">
             <div className="field">
               <label htmlFor="account-twitch-id">Twitch user ID</label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -76,13 +68,12 @@ export function Account() {
                   value={session.user.twitchUserId}
                   readOnly
                 />
-                <button
-                  className="icon-button"
-                  aria-label="Copy Twitch user ID"
+                <IconButton
+                  label="Copy Twitch user ID"
                   onClick={() => void copy()}
                 >
                   {copied ? <Check size={17} /> : <Copy size={17} />}
-                </button>
+                </IconButton>
               </div>
               <small role={copied ? 'status' : undefined}>
                 {copied
@@ -96,18 +87,11 @@ export function Account() {
           <div className="panel-title">
             <h2>Appearance</h2>
           </div>
-          <p className="panel-description">
-            Choose light, dark or your device’s theme.
-          </p>
           <ThemeChoices />
         </section>
         <section className="panel danger-section">
           <div>
             <h2>Sign out</h2>
-            <p>
-              Signing out ends this Lore session. Your channel and team stay
-              right where you left them.
-            </p>
           </div>
           <button
             className="button secondary"

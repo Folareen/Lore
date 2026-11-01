@@ -1,6 +1,8 @@
 'use client';
+import { RefreshCw } from 'lucide-react';
+import { IconButton } from '../../components/icon-button';
+import { formatDateTime } from '../../lib/date-time';
 import { useEffect, useState } from 'react';
-import { Radio } from 'lucide-react';
 import {
   ingestionStatusSchema,
   twitchEventTypes,
@@ -81,12 +83,10 @@ export function LiveCapture({ channel }: { channel: Channel }) {
     <section className="panel">
       <div className="panel-title">
         <h2>Live capture</h2>
-        <Radio size={19} aria-hidden="true" />
       </div>
       <p className="panel-description">
-        Bring in new chat and stream events from this channel. Deleted messages
-        and cleared chat are removed from ordinary capture. Nothing from before
-        you connect is imported.
+        Capture new chat and stream events. Deleted or cleared chat is removed;
+        earlier history isn’t imported.
       </p>
       {preview ? (
         <p className="notice">
@@ -167,17 +167,20 @@ export function LiveCapture({ channel }: { channel: Channel }) {
                           Reconnect Twitch permissions
                         </a>
                       )}
-                      <p>
-                        {enabled} event connections ready (6 core; up to 3
-                        optional moderation connections). {status.pending}{' '}
-                        deliveries waiting; {status.failed} failed.
-                      </p>
-                      {status.lastReceivedAt && (
+                      <details className="capture-details">
+                        <summary>Connection details</summary>{' '}
                         <p>
-                          Last delivery:{' '}
-                          {new Date(status.lastReceivedAt).toLocaleString()}
+                          {enabled} event connections ready (6 core; up to 3
+                          optional moderation connections). {status.pending}{' '}
+                          deliveries waiting; {status.failed} failed.
                         </p>
-                      )}
+                        {status.lastReceivedAt && (
+                          <p>
+                            Last delivery:{' '}
+                            {formatDateTime(status.lastReceivedAt)}
+                          </p>
+                        )}
+                      </details>
                       <button
                         className={`button ${status.requested ? 'secondary' : 'primary'}`}
                         disabled={busy}
@@ -197,13 +200,14 @@ export function LiveCapture({ channel }: { channel: Channel }) {
                   )}
                 </>
               )}
-              <button
-                className="button secondary"
+              <IconButton
+                label="Refresh capture status"
+
                 disabled={busy}
                 onClick={() => void load()}
               >
-                Refresh capture status
-              </button>
+                <RefreshCw size={18} aria-hidden="true" />
+              </IconButton>
             </div>
           )}
         </>

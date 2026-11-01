@@ -168,6 +168,7 @@ describe('Lore interface behavior', () => {
     );
     workspace(<ChannelSettings />);
     const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Privacy & data' }));
     await selectValue(
       user,
       screen.getByLabelText('Ordinary chat retention'),
@@ -188,6 +189,7 @@ describe('Lore interface behavior', () => {
     fetchMock.mockResolvedValue(response({ message: 'unavailable' }, 503));
     workspace(<ChannelSettings />);
     const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Privacy & data' }));
     await selectValue(
       user,
       screen.getByLabelText('Ordinary chat retention'),
@@ -203,6 +205,7 @@ describe('Lore interface behavior', () => {
     fetchMock.mockResolvedValue(response({ unexpected: true }));
     workspace(<ChannelSettings />);
     const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Privacy & data' }));
     await selectValue(
       user,
       screen.getByLabelText('Ordinary chat retention'),
@@ -218,6 +221,7 @@ describe('Lore interface behavior', () => {
     fetchMock.mockResolvedValue(response(null, 204));
     workspace(<ChannelSettings />);
     const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Privacy & data' }));
     await user.click(
       screen.getByRole('button', { name: 'Disconnect channel' }),
     );
@@ -241,6 +245,7 @@ describe('Lore interface behavior', () => {
       </>,
       [previewChannels[1]],
     );
+    await userEvent.click(screen.getByRole('tab', { name: 'Privacy & data' }));
     expect(
       screen.getByLabelText<HTMLButtonElement>('Ordinary chat retention')
         .disabled,
@@ -505,6 +510,7 @@ describe('Lore interface behavior', () => {
     fetchMock.mockResolvedValue(response({ message: 'Sign in required' }, 401));
     workspace(<ChannelSettings />);
     const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Privacy & data' }));
     await selectValue(
       user,
       screen.getByLabelText('Ordinary chat retention'),
@@ -520,6 +526,7 @@ describe('Lore interface behavior', () => {
     let members = [previewPeople[0]];
     fetchMock.mockImplementation(async () => response(members));
     workspace(<Overview />);
+    await userEvent.click(screen.getByText('Channels & setup'));
     const completed = await screen.findByRole('link', {
       name: /Team added 1 teammate has access/,
     });
@@ -540,13 +547,16 @@ describe('Lore interface behavior', () => {
   it('keeps setup status unknown on a failed membership check and skips private checks for moderators', async () => {
     fetchMock.mockRejectedValue(new Error('Unavailable'));
     const view = workspace(<Overview />);
+    await userEvent.click(screen.getByText('Channels & setup'));
     expect(await screen.findByText('Open Teams to check access.')).toBeTruthy();
     expect(screen.queryByText('Team added')).toBeNull();
     view.unmount();
     fetchMock.mockClear();
     workspace(<Overview />, [previewChannels[1]]);
     expect(screen.getByText('Your access')).toBeTruthy();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).endsWith('/members')),
+    ).toBe(false);
   });
   it('connects an authenticated user’s channel from the empty overview', async () => {
     fetchMock.mockResolvedValue(response(previewChannels[0]));
@@ -580,6 +590,7 @@ describe('Lore interface behavior', () => {
       </AppShell>,
     );
     const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Privacy & data' }));
     expect(
       screen.getByRole('button', { name: 'Disconnect channel' }),
     ).toBeTruthy();
@@ -588,6 +599,7 @@ describe('Lore interface behavior', () => {
       screen.getByLabelText('Selected channel'),
       previewChannels[1].id,
     );
+    await user.click(screen.getByRole('tab', { name: 'Privacy & data' }));
     expect(
       screen.queryByRole('button', { name: 'Disconnect channel' }),
     ).toBeNull();

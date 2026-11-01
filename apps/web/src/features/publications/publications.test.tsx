@@ -22,6 +22,7 @@ import {
 } from '../../lib/preview-publications';
 import { previewChannels, previewSession } from '../../lib/preview-data';
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 vi.mock('next/link', () => ({
@@ -63,8 +64,8 @@ async function draft(
   user: ReturnType<typeof userEvent.setup>,
   title = 'Our next community moment',
 ) {
-  await screen.findByRole('button', { name: 'New community draft' });
-  await user.click(screen.getByRole('button', { name: 'New community draft' }));
+  await screen.findByRole('button', { name: 'New story' });
+  await user.click(screen.getByRole('button', { name: 'New story' }));
   await user.type(screen.getByLabelText('Public title'), title);
   await user.type(
     screen.getByLabelText('Public story'),
@@ -108,10 +109,13 @@ it('keeps a new draft out of visitor catch-up until an explicit human publicatio
     screen.getByRole('button', { name: 'View fixture publisher' }),
   );
   const card = await screen.findByRole('article', { name: title });
+  await user.click(within(card).getByRole('button', { name: 'Open draft' }));
   await user.click(
     within(card).getByRole('button', { name: 'Review for publication' }),
   );
-  const dialog = screen.getByRole('dialog');
+  const dialog = screen.getByRole('dialog', {
+    name: /Publish this exact wording/,
+  });
   expect(
     within(dialog).getByText(
       'Chat chose a new garden path. Everyone is welcome to help name it.',
@@ -159,7 +163,8 @@ it('withdraws published sources and dependent newcomer summaries when a public s
   const user = userEvent.setup();
   const source = previewPublications[0];
   const card = await screen.findByRole('article', { name: source.title });
-  await user.click(within(card).getByRole('button', { name: 'Edit to draft' }));
+  await user.click(within(card).getByRole('button', { name: 'Manage story' }));
+  await user.click(within(card).getByRole('button', { name: 'Edit as draft' }));
   await user.clear(screen.getByLabelText('Public story'));
   await user.type(
     screen.getByLabelText('Public story'),
@@ -183,7 +188,7 @@ it('withdraws published sources and dependent newcomer summaries when a public s
   await user.click(
     screen.getByRole('button', { name: 'View fixture visitor' }),
   );
-  await screen.findByText('No catch-up summary published yet.');
+  await screen.findByText('No catch-up published yet');
   expect(screen.queryByText(source.title)).toBeNull();
   expect(screen.queryByText(previewPublications[2].body)).toBeNull();
   expect(fetchMock).not.toHaveBeenCalled();
@@ -193,6 +198,8 @@ it('requires reasoned deletion and removes the entry from visitor views', async 
   const user = userEvent.setup();
   const source = previewPublications[1];
   const card = await screen.findByRole('article', { name: source.title });
+  await user.click(within(card).getByRole('button', { name: 'Manage story' }));
+  await user.click(within(card).getByText('More actions'));
   await user.click(within(card).getByRole('button', { name: 'Delete entry' }));
   await user.type(
     screen.getByLabelText('Publication review reason'),
@@ -212,8 +219,18 @@ it('requires reasoned deletion and removes the entry from visitor views', async 
 });
 it('shows the exact short catch-up wording and keeps chat sending disabled in the fixture preview', async () => {
   setup();
+  await userEvent.click(
+    within(
+      await screen.findByRole('article', {
+        name: previewPublications[2].title,
+      }),
+    ).getByRole('button', { name: 'Manage story' }),
+  );
+  expect(
+    await screen.findByText(previewPublications[2].chatSummary),
+  ).toBeTruthy();
+  await userEvent.click(screen.getByRole('tab', { name: 'Twitch replies' }));
   await screen.findByRole('heading', { name: '!catchup in Twitch chat' });
-  expect(screen.getByText(previewPublications[2].chatSummary)).toBeTruthy();
   expect(
     screen
       .getByRole('button', { name: 'Enable !catchup replies' })
@@ -235,7 +252,11 @@ it('clears public content when revalidation finds a withdrawal and renders commu
     ],
     nextCursor: null,
   };
-  fetchMock.mockResolvedValue(Response.json(data));
+  fetchMock.mockImplementation(async (input) =>
+    Response.json(
+      String(input).endsWith('/assistant') ? { enabled: false } : data,
+    ),
+  );
   render(<PublicReader initial={{ mode: 'feed', data }} />);
   await waitFor(() => expect(fetchMock).toHaveBeenCalled());
   expect(screen.getByText('<script>privateContext()</script>')).toBeTruthy();
@@ -287,6 +308,7 @@ it('sends a CSRF-protected versioned approval and keeps a conflict visible witho
   });
   setup('owner', false);
   const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Open draft' }));
   await screen.findByRole('button', { name: 'Review for publication' });
   await user.click(
     screen.getByRole('button', { name: 'Review for publication' }),
@@ -296,7 +318,9 @@ it('sends a CSRF-protected versioned approval and keeps a conflict visible witho
     'Keep this review rationale.',
   );
   await user.click(screen.getByRole('button', { name: 'Approve & publish' }));
-  const dialog = screen.getByRole('dialog');
+  const dialog = screen.getByRole('dialog', {
+    name: /Publish this exact wording/,
+  });
   await within(dialog).findByRole('alert');
   expect(
     (screen.getByLabelText('Publication review reason') as HTMLTextAreaElement)
@@ -317,21 +341,22 @@ it('does not resurrect withdrawn text when an older public request finishes afte
   let release: (response: Response) => void = () => {
     throw new Error('Missing pending response');
   };
-  fetchMock
-    .mockImplementationOnce(
-      () =>
-        new Promise<Response>((resolve) => {
-          release = resolve;
-        }),
-    )
-    .mockImplementation(async () =>
-      Response.json(
-        { message: 'Community Lore is not available' },
-        { status: 404 },
-      ),
+  let feedRequests = 0;
+  fetchMock.mockImplementation(async (input) => {
+    if (String(input).endsWith('/assistant'))
+      return Response.json({ enabled: false });
+    feedRequests++;
+    if (feedRequests === 1)
+      return new Promise<Response>((resolve) => {
+        release = resolve;
+      });
+    return Response.json(
+      { message: 'Community Lore is not available' },
+      { status: 404 },
     );
+  });
   render(<PublicReader initial={{ mode: 'feed', data }} />);
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(feedRequests).toBe(1));
   Object.defineProperty(document, 'visibilityState', {
     configurable: true,
     value: 'visible',

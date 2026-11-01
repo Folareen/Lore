@@ -88,6 +88,9 @@ export const channels = pgTable(
     publicSummaryAiEnabled: boolean('public_summary_ai_enabled')
       .default(false)
       .notNull(),
+    communityAssistantEnabled: boolean('community_assistant_enabled')
+      .default(false)
+      .notNull(),
     microphoneEnabled: boolean('microphone_enabled').default(false).notNull(),
     featuresGeneration: integer('features_generation').default(0).notNull(),
     workspaceRevision: integer('workspace_revision').default(0).notNull(),

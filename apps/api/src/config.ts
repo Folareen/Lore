@@ -90,6 +90,22 @@ export const env = z
       .string()
       .regex(/^[a-zA-Z0-9._-]+$/)
       .default('gemini-3.8-flash'),
+    GEMINI_COMMUNITY_MODEL: z
+      .string()
+      .regex(/^[a-zA-Z0-9._-]+$/)
+      .default('gemini-3.5-flash-lite'),
+    COMMUNITY_AI_DAILY_LIMIT: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(1000)
+      .default(100),
+    COMMUNITY_AI_GLOBAL_DAILY_LIMIT: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(10000)
+      .default(500),
     AI_DAILY_CALL_LIMIT: z.coerce.number().int().min(1).max(500).default(50),
     AI_TEST_BASE_URL: z.url().optional(),
   })

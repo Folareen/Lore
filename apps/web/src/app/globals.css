@@ -1569,9 +1569,6 @@ svg {
   .header-actions {
     gap: 10px;
   }
-  .header-actions .login-link {
-    display: none;
-  }
   .header-actions .button {
     font-size: 12px;
     padding: 10px 12px;
@@ -3246,6 +3243,9 @@ details[open] > summary {
   .marketing-header .marketing-nav {
     display: none;
   }
+  .marketing-header .login-link {
+    display: none;
+  }
   .marketing-menu {
     display: block;
   }
@@ -4581,9 +4581,10 @@ details[open] > summary {
 }
 .hero-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 20px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
   margin-top: 8px;
 }
 .intro-aside .button {
@@ -4686,12 +4687,6 @@ details[open] > summary {
   }
 }
 @media (max-width: 850px) {
-  .marketing-header .desktop-demo-link {
-    display: none;
-  }
-  .marketing-menu nav .menu-demo-link {
-    margin-top: 8px;
-  }
   .landing-intro {
     grid-template-columns: minmax(0, 1fr);
     gap: 36px;
@@ -4721,7 +4716,7 @@ details[open] > summary {
   }
   .hero-actions {
     margin-top: 8px;
-    gap: 20px;
+    gap: 12px;
   }
   .stage-top {
     padding: 16px 20px;
@@ -4754,10 +4749,6 @@ details[open] > summary {
     ) {
     animation: none;
   }
-}
-.marketing-menu nav .menu-demo-link:hover {
-  background: var(--primary-hover);
-  color: var(--on-primary);
 }
 
 /* Native modal navigation keeps narrow-screen tasks separate from the page. */
@@ -4840,4 +4831,385 @@ details[open] > summary {
   margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
+}
+
+/* Task-first app layouts. Public/marketing pages keep their editorial rhythm. */
+.workspace
+  main
+  > :is(
+    .content-stack,
+    .page-heading,
+    .home-brief,
+    .overview-shortcuts,
+    .task-disclosure
+  ) {
+  max-width: 1120px;
+}
+.workspace .content-stack {
+  width: 100%;
+  max-width: 1120px;
+}
+.workspace .page-heading {
+  align-items: center;
+  gap: 20px;
+  margin-block: 24px 28px;
+}
+.workspace .content-stack > .page-heading {
+  margin-block: 8px 4px;
+}
+.workspace .page-heading p {
+  max-width: 58ch;
+  line-height: 1.6;
+}
+.workspace .panel {
+  padding: 28px;
+  border-radius: 12px;
+}
+.workspace .panel > :last-child {
+  margin-bottom: 0;
+}
+.workspace .panel-title h2 {
+  font-size: 21px;
+}
+.workspace .panel-description {
+  margin-bottom: 20px;
+}
+.workspace .button,
+.workspace .select-trigger {
+  min-height: 44px;
+  line-height: 1.4;
+}
+.workspace .button {
+  padding: 11px 18px;
+}
+.workspace .button-row {
+  gap: 12px;
+}
+.workspace .sidebar > nav a {
+  min-height: 44px;
+  padding: 10px 14px;
+}
+.workspace .sidebar > nav .nav-break {
+  margin-top: 14px;
+}
+.workspace .sidebar-account {
+  border-radius: 8px;
+  padding: 14px 10px;
+}
+.workspace .sidebar-account:hover {
+  background: var(--raised);
+}
+.workspace .sidebar-account > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.workspace .list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+}
+.workspace .list-toolbar .field {
+  width: 210px;
+  max-width: 100%;
+  margin: 0;
+}
+.workspace .list-toolbar > .button:first-child {
+  margin-right: auto;
+}
+.workspace .task-disclosure {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 18px 24px;
+  margin-block: 0;
+}
+.workspace .task-disclosure > summary {
+  color: var(--text);
+  font-size: 16px;
+}
+.workspace .task-disclosure.new-promise > summary {
+  color: var(--purple-ink);
+}
+.workspace .task-disclosure > .panel {
+  padding: 8px 0 4px;
+  box-shadow: none;
+}
+.workspace .task-disclosure > .panel > .panel-title {
+  display: none;
+}
+.workspace .promise-guide {
+  padding: 0 4px;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.workspace .promise-guide svg {
+  flex-shrink: 0;
+}
+.workspace .promise-wording {
+  font-size: 22px;
+  line-height: 1.4;
+  margin-block: 14px 8px;
+}
+.workspace .promise-publish-link {
+  display: inline-block;
+  margin-block: 12px 4px;
+}
+.workspace .promise-source {
+  padding: 14px 18px;
+  margin-top: 20px;
+}
+.workspace .promise-update {
+  margin-top: 12px;
+}
+.workspace .home-brief {
+  background: var(--purple-soft);
+}
+.workspace .home-brief .panel-title {
+  margin-bottom: 16px;
+}
+.home-promises {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.home-promises a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  margin-block: 8px;
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.home-promises a:hover {
+  background: var(--raised);
+}
+.home-promises svg {
+  flex-shrink: 0;
+  color: var(--purple-ink);
+}
+.home-promises span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.home-empty {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-block: 12px;
+}
+.home-empty p {
+  margin-top: 8px;
+  color: var(--muted);
+}
+.workspace .overview-shortcuts {
+  margin-block: 24px;
+}
+.workspace .overview-setup {
+  margin-bottom: 20px;
+}
+.workspace .overview-setup .panel {
+  background: var(--raised);
+  box-shadow: none;
+  padding: 22px;
+}
+.section-tabs {
+  min-width: 0;
+}
+.section-tab-list {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px;
+  background: var(--raised);
+  border-radius: 10px;
+  margin-bottom: 24px;
+  scrollbar-width: thin;
+}
+.section-tab-list button {
+  flex-shrink: 0;
+  padding: 12px 18px;
+  min-height: 44px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.section-tab-list button[aria-selected='true'] {
+  color: var(--purple-ink);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.section-tabs [role='tabpanel'][hidden] {
+  display: none;
+}
+.task-intro {
+  max-width: 68ch;
+}
+.task-intro h2 {
+  margin-bottom: 10px;
+}
+.task-intro p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.workspace .feature-controls > section + section {
+  margin-top: 12px;
+  padding-top: 20px;
+}
+.workspace .feature-controls p {
+  max-width: 70ch;
+}
+.workspace .draft-promise-source {
+  padding: 16px 20px;
+  background: var(--raised);
+  border-radius: 8px;
+}
+.workspace .draft-promise-source .select-trigger {
+  background: var(--surface);
+}
+@media (max-width: 850px) {
+  .workspace .sidebar > nav .nav-break {
+    margin-top: 0;
+  }
+  .workspace .overview-shortcuts {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .workspace .page-heading {
+    align-items: stretch;
+    gap: 16px;
+  }
+  .workspace .panel {
+    padding: 22px 20px;
+  }
+  .workspace .page-heading h1 {
+    font-size: 28px;
+  }
+  .workspace .panel-title h2,
+  .workspace .promise-wording {
+    font-size: 20px;
+  }
+  .workspace .task-disclosure {
+    padding: 16px 20px;
+  }
+  .workspace .button-row > .button {
+    width: auto;
+    flex: 0 1 auto;
+  }
+  .workspace .list-toolbar {
+    gap: 12px;
+    align-items: end;
+  }
+  .workspace .list-toolbar .field {
+    flex: 1 1 160px;
+  }
+  .workspace .list-toolbar > .button:first-child {
+    flex: 1 0 100%;
+  }
+  .section-tab-list {
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 20px;
+  }
+  .section-tab-list button {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .home-promises a {
+    padding: 14px 12px;
+    font-size: 15px;
+  }
+}
+.case-jump-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.case-jump-nav a {
+  padding: 10px 14px;
+  background: var(--raised);
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.case-jump-nav a:hover {
+  background: var(--purple-soft);
+  color: var(--purple-ink);
+}
+.workspace .promise-source:not([open]) {
+  padding: 0;
+  background: transparent;
+  margin-top: 16px;
+}
+.workspace .promise-publish-link,
+.workspace .home-brief .text-link {
+  color: var(--purple-ink);
+}
+.workspace .publication-details {
+  font-size: 13px;
+  color: var(--muted);
+}
+.workspace .publication-details summary,
+.workspace .record-more summary {
+  font-size: 13px;
+}
+.workspace .publication-details p {
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.workspace .record-more {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+.workspace .record-more[open] > .button-row {
+  margin-top: 8px;
+}
+.workspace .new-promise:not([open]) {
+  padding: 0;
+  background: transparent;
+}
+.workspace .task-disclosure.new-promise > summary {
+  width: fit-content;
+  padding: 12px 22px;
+  border-radius: 8px;
+  color: var(--on-primary);
+  background: var(--primary);
+  font-size: 14px;
+}
+.workspace .new-promise > summary::marker {
+  color: var(--on-primary);
+}
+.workspace details.panel:not([open]),
+.workspace .overview-capture {
+  display: block;
+}
+.workspace .overview-capture > .button {
+  margin-top: 16px;
+}
+.workspace .new-promise .promise-guide {
+  margin-top: 20px;
+}
+@media (max-width: 600px) {
+  .workspace .promise-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+  }
+  .workspace .promise-toolbar .field {
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+  }
+  .workspace .promise-toolbar .button {
+    width: auto;
+  }
 }

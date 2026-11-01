@@ -1,4 +1,7 @@
 'use client';
+import { IconButton } from '../../components/icon-button';
+import { formatDateTime } from '../../lib/date-time';
+import { PageTitle } from '../../components/page-title';
 import { Select } from '../../components/select';
 import { useLiveRefresh } from '../continuity/live-updates';
 import { useEffect, useState } from 'react';
@@ -22,10 +25,8 @@ export function OpenLoopsScreen({ focusId }: { focusId?: string }) {
     <>
       <div className="page-heading">
         <div>
-          <h1>Open loops</h1>
-          <p>
-            Promises, follow-ups, and the things your community is waiting for.
-          </p>
+          <PageTitle>Promises</PageTitle>
+          <p>Keep track of what you said you’d do.</p>
         </div>
         <Link className="button secondary" href={href('brief')}>
           Next-stream brief
@@ -97,9 +98,7 @@ function LoopsPanel({
       .catch((error) => {
         if (!controller.signal.aborted)
           setError(
-            error instanceof Error
-              ? error.message
-              : 'Could not load open loops.',
+            error instanceof Error ? error.message : 'Could not load promises.',
           );
       })
       .finally(() => {
@@ -135,25 +134,28 @@ function LoopsPanel({
   }
   return (
     <div className="content-stack">
-      <QuickCapture
-        channelId={channelId}
-        disabled={!connected}
-        onCreated={(loop) => {
-          if (filter !== 'all' && filter !== 'confirmed') setFilter('all');
-          else
-            setItems((current) => [
-              loop,
-              ...current.filter((item) => item.id !== loop.id),
-            ]);
-        }}
-      />
-      <section className="panel promise-guide">
-        <Bookmark size={21} aria-hidden="true" />
-        <p>
-          With live capture enabled, broadcasters and Twitch moderators can use{' '}
-          <code>!promise your commitment</code> to save a confirmed promise.
-        </p>
-      </section>
+      <details className="task-disclosure new-promise" id="new-promise">
+        <summary>New promise</summary>
+        <QuickCapture
+          channelId={channelId}
+          disabled={!connected}
+          onCreated={(loop) => {
+            if (filter !== 'all' && filter !== 'confirmed') setFilter('all');
+            else
+              setItems((current) => [
+                loop,
+                ...current.filter((item) => item.id !== loop.id),
+              ]);
+          }}
+        />
+        <section className="promise-guide">
+          <Bookmark size={21} aria-hidden="true" />
+          <p>
+            With live capture on, the broadcaster and Twitch moderators can use{' '}
+            <code>!promise your commitment</code> to save a confirmed promise.
+          </p>
+        </section>
+      </details>
       <div className="promise-toolbar">
         <div className="field">
           <label htmlFor="promise-filter">Show promises</label>
@@ -173,13 +175,13 @@ function LoopsPanel({
             ))}
           </Select>
         </div>
-        <button
-          className="button secondary"
+        <IconButton
+          label="Refresh promises"
           disabled={loading || busy}
           onClick={() => setRevision((value) => value + 1)}
         >
-          <RefreshCw size={16} aria-hidden="true" /> Refresh promises
-        </button>
+          <RefreshCw size={18} aria-hidden="true" />
+        </IconButton>
       </div>
       {loading && <p role="status">Loading your promises…</p>}
       {error && (
@@ -193,8 +195,8 @@ function LoopsPanel({
           <h2>No promises here yet.</h2>
           <p>
             {filter === 'candidate'
-              ? 'AI suggestions live in Needs review until a person confirms them.'
-              : 'Capture a commitment above, or choose another status.'}
+              ? 'AI suggestions stay in Suggestions until you confirm them.'
+              : 'Choose New promise to save a commitment, or try another status.'}
           </p>
         </div>
       )}
@@ -235,7 +237,7 @@ function OpenLoopCard({
   disabled: boolean;
   onUpdated: (loop: OpenLoop) => void;
 }) {
-  const { transitionLoop, loadLoopHistory } = useWorkspace();
+  const { transitionLoop, loadLoopHistory, href, preview } = useWorkspace();
   const next = openLoopTransitions[loop.status];
   const [target, setTarget] = useState<OpenLoopStatus | ''>(next[0] || '');
   const [reason, setReason] = useState('');
@@ -301,22 +303,34 @@ function OpenLoopCard({
             ? 'Demo fixture'
             : loop.origin === 'live_twitch'
               ? 'Live Twitch'
-              : 'Manual import'}{' '}
+              : 'Saved in Lore'}{' '}
           ·{' '}
           {loop.captureMethod === 'ai_review'
             ? 'AI-reviewed capture'
             : loop.captureMethod === 'chat_command'
               ? 'Chat command'
-              : 'Dashboard capture'}
+              : 'Manual entry'}
         </small>
       </div>
       <h2 className="promise-wording">{loop.wording}</h2>
-      <p className="muted">
-        {loop.ownerLabel
-          ? `Following up: ${loop.ownerLabel}`
-          : 'Follow-up owner not set'}{' '}
-        · {loop.dueContext || 'No due context set'}
-      </p>
+      {(loop.ownerLabel || loop.dueContext) && (
+        <p className="muted">
+          {[
+            loop.ownerLabel ? `Following up: ${loop.ownerLabel}` : '',
+            loop.dueContext,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      )}
+      {loop.status !== 'candidate' && !disabled && (
+        <Link
+          className="text-link promise-publish-link"
+          href={`${href('publications')}${preview ? '&' : '?'}promise=${loop.id}&channel=${loop.channelId}#publication-draft`}
+        >
+          Create public story →
+        </Link>
+      )}
       <details className="promise-source">
         <summary>Source and history</summary>
         <p className="muted">Retained source excerpt</p>
@@ -341,7 +355,7 @@ function OpenLoopCard({
                 <strong>{openLoopLabels[entry.toStatus]}</strong>
                 <span>
                   Twitch user {entry.actorTwitchUserId} ·{' '}
-                  {new Date(entry.occurredAt).toLocaleString()}
+                  {formatDateTime(entry.occurredAt)}
                 </span>
                 {entry.reason && <p>{entry.reason}</p>}
               </li>

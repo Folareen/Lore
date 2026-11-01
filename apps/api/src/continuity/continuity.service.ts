@@ -86,6 +86,7 @@ export class ContinuityService {
         moderationImportsEnabled: channel.moderationImportsEnabled,
         promiseConfirmationsEnabled: channel.promiseConfirmationsEnabled,
         publicSummaryAiEnabled: channel.publicSummaryAiEnabled,
+        communityAssistantEnabled: channel.communityAssistantEnabled,
         microphoneEnabled: channel.microphoneEnabled,
         missingModerationScopes: moderationReadScopes.filter(
           (s) => !granted.includes(s),
@@ -115,9 +116,11 @@ export class ContinuityService {
         );
       if (
         input.enabled &&
-        ['publicSummaryAiEnabled', 'microphoneEnabled'].includes(
-          input.feature,
-        ) &&
+        [
+          'publicSummaryAiEnabled',
+          'microphoneEnabled',
+          'communityAssistantEnabled',
+        ].includes(input.feature) &&
         !env.GEMINI_API_KEY
       )
         throw new ConflictException('Configure GEMINI_API_KEY first');
