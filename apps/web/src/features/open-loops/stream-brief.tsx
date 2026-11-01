@@ -69,7 +69,7 @@ function Brief({ channelId }: { channelId: string }) {
   }, [channelId, loadBrief, revision]);
   return (
     <div className="content-stack">
-      <div className="list-toolbar">
+      <div className="brief-toolbar">
         <p className="muted">
           {brief
             ? `${brief.activeCount} active ${brief.activeCount === 1 ? 'promise' : 'promises'}`

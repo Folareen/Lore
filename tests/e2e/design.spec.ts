@@ -41,9 +41,26 @@ for (const width of [390, 1440]) {
             ),
           )
           .toBe(true);
+        if (view === 'brief') {
+          const toolbar = page.locator('.brief-toolbar');
+          await expect(
+            toolbar.getByRole('button', { name: 'Refresh brief' }),
+          ).toBeEnabled();
+          const centers = await toolbar.evaluate((element) => {
+            const count = element.querySelector('p')!.getBoundingClientRect();
+            const refresh = element
+              .querySelector('button')!
+              .getBoundingClientRect();
+            return Math.abs(
+              count.y + count.height / 2 - refresh.y - refresh.height / 2,
+            );
+          });
+          expect(centers).toBeLessThan(1);
+        }
         if (
           [
             'overview',
+            'brief',
             'candidates',
             'streamer',
             'publications',
@@ -506,12 +523,8 @@ test('the illustrative story loops, can be paused, and respects reduced motion',
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
   const header = page.locator('.marketing-header');
-  await expect(
-    header.getByRole('link', { name: 'Sign in', exact: true }),
-  ).toBeVisible();
-  await expect(
-    header.getByRole('link', { name: 'Sign in', exact: true }),
-  ).toHaveClass(/primary/);
+  await expect(header.locator('.login-link')).toBeHidden();
+  await expect(header.locator('.login-link')).toHaveClass(/primary/);
   await expect(
     header.getByRole('link', { name: 'Try the demo', exact: true }),
   ).toHaveCount(0);
@@ -526,6 +539,11 @@ test('the illustrative story loops, can be paused, and respects reduced motion',
       .getByRole('navigation', { name: 'Mobile site navigation' })
       .getByRole('link', { name: 'Try the demo', exact: true }),
   ).toHaveAttribute('href', '/demo');
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Mobile site navigation' })
+      .getByRole('link', { name: 'Sign in', exact: true }),
+  ).toBeVisible();
   await page.keyboard.press('Escape');
   const story = page.getByRole('region', {
     name: 'An illustrative Lore story',
@@ -533,6 +551,8 @@ test('the illustrative story loops, can be paused, and respects reduced motion',
   const chapters = story.getByRole('group', { name: 'Story chapters' });
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
+    if (width === 1440)
+      await expect(header.locator('.login-link')).toBeVisible();
     // Measure both in one frame while their shared entrance animation runs.
     const { controlsBottom, sceneTop } = await story.evaluate((element) => {
       const controls = element.querySelector('.chapter-nav');

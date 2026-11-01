@@ -21,6 +21,9 @@ export function MarketingMenu() {
         <Menu size={21} aria-hidden="true" />
       </summary>
       <nav aria-label="Mobile site navigation">
+        <Link className="button primary" href="/login" onClick={close}>
+          Sign in
+        </Link>
         <Link href="/how-it-works" onClick={close}>
           How it works
         </Link>

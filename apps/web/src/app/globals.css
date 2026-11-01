@@ -1569,9 +1569,6 @@ svg {
   .header-actions {
     gap: 10px;
   }
-  .header-actions .login-link {
-    display: inline-flex;
-  }
   .header-actions .button {
     font-size: 12px;
     padding: 10px 12px;
@@ -3244,6 +3241,9 @@ details[open] > summary {
     grid-template-columns: 1fr;
   }
   .marketing-header .marketing-nav {
+    display: none;
+  }
+  .marketing-header .login-link {
     display: none;
   }
   .marketing-menu {
