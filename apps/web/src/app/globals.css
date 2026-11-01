@@ -2063,6 +2063,44 @@ svg {
   }
 }
 
+.moderation-page > .page-heading {
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+.moderation-page .page-heading > .button {
+  flex-shrink: 0;
+}
+.cases-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.cases-toolbar .field {
+  width: 180px;
+  margin: 0;
+}
+.cases-shift-link {
+  margin-inline-start: auto;
+}
+.cases-empty-state {
+  background: var(--surface);
+  padding: 32px 24px;
+}
+.cases-empty-state h2 {
+  font-size: 20px;
+}
+@media (max-width: 600px) {
+  .cases-toolbar .field {
+    flex: 1 1 100%;
+  }
+  .cases-toolbar > .button {
+    flex: 1;
+  }
+  .cases-shift-link {
+    margin-inline-start: 0;
+  }
+}
 .case-list-row {
   display: flex;
   align-items: center;

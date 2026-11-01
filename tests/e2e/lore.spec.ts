@@ -163,6 +163,56 @@ test('demo evidence, precedent and human decision remain connected across naviga
     page.getByRole('heading', { name: 'Previously, in our corner of chat…' }),
   ).toBeVisible();
 });
+test('moderation list has aligned controls and useful empty states', async ({
+  page,
+  context,
+}, info) => {
+  await signIn(context);
+  await page.route(/\/api\/channels\/[^/]+\/cases\?/, (route) =>
+    route.fulfill({ json: { items: [], nextCursor: null } }),
+  );
+  for (const width of [320, 390, 1440]) {
+    await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light' });
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/app/moderation');
+    await expect(
+      page.getByRole('heading', { name: 'No cases yet', exact: true }),
+    ).toBeVisible();
+    const filter = page.getByRole('combobox', { name: 'Case status' });
+    const refresh = page.getByRole('button', { name: 'Refresh cases' });
+    await expect(filter).toBeVisible();
+    await expect(refresh).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    if (width === 1440) {
+      const selectBox = await filter.boundingBox();
+      const refreshBox = await refresh.boundingBox();
+      expect(
+        Math.abs(
+          selectBox!.y + selectBox!.height - refreshBox!.y - refreshBox!.height,
+        ),
+      ).toBeLessThan(2);
+    }
+    await page.screenshot({
+      path: info.outputPath(`moderation-empty-${width}.png`),
+      fullPage: true,
+    });
+    await chooseSelect(page, filter, 'open');
+    await expect(
+      page.getByRole('heading', { name: 'No matching cases' }),
+    ).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'New case', exact: true }).click();
+  await expect(page.getByLabel('Case title')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByLabel('Case title')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Shift desk', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/moderation\/workflows/);
+});
+
 test('channel updates preserve editing until refresh is confirmed', async ({
   page,
   context,
