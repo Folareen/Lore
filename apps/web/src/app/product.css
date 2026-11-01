@@ -138,9 +138,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.record-dialog::backdrop {
-  background: #100c18a6;
-}
 .record-dialog-header {
   position: sticky;
   top: 0;
@@ -1078,10 +1075,8 @@
   opacity: 1;
   visibility: visible;
 }
-.confirm-dialog::backdrop,
-.record-dialog::backdrop,
-.mobile-nav-dialog::backdrop {
-  background: rgb(10 8 14 / 86%);
+dialog::backdrop {
+  background: var(--dialog-scrim);
 }
 @media (max-width: 850px) {
   .workspace .workspace-topbar {
@@ -1641,4 +1636,44 @@
   .reader-header .brand > span {
     display: none;
   }
+}
+
+/* Floating choices and menus separate clearly from the page beneath them. */
+.workspace .mobile-nav-toggle {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 10px;
+  justify-content: center;
+}
+.select-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  background: var(--menu-scrim);
+  pointer-events: auto;
+}
+.marketing-menu[open]::before,
+.demo-tools details[open]::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--menu-scrim);
+}
+.marketing-menu[open]::before {
+  z-index: 1;
+}
+.marketing-menu[open] > summary {
+  position: relative;
+  z-index: 2;
+  background: var(--raised);
+}
+.demo-tools details[open]::before {
+  z-index: 64;
+}
+.demo-tools details[open] > summary {
+  position: relative;
+  z-index: 66;
+  background: var(--raised);
+  border-radius: 6px;
 }

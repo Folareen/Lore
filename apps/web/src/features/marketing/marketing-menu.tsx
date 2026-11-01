@@ -13,6 +13,9 @@ export function MarketingMenu() {
     <details
       ref={details}
       className="marketing-menu"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Escape') close();
       }}

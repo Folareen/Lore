@@ -50,6 +50,7 @@ export function Select({
   });
   const initial = String(defaultValue ?? options[0]?.value ?? '');
   const [local, setLocal] = useState(initial);
+  const [open, setOpen] = useState(false);
   const current = value === undefined ? local : String(value);
   const trigger = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -64,6 +65,8 @@ export function Select({
   const placeholder = options.find((option) => option.value === '')?.label;
   return (
     <Primitive.Root
+      open={open}
+      onOpenChange={setOpen}
       value={encode(current)}
       required={required}
       disabled={disabled}
@@ -87,38 +90,45 @@ export function Select({
       {name && (
         <input type="hidden" name={name} value={current} disabled={disabled} />
       )}
-      <Primitive.Portal>
-        <Primitive.Content
-          className="select-content"
-          position="popper"
-          sideOffset={6}
-          collisionPadding={12}
-        >
-          <Primitive.ScrollUpButton className="select-scroll">
-            <ChevronUp size={16} />
-          </Primitive.ScrollUpButton>
-          <Primitive.Viewport className="select-viewport">
-            {options
-              .filter((option) => !(required && option.value === ''))
-              .map((option) => (
-                <Primitive.Item
-                  className="select-option"
-                  key={option.value}
-                  value={encode(option.value)}
-                  data-value={option.value}
-                  disabled={option.disabled}
-                >
-                  <Primitive.ItemText>{option.label}</Primitive.ItemText>
-                  <Primitive.ItemIndicator className="select-check">
-                    <Check size={16} aria-hidden="true" />
-                  </Primitive.ItemIndicator>
-                </Primitive.Item>
-              ))}
-          </Primitive.Viewport>
-          <Primitive.ScrollDownButton className="select-scroll">
-            <ChevronDown size={16} />
-          </Primitive.ScrollDownButton>
-        </Primitive.Content>
+      <Primitive.Portal
+        container={
+          trigger.current?.closest<HTMLDialogElement>('dialog') ?? undefined
+        }
+      >
+        <div>
+          {open && <div className="select-scrim" aria-hidden="true" />}
+          <Primitive.Content
+            className="select-content"
+            position="popper"
+            sideOffset={6}
+            collisionPadding={12}
+          >
+            <Primitive.ScrollUpButton className="select-scroll">
+              <ChevronUp size={16} />
+            </Primitive.ScrollUpButton>
+            <Primitive.Viewport className="select-viewport">
+              {options
+                .filter((option) => !(required && option.value === ''))
+                .map((option) => (
+                  <Primitive.Item
+                    className="select-option"
+                    key={option.value}
+                    value={encode(option.value)}
+                    data-value={option.value}
+                    disabled={option.disabled}
+                  >
+                    <Primitive.ItemText>{option.label}</Primitive.ItemText>
+                    <Primitive.ItemIndicator className="select-check">
+                      <Check size={16} aria-hidden="true" />
+                    </Primitive.ItemIndicator>
+                  </Primitive.Item>
+                ))}
+            </Primitive.Viewport>
+            <Primitive.ScrollDownButton className="select-scroll">
+              <ChevronDown size={16} />
+            </Primitive.ScrollDownButton>
+          </Primitive.Content>
+        </div>
       </Primitive.Portal>
     </Primitive.Root>
   );

@@ -21,6 +21,9 @@ export function DemoToolbar() {
     <div className="demo-tools">
       <details
         ref={tools}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) close();
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Escape') close();
         }}
