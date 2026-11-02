@@ -1,0 +1,14 @@
+lore.afolarin.cv {
+    request_body {
+        max_size 12MB
+    }
+    handle /api/* {
+        reverse_proxy 127.0.0.1:4200 {
+            flush_interval -1
+        }
+    }
+    handle {
+        encode zstd gzip
+        reverse_proxy 127.0.0.1:3200
+    }
+}
