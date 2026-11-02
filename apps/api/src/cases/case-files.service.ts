@@ -85,7 +85,11 @@ export class CaseFileStorage implements OnApplicationShutdown {
         maxAttempts: 2,
         requestChecksumCalculation: 'WHEN_REQUIRED',
         responseChecksumValidation: 'WHEN_REQUIRED',
-        requestHandler: { connectionTimeout: 3000, requestTimeout: 15000 },
+        requestHandler: {
+          connectionTimeout: 3000,
+          requestTimeout: 15000,
+          throwOnRequestTimeout: true,
+        },
       })
     : null;
   onApplicationShutdown() {
@@ -108,6 +112,13 @@ export class CaseFileStorage implements OnApplicationShutdown {
         ContentLength: buffer.length,
       }),
     );
+  }
+  async read(key: string) {
+    const object = await this.required().send(
+      new GetObjectCommand({ Bucket: env.R2_BUCKET, Key: key }),
+    );
+    if (!object.Body) throw new NotFoundException('Image unavailable');
+    return Buffer.from(await object.Body.transformToByteArray());
   }
   async remove(key: string) {
     await this.required().send(

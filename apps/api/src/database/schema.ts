@@ -982,6 +982,8 @@ export const publicEntries = pgTable(
     title: text('title').notNull(),
     body: text('body').notNull(),
     chatSummary: text('chat_summary').notNull(),
+    clipId: text('clip_id'),
+    screenshotId: uuid('screenshot_id'),
     promiseId: uuid('promise_id'),
     status: text('status')
       .$type<ManagedPublication['status']>()
@@ -1164,5 +1166,33 @@ export const caseImports = pgTable(
       columns: [t.channelId, t.caseId],
       foreignColumns: [cases.channelId, cases.id],
     }).onDelete('cascade'),
+  ],
+);
+
+export const publicationImages = pgTable(
+  'publication_images',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    channelId: uuid('channel_id')
+      .notNull()
+      .references(() => channels.id, { onDelete: 'cascade' }),
+    entryId: uuid('entry_id').notNull(),
+    storageKey: text('storage_key'),
+    alt: text('alt').notNull(),
+    state: text('state', { enum: ['pending', 'ready', 'removed'] })
+      .default('pending')
+      .notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.channelId, t.entryId],
+      foreignColumns: [publicEntries.channelId, publicEntries.id],
+    }),
+    check(
+      'publication_image_state',
+      sql`${t.state} IN ('pending','ready','removed')`,
+    ),
   ],
 );

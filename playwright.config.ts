@@ -21,10 +21,14 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'pnpm --filter @lore/api exec tsx test/e2e-stack.ts',
+    command:
+      'node --import ./apps/api/node_modules/tsx/dist/loader.mjs apps/api/test/e2e-stack.ts',
     url: 'http://127.0.0.1:4322/api/health',
     reuseExistingServer: false,
     timeout: 60000,
-    gracefulShutdown: { signal: 'SIGTERM', timeout: 15000 },
+    gracefulShutdown: {
+      signal: 'SIGTERM',
+      timeout: process.env.LORE_LIVE_MEDIA_TEST === '1' ? 60000 : 15000,
+    },
   },
 });

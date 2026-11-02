@@ -7,6 +7,7 @@ import { Brand } from '../../components/brand';
 import { Avatar } from '../../components/avatar';
 import { ThemeToggle } from '../../components/theme-control';
 import { Select } from '../../components/select';
+import { StoryMedia, StoryScreenshot } from './story-media';
 import { SectionTabs } from '../../components/section-tabs';
 export const publicationLabels = {
   milestone: 'Milestone',
@@ -83,6 +84,7 @@ export function CommunityContent({
   onMore,
   onSearch,
   onTabChange,
+  imageLink,
 }: {
   view: PublicView;
   link: (id: string) => string;
@@ -92,8 +94,12 @@ export function CommunityContent({
   busy?: boolean;
   onMore?: () => void;
   onTabChange?: (kind: string) => void;
+  imageLink?: (entry: PublicEntry) => string;
   onSearch?: React.FormEventHandler<HTMLFormElement>;
 }) {
+  const image = (entry: PublicEntry) =>
+    imageLink?.(entry) ??
+    `/api/public/channels/${encodeURIComponent(view.data.channel.slug)}/entries/${entry.id}/screenshot/${entry.screenshot?.id}`;
   if (view.mode === 'entry')
     return (
       <div className="reader-article-layout">
@@ -109,6 +115,11 @@ export function CommunityContent({
             <h1>{view.data.entry.title}</h1>
             <PublishedAt entry={view.data.entry} />
           </header>
+          <StoryMedia
+            key={view.data.entry.id}
+            entry={view.data.entry}
+            imageHref={image(view.data.entry)}
+          />
           <p className="reader-prose">{view.data.entry.body}</p>
           <SourceLinks entry={view.data.entry} link={link} />
         </article>
@@ -196,6 +207,15 @@ export function CommunityContent({
             </div>
             <h2>{view.data.summary.title}</h2>
             <p className="reader-prose">{view.data.summary.body}</p>
+            {(view.data.summary.clipId || view.data.summary.screenshot) && (
+              <Link
+                href={link(view.data.summary.id)}
+                className="reader-story-link"
+                prefetch={false}
+              >
+                View the attached moment <ArrowRight size={16} />
+              </Link>
+            )}
             <SourceLinks entry={view.data.summary} link={link} />
           </article>
         ) : (
@@ -271,7 +291,12 @@ export function CommunityContent({
           {entries
             .filter((entry) => entry.id !== featured?.id)
             .map((entry) => (
-              <EntryCard key={entry.id} entry={entry} href={link(entry.id)} />
+              <EntryCard
+                key={entry.id}
+                entry={entry}
+                href={link(entry.id)}
+                imageHref={image(entry)}
+              />
             ))}
         </div>
       ) : (
@@ -295,6 +320,7 @@ export function CommunityContent({
                     key={entry.id}
                     entry={entry}
                     href={link(entry.id)}
+                    imageHref={image(entry)}
                   />
                 ))}
               </div>
@@ -416,9 +442,11 @@ export function SourceLinks({
 export function EntryCard({
   entry,
   href,
+  imageHref,
 }: {
   entry: PublicEntry;
   href: string;
+  imageHref?: string;
 }) {
   return (
     <article className="reader-story">
@@ -431,6 +459,18 @@ export function EntryCard({
           {entry.title}
         </Link>
       </h2>
+      {entry.screenshot && imageHref && (
+        <Link href={href} prefetch={false} className="reader-media-preview">
+          <StoryScreenshot
+            key={entry.screenshot.id}
+            src={imageHref}
+            alt={entry.screenshot.alt}
+          />
+        </Link>
+      )}
+      {entry.clipId && (
+        <span className="reader-clip-label">Twitch clip attached</span>
+      )}
       <p>{entry.body}</p>
       <Link href={href} prefetch={false} className="reader-story-link">
         Read story <ArrowRight size={16} />

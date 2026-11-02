@@ -11,6 +11,7 @@ export function proxy(request: NextRequest) {
     "media-src 'self' blob:",
     "font-src 'self'",
     `connect-src 'self'${dev ? ' ws:' : ''}`,
+    'frame-src https://clips.twitch.tv',
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
