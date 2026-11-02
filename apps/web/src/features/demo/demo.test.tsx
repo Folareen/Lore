@@ -210,7 +210,7 @@ it('captures simulated authorized chat into the brief and resets only this visit
   expect(
     screen.queryByText('Name the garden pond with chat next stream.'),
   ).toBeNull();
-  expect(demoSeed.loops).toHaveLength(2);
+  expect(demoSeed.loops).toHaveLength(5);
   expect(fetchMock).not.toHaveBeenCalled();
 });
 it('updates simulated catch-up after human source withdrawal and restores the recap on reset', async () => {

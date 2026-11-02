@@ -1,7 +1,7 @@
 import type { CaseDetail } from '../cases';
 import { previewChannels } from './people';
 const time = '2026-10-29T10:00:00.000Z';
-export const previewCases: (CaseDetail & { origin: 'demo_fixture' })[] = [
+const initialCases: (CaseDetail & { origin: 'demo_fixture' })[] = [
   {
     id: '00000000-0000-4000-8000-000000003001',
     channelId: previewChannels[0].id,
@@ -95,6 +95,49 @@ export const previewCases: (CaseDetail & { origin: 'demo_fixture' })[] = [
         action: 'decided',
         actorTwitchUserId: '200',
         reason: 'The reminder had not been clear.',
+        occurredAt: time,
+      },
+    ],
+  },
+];
+
+export const previewCases: (CaseDetail & { origin: 'demo_fixture' })[] = [
+  ...initialCases,
+  {
+    ...initialCases[0],
+    id: '00000000-0000-4000-8000-000000003003',
+    title: 'Check a repeated backseating report',
+    subjectReference: 'Demo viewer · pebble_path',
+    status: 'reviewing',
+    version: 2,
+    incident:
+      'A viewer repeatedly posted building instructions after the streamer asked chat to let them experiment.',
+    appeal:
+      'The viewer says they were trying to help and asks which kinds of suggestions are welcome.',
+    ruleTitle: 'Ask before backseating',
+    ruleVersion: '1',
+    ruleText:
+      'Offer game instructions only when the streamer asks. Acknowledge a reminder and let the streamer try their own approach.',
+    evidence: [
+      {
+        ...initialCases[0].evidence[0],
+        id: '00000000-0000-4000-8000-000000004003',
+        label: 'Synthetic report summary',
+        excerpt:
+          'Two instruction messages followed the reminder. Exact wording and full chat are not retained in this sample.',
+      },
+    ],
+    history: [
+      {
+        ...initialCases[0].history[0],
+        id: '00000000-0000-4000-8000-000000005004',
+      },
+      {
+        id: '00000000-0000-4000-8000-000000005005',
+        version: 2,
+        action: 'updated',
+        actorTwitchUserId: '200',
+        reason: 'Added the viewer’s appeal; waiting for a human review.',
         occurredAt: time,
       },
     ],

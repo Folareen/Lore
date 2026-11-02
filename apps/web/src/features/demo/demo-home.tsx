@@ -1,4 +1,12 @@
 'use client';
+import { SectionTabs } from '../../components/section-tabs';
+import {
+  audiences,
+  guides,
+  demoGuideHref,
+  type GuideAudience,
+  type GuideView,
+} from '../help/guides';
 import { PageTitle } from '../../components/page-title';
 import { useRef, useState } from 'react';
 import Link from 'next/link';
@@ -28,9 +36,6 @@ export function DemoToolbar() {
         <summary>Demo tools</summary>
         <div className="demo-tools-menu">
           <nav aria-label="Demo tools">
-            <Link href="/demo?view=guide" onClick={close}>
-              Demo guide
-            </Link>
             <Link href="/demo?view=chat" onClick={close}>
               Chat simulation
             </Link>
@@ -66,9 +71,93 @@ export function DemoToolbar() {
     </div>
   );
 }
+const journeys: Record<
+  GuideAudience,
+  { title: string; body: string; view: GuideView; action: string }[]
+> = {
+  streamers: [
+    {
+      title: 'Carry a promise into the next stream',
+      body: 'Open the island-tour promise, move it to In progress, then check the brief. Completed and postponed examples are already in the list.',
+      view: 'streamer',
+      action: 'Start with promises',
+    },
+    {
+      title: 'Review a suggestion',
+      body: 'Read the games-list quote and its missing details. Confirm an edited promise or dismiss it with a reason. The other filters include reviewed and unavailable examples.',
+      view: 'candidates',
+      action: 'Review suggestions',
+    },
+    {
+      title: 'Publish a ready-to-review draft',
+      body: 'Open the pond-naming announcement, inspect its wording and approve publication. Switch to the visitor view to see the result. Drafts and a withdrawn example stay private.',
+      view: 'publications',
+      action: 'Open Public stories',
+    },
+    {
+      title: 'Choose what appears on stream',
+      body: 'Inspect the recap preview, change the selected public entries and approve your display. OBS setup creates a clearly invalid sample credential; it cannot connect to a live channel.',
+      view: 'overlay',
+      action: 'Try the stream overlay',
+    },
+  ],
+  moderators: [
+    {
+      title: 'Read an appeal with its evidence',
+      body: 'Open the repeated spoiler warning. Its incident note and rule snapshot explain what is known and what is missing.',
+      view: 'sampleAppeal',
+      action: 'Open the sample appeal',
+    },
+    {
+      title: 'Compare an earlier human decision',
+      body: 'In Review & decision, retrieve the simulated precedent. Compare rule versions, edit the decision and save your own rationale.',
+      view: 'moderation',
+      action: 'Explore the case list',
+    },
+    {
+      title: 'Follow through after a decision',
+      body: 'The shift desk includes pending and completed repair actions plus open and reviewed consistency concerns. Inspect the linked case before updating a task.',
+      view: 'workflows',
+      action: 'Open the shift desk',
+    },
+    {
+      title: 'Read the next-shift handoff',
+      body: 'Review the saved decisions, documented rule change and unresolved task. Acknowledge the handoff task and record a useful note.',
+      view: 'workflows',
+      action: 'Read the sample handoff',
+    },
+  ],
+  viewers: [
+    {
+      title: 'Enter as a newcomer',
+      body: 'Read the latest approved recap and browse the community tabs. Only published stories appear here.',
+      view: 'community',
+      action: 'Catch up as a newcomer',
+    },
+    {
+      title: 'Learn an inside reference',
+      body: 'Find out why chat calls itself the moss club, then follow the recap’s source links back to individual stories.',
+      view: 'sampleReference',
+      action: 'What is the moss club?',
+    },
+    {
+      title: 'Open a moment',
+      body: 'See the sample image attachment and its description. A separate, clearly labeled Twitch clip demonstrates optional video playback.',
+      view: 'sampleImage',
+      action: 'View the image story',
+    },
+    {
+      title: 'Ask the community guide',
+      body: 'Open Ask about the community and ask what is planned next. Demo answers use the approved sample stories; private moderator notes are excluded.',
+      view: 'community',
+      action: 'Try the community guide',
+    },
+  ],
+};
 export function DemoHome() {
   const demo = useDemo(),
     { href } = useWorkspace();
+  const [audience, setAudience] = useState('streamers');
   if (!demo) return null;
   return (
     <div className="content-stack demo-guide">
@@ -76,61 +165,45 @@ export function DemoHome() {
         <div>
           <PageTitle>The next stream remembers.</PageTitle>
           <p>
-            Meet cozybyte’s community: an island garden, a promise to finish the
-            tour, and a spoiler appeal that needs a human decision.
+            Explore cozybyte’s island garden as a streamer, moderator or
+            newcomer. Choose a path and try the actual screens.
           </p>
         </div>
       </div>
       <p className="notice">
-        Explore a sample community. Changes stay in this tab and reset on
-        refresh. Nothing is sent to Twitch.
+        Sample data. Changes stay in this visit and reset on refresh. Chat, AI
+        and OBS actions are simulations; the optional Twitch sample clip uses
+        real playback.
       </p>
-      <ol className="demo-journey">
-        <li>
-          <h2>Carry a promise into the next stream.</h2>
-          <p>
-            Open the island-tour promise, change its status, then check the
-            brief. Review a suggested commitment and decide whether it belongs
-            on the list.
-          </p>
-          <div className="button-row">
-            <Link className="button primary" href={href('streamer')}>
-              Start with promises
-            </Link>
-            <Link className="button secondary" href="/demo?view=chat">
-              Simulate !promise / !catchup
-            </Link>
-          </div>
-        </li>
-        <li>
-          <h2>Context before a decision.</h2>
-          <p>
-            Review the repeated spoiler warning, read its evidence and compare
-            the earlier appeal. Recommendations are labeled simulations. Your
-            decision, rationale and repair action remain human choices.
-          </p>
-          <div className="button-row">
-            <Link className="button secondary" href={href('moderation')}>
-              Open moderation cases
-            </Link>
-            <Link href={href('workflows')}>Read the seeded handoff →</Link>
-          </div>
-        </li>
-        <li>
-          <h2>Let newcomers join the story.</h2>
-          <p>
-            Read the approved garden recap and public commitment. Withdraw a
-            source in Public stories and see its dependent recap disappear.
-            Private moderation details stay out of the visitor view.
-          </p>
-          <div className="button-row">
-            <Link className="button secondary" href={href('community')}>
-              Catch up as a newcomer
-            </Link>
-            <Link href={href('publications')}>Public stories →</Link>
-          </div>
-        </li>
-      </ol>
+      <SectionTabs
+        label="Choose a demo path"
+        value={audience}
+        onValueChange={setAudience}
+        tabs={audiences.map((key) => ({
+          value: key,
+          label: guides[key].label,
+          content: (
+            <ol className="demo-journey">
+              {journeys[key].map((step) => (
+                <li key={step.title}>
+                  <h2>{step.title}</h2>
+                  <p>{step.body}</p>
+                  <Link
+                    className="button secondary"
+                    href={demoGuideHref(step.view)}
+                  >
+                    {step.action} →
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          ),
+        }))}
+      />
+      <div className="demo-guide-footer">
+        <Link href={href('chat')}>Simulate !promise / !catchup →</Link>
+        <Link href={href('help')}>Need setup details? Help & guides →</Link>
+      </div>
     </div>
   );
 }

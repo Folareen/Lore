@@ -87,6 +87,13 @@ test('production CSP permits hydration, themes and the seeded command-to-brief/r
   );
   await page
     .getByRole('navigation', { name: 'Community navigation' })
+    .getByRole('link', { name: 'Help & guides', exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Help & guides', exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('navigation', { name: 'Community navigation' })
     .getByRole('link', { name: 'Next-stream brief', exact: true })
     .click();
   await expect(
@@ -1854,4 +1861,136 @@ test('demo media examples render from the seeded snapshot on desktop and phone',
     'https://clips.twitch.tv/IncredulousAbstemiousFennelImGlitch',
   );
   await expect(page.locator('iframe')).toHaveCount(0);
+});
+
+test('help guides are reachable without sign-in and keep demo task links inside the playground', async ({
+  page,
+}, info) => {
+  await page.goto('/help');
+  await expect(
+    page.getByRole('heading', { name: 'A little guidance, when you need it.' }),
+  ).toBeVisible();
+  for (const audience of ['streamers', 'moderators', 'viewers']) {
+    const response = await page.goto(`/help/${audience}`);
+    expect(response?.status()).toBe(200);
+    await expect(page.locator('main h1')).toContainText('guide');
+    for (const link of await page.locator('.help-steps a').all())
+      expect(await link.getAttribute('href')).toMatch(/^\/demo\?view=/);
+  }
+  await page.goto('/demo');
+  await page.getByRole('link', { name: 'Demo guide', exact: true }).click();
+  await page.getByRole('tab', { name: 'Moderators', exact: true }).click();
+  await page.getByRole('link', { name: /Open the sample appeal/ }).click();
+  await expect(page).toHaveURL(/\/demo\?view=case&case=/);
+  await expect(
+    page.getByRole('heading', {
+      name: 'Review a repeated spoiler warning',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole('navigation', { name: 'Community navigation' })
+    .getByRole('link', { name: 'Help & guides', exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: 'Help & guides', exact: true }),
+  ).toBeVisible();
+  const tabs = page.getByRole('tablist', { name: 'Who is this guide for?' });
+  await tabs.getByRole('tab', { name: 'Streamers & teams' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(
+    tabs.getByRole('tab', { name: 'Moderators', exact: true }),
+  ).toHaveAttribute('aria-selected', 'true');
+  await page.screenshot({
+    path: info.outputPath('help-desktop.png'),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole('button', { name: 'Toggle light and dark mode' })
+    .click();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: info.outputPath('help-phone.png'),
+    fullPage: true,
+  });
+  await page.goto('/help/streamers');
+  await page
+    .getByText('Details & troubleshooting', { exact: true })
+    .nth(3)
+    .click();
+  await expect(page.getByText(/A blank overlay can mean/)).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  expect((await page.locator('main').boundingBox())?.x).toBe(20);
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = 'auto';
+    window.scrollTo(0, 0);
+  });
+  await page.screenshot({
+    path: info.outputPath('public-help-phone.png'),
+  });
+  await page.goto('/demo?view=community');
+  await page.getByRole('link', { name: 'Viewer guide', exact: true }).click();
+  await expect(page).toHaveURL(/view=help&audience=viewers/);
+  await expect(
+    page.getByRole('tab', { name: 'Viewers & newcomers' }),
+  ).toHaveAttribute('aria-selected', 'true');
+});
+
+test('expanded demo fixtures populate review filters, public privacy and shift history', async ({
+  page,
+}) => {
+  await page.goto('/demo?view=candidates');
+  await expect(
+    page.getByRole('article', {
+      name: 'Share the cozy games list after the stream.',
+    }),
+  ).toBeVisible();
+  await chooseSelect(
+    page,
+    page.getByRole('combobox', { name: 'Show', exact: true }),
+    'confirmed',
+  );
+  await expect(
+    page.getByRole('article', { name: 'Publish the garden planting plan.' }),
+  ).toBeVisible();
+  await chooseSelect(
+    page,
+    page.getByRole('combobox', { name: 'Show', exact: true }),
+    'expired',
+  );
+  await expect(page.getByText(/Source unavailable/).first()).toBeVisible();
+  await page.goto('/demo?view=publications');
+  await expect(
+    page.getByRole('article', {
+      name: 'Help name the garden pond',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.goto('/demo?view=community&public=feed');
+  await expect(
+    page.getByText('Help name the garden pond', { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText('Old bonus-stream announcement', { exact: true }),
+  ).toHaveCount(0);
+  await page.goto('/demo?view=workflows');
+  await page.getByRole('button', { name: 'Handoffs', exact: true }).click();
+  await expect(
+    page
+      .getByRole('region', { name: 'Moderator handoffs' })
+      .getByText(/Clarified that undiscovered locations/),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Earlier spoiler appeal', { exact: true }).first(),
+  ).toBeVisible();
+  await expect(page.getByText(/A spoiler appeal needs review/)).toBeVisible();
 });

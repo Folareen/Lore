@@ -26,6 +26,7 @@ import {
   ArrowUpRight,
   Bookmark,
   ListChecks,
+  CircleHelp,
 } from 'lucide-react';
 import type { Channel, Session } from '@lore/shared';
 import { PublicationsProvider } from '../publications/publications-context';
@@ -47,6 +48,7 @@ const navigation = [
   { view: 'settings', title: 'Channel settings', icon: Settings2 },
   { view: 'team', title: 'Teams', icon: Users },
   { view: 'account', title: 'Account', icon: UserRound },
+  { view: 'help', title: 'Help & guides', icon: CircleHelp },
 ] as const;
 function Shell({
   children,
@@ -121,7 +123,7 @@ function Shell({
             user={session.user}
             preview={preview}
             secondary={links.filter((link) =>
-              ['overlay', 'settings', 'team', 'account'].includes(
+              ['overlay', 'settings', 'team', 'account', 'help'].includes(
                 String(link.key),
               ),
             )}
@@ -130,11 +132,12 @@ function Shell({
               'settings',
               'team',
               'account',
+              'help',
             ].includes(current)}
           >
             {links.filter(
               (link) =>
-                !['overlay', 'settings', 'team', 'account'].includes(
+                !['overlay', 'settings', 'team', 'account', 'help'].includes(
                   String(link.key),
                 ),
             )}
@@ -176,6 +179,9 @@ function Shell({
                   <strong>Demo fixture</strong> · Simulated actions
                 </span>
                 <div className="demo-session-actions">
+                  {route !== 'guide' && (
+                    <Link href={href('guide')}>Demo guide</Link>
+                  )}
                   <DemoToolbar />
                   <Link href="/login">
                     Sign in <ArrowUpRight size={12} aria-hidden="true" />

@@ -157,6 +157,12 @@ In **Channel settings → Features → Optional features**, each owner-controlle
 
 Extraction, microphone and recap calls share `AI_DAILY_CALL_LIMIT`; this does not override Google's free-tier quotas. Live workspace SSE uses the existing session and streams only invalidations; reverse proxies must preserve streaming and avoid buffering `/api/channels/:id/stream`.
 
+### Help and demo walkthroughs
+
+`/help` has task guides for streamers/teams, moderators and viewers. The same guides are available from **Help & guides** in the workspace and demo navigation; viewer pages link to the viewer guide. Public guide task links open safe demo examples.
+
+Open **Demo guide** in `/demo` to choose a streamer, moderator or viewer path. The repeatable seed includes active/completed/postponed/cancelled promises, pending/reviewed/expired suggestions, cases at different review stages, draft and withdrawn public stories, media, repair actions, consistency reviews, rule changes and a populated handoff. Demo navigation preserves local edits; reset restores the seed. Run `pnpm db:seed` after updates to refresh the backend snapshot. Bundled fallback data uses the same fixtures.
+
 ### Story clips and screenshots
 
 Each public story can include one manually pasted Twitch clip link and one uploaded screenshot. Add the clip while writing the draft; save the draft, open it and use **Attach a screenshot** to upload a PNG, JPEG or WebP (up to 5 MB and 16 megapixels) with a short description. Screenshot changes return the story to draft; publication review includes the image and clip link. Existing R2 configuration is reused with a separate `community-images/` prefix. Apply migration 0014 before starting the updated API.

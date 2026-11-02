@@ -12,7 +12,7 @@ export function MarketingHeader() {
           <Link href="/discover">Discover</Link>
           <Link href="/how-it-works">How it works</Link>
           <Link href="/#your-crew">For your crew</Link>
-          <Link href="/#questions">Questions</Link>
+          <Link href="/help">Help</Link>
         </nav>
         <div className="header-actions">
           <ThemeToggle />
@@ -32,6 +32,7 @@ export function MarketingFooter() {
       <nav aria-label="Footer navigation">
         <Link href="/discover">Discover</Link>
         <Link href="/how-it-works">How it works</Link>
+        <Link href="/help">Help & guides</Link>
         <Link href="/demo">Explore the demo</Link>
         <a
           href="https://github.com/Folareen/Lore"

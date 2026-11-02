@@ -89,7 +89,10 @@ type Workspace = {
       | 'community'
       | 'settings'
       | 'team'
-      | 'account',
+      | 'account'
+      | 'help'
+      | 'guide'
+      | 'chat',
   ) => string;
 };
 const WorkspaceContext = createContext<Workspace | null>(null);

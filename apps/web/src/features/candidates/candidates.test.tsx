@@ -80,8 +80,16 @@ it('shows full candidate evidence and uncertainty, then carries an edited human 
   await screen.findByText('Finish the community island tour next stream.');
   expect(screen.queryByText(previewCandidates[0].draft!.summary)).toBeNull();
   await user.click(screen.getByRole('button', { name: 'Review candidates' }));
-  await screen.findByRole('article');
-  await user.click(screen.getByRole('button', { name: 'Review suggestion' }));
+  await screen.findByRole('article', {
+    name: previewCandidates[0].draft!.summary,
+  });
+  await user.click(
+    within(
+      screen.getByRole('article', {
+        name: previewCandidates[0].draft!.summary,
+      }),
+    ).getByRole('button', { name: 'Review suggestion' }),
+  );
   await user.click(screen.getByRole('button', { name: 'Review as promise' }));
   await user.clear(screen.getByLabelText('Promise wording'));
   await user.type(
@@ -97,8 +105,16 @@ it('shows full candidate evidence and uncertainty, then carries an edited human 
 it('requires an explicit dismissal reason and preserves the reviewed decision', async () => {
   setup();
   const user = userEvent.setup();
-  await screen.findByRole('article');
-  await user.click(screen.getByRole('button', { name: 'Review suggestion' }));
+  await screen.findByRole('article', {
+    name: previewCandidates[0].draft!.summary,
+  });
+  await user.click(
+    within(
+      screen.getByRole('article', {
+        name: previewCandidates[0].draft!.summary,
+      }),
+    ).getByRole('button', { name: 'Review suggestion' }),
+  );
   await user.click(screen.getByRole('button', { name: 'Dismiss suggestion' }));
   expect(
     (
@@ -112,10 +128,20 @@ it('requires an explicit dismissal reason and preserves the reviewed decision', 
     'Just brainstorming.',
   );
   await user.click(screen.getByRole('button', { name: 'Confirm dismissal' }));
-  await waitFor(() => expect(screen.queryByRole('article')).toBeNull());
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('article', {
+        name: previewCandidates[0].draft!.summary,
+      }),
+    ).toBeNull(),
+  );
   await selectValue(user, screen.getByLabelText('Show'), 'dismissed');
   await user.click(
-    await screen.findByRole('button', { name: 'Review suggestion' }),
+    within(
+      await screen.findByRole('article', {
+        name: previewCandidates[0].draft!.summary,
+      }),
+    ).getByRole('button', { name: 'Review suggestion' }),
   );
   await screen.findByText(/Just brainstorming/);
   expect(
@@ -125,9 +151,15 @@ it('requires an explicit dismissal reason and preserves the reviewed decision', 
 });
 it('makes a disconnected channel read-only', async () => {
   setup(true, false);
-  await screen.findByRole('article');
+  await screen.findByRole('article', {
+    name: previewCandidates[0].draft!.summary,
+  });
   await userEvent.click(
-    screen.getByRole('button', { name: 'Review suggestion' }),
+    within(
+      screen.getByRole('article', {
+        name: previewCandidates[0].draft!.summary,
+      }),
+    ).getByRole('button', { name: 'Review suggestion' }),
   );
   expect(
     (
@@ -137,7 +169,11 @@ it('makes a disconnected channel read-only', async () => {
     ).disabled,
   ).toBe(true);
   expect(
-    screen.getByText('Reconnect the channel before reviewing suggestions.'),
+    within(
+      screen.getByRole('article', {
+        name: previewCandidates[0].draft!.summary,
+      }),
+    ).getByText('Reconnect the channel before reviewing suggestions.'),
   ).toBeTruthy();
 });
 function json(value: unknown, status = 200) {
@@ -190,7 +226,7 @@ it('sends versioned, CSRF-protected review and keeps a conflict visible for refr
       );
     }
     return String(input).includes('/candidates?')
-      ? json({ items: previewCandidates, nextCursor: null })
+      ? json({ items: [previewCandidates[0]], nextCursor: null })
       : json({
           configured: true,
           enabled: true,
@@ -203,8 +239,16 @@ it('sends versioned, CSRF-protected review and keeps a conflict visible for refr
   });
   setup(false);
   const user = userEvent.setup();
-  await screen.findByRole('article');
-  await user.click(screen.getByRole('button', { name: 'Review suggestion' }));
+  await screen.findByRole('article', {
+    name: previewCandidates[0].draft!.summary,
+  });
+  await user.click(
+    within(
+      screen.getByRole('article', {
+        name: previewCandidates[0].draft!.summary,
+      }),
+    ).getByRole('button', { name: 'Review suggestion' }),
+  );
   await user.click(screen.getByRole('button', { name: 'Review as promise' }));
   await user.click(screen.getByRole('button', { name: 'Confirm promise' }));
   expect((await screen.findByRole('alert')).textContent).toContain(
@@ -215,7 +259,7 @@ it('sends versioned, CSRF-protected review and keeps a conflict visible for refr
 it('preserves review edits while refreshed suggestions keep the same version', async () => {
   fetchMock.mockImplementation(async (input) =>
     String(input).includes('/candidates?')
-      ? json({ items: previewCandidates, nextCursor: null })
+      ? json({ items: [previewCandidates[0]], nextCursor: null })
       : json({
           configured: true,
           enabled: true,
@@ -228,8 +272,16 @@ it('preserves review edits while refreshed suggestions keep the same version', a
   );
   setup(false);
   const user = userEvent.setup();
-  await screen.findByRole('article');
-  await user.click(screen.getByRole('button', { name: 'Review suggestion' }));
+  await screen.findByRole('article', {
+    name: previewCandidates[0].draft!.summary,
+  });
+  await user.click(
+    within(
+      screen.getByRole('article', {
+        name: previewCandidates[0].draft!.summary,
+      }),
+    ).getByRole('button', { name: 'Review suggestion' }),
+  );
   await user.click(screen.getByRole('button', { name: 'Review as promise' }));
   await user.clear(screen.getByLabelText('Promise wording'));
   await user.type(
