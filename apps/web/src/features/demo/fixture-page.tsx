@@ -1,3 +1,4 @@
+import { DemoDiscover } from './demo-discover';
 import { HelpScreen } from '../help/help-screen';
 import { DemoHome } from './demo-home';
 import { DemoChat } from '../demo/demo-chat';
@@ -29,6 +30,7 @@ export default async function FixturePage({
   const focused = z.uuid().safeParse(loop);
   const current = z
     .enum([
+      'discover',
       'help',
       'guide',
       'chat',
@@ -61,6 +63,7 @@ export default async function FixturePage({
     );
   }
   const Screen = {
+    discover: DemoDiscover,
     help: HelpScreen,
     guide: DemoHome,
     chat: DemoChat,

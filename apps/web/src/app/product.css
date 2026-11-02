@@ -1945,3 +1945,21 @@ dialog::backdrop {
     justify-content: space-between;
   }
 }
+
+.landing-task-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+.landing-overlay-preview {
+  margin-block: 22px;
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--purple-soft);
+  color: var(--purple-ink);
+  font-size: 19px;
+  line-height: 1.65;
+}
+.demo-directory .discover-page {
+  width: 100%;
+}

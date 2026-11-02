@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ListChecks, RefreshCw } from 'lucide-react';
 import { openLoopLabels, type StreamBrief } from '@lore/shared';
+import { useOptionalPublications } from '../publications/publications-context';
 import { useWorkspace } from '../workspace/workspace-context';
 export function StreamBriefScreen() {
   const { selected, href } = useWorkspace();
@@ -40,6 +41,7 @@ export function StreamBriefScreen() {
 }
 function Brief({ channelId }: { channelId: string }) {
   const { loadBrief, href, preview } = useWorkspace();
+  const publications = useOptionalPublications();
   const [brief, setBrief] = useState<StreamBrief>();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,26 @@ function Brief({ channelId }: { channelId: string }) {
       });
     return () => controller.abort();
   }, [channelId, loadBrief, revision]);
+  const baseContext = brief?.context;
+  const context =
+    preview && baseContext
+      ? {
+          ...baseContext,
+          community: (publications?.publicFeed(channelId).items ?? [])
+            .filter(
+              (entry) =>
+                entry.kind !== 'summary' &&
+                entry.publishedAt >= baseContext.since,
+            )
+            .slice(0, 20)
+            .map(({ id, title, body, publishedAt }) => ({
+              id,
+              title,
+              body,
+              publishedAt,
+            })),
+        }
+      : baseContext;
   return (
     <div className="content-stack">
       <div className="brief-toolbar">
@@ -104,7 +126,7 @@ function Brief({ channelId }: { channelId: string }) {
               </Link>
             </div>
           ) : (
-            <ol className="brief-list">
+            <ol className="brief-list" aria-label="Active promises">
               {brief.items.map((loop) => (
                 <li key={loop.id} className="brief-record">
                   <span className="status purple">
@@ -143,28 +165,31 @@ function Brief({ channelId }: { channelId: string }) {
               <Link href={href('streamer')}>See all promises</Link>.
             </p>
           )}
-          {brief.context && (
+          {context && (
             <section className="panel content-stack brief-context">
               <h2>
-                Since{' '}
-                {brief.context.basis === 'previous_stream_end'
-                  ? 'the last stream ended'
-                  : 'seven days ago'}
-              </h2>
-              <p className="muted">
-                From {formatDateTime(brief.context.since)}.
-              </p>
-              {!brief.context.recentChanges.length &&
-                !brief.context.community.length && (
-                  <p className="muted">
-                    No new promise changes or public stories in this period.
-                  </p>
+                {preview ? (
+                  'Recent sample activity'
+                ) : (
+                  <>
+                    Since{' '}
+                    {context.basis === 'previous_stream_end'
+                      ? 'the last stream ended'
+                      : 'seven days ago'}
+                  </>
                 )}
-              {brief.context.recentChanges.length > 0 && (
+              </h2>
+              <p className="muted">From {formatDateTime(context.since)}.</p>
+              {!context.recentChanges.length && !context.community.length && (
+                <p className="muted">
+                  No new promise changes or public stories in this period.
+                </p>
+              )}
+              {context.recentChanges.length > 0 && (
                 <>
                   <h3>Promise changes</h3>
-                  <ul>
-                    {brief.context.recentChanges.map((item) => (
+                  <ul aria-label="Recent promise changes">
+                    {context.recentChanges.map((item) => (
                       <li key={item.id}>
                         <Link
                           href={`${href('streamer')}${preview ? '&' : '?'}loop=${item.id}#loop-${item.id}`}
@@ -178,11 +203,11 @@ function Brief({ channelId }: { channelId: string }) {
                   </ul>
                 </>
               )}
-              {brief.context.community.length > 0 && (
+              {context.community.length > 0 && (
                 <>
                   <h3>Community updates</h3>
-                  <ul>
-                    {brief.context.community.map((item) => (
+                  <ul aria-label="Recent community stories">
+                    {context.community.map((item) => (
                       <li key={item.id}>
                         <Link
                           href={
@@ -199,7 +224,7 @@ function Brief({ channelId }: { channelId: string }) {
                   </ul>
                 </>
               )}
-              {brief.context.truncated && (
+              {context.truncated && (
                 <p className="notice">
                   Showing up to 20 promise changes and 10 public developments.
                   Open the source pages for more.

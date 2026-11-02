@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Search } from 'lucide-react';
+import type { FormEventHandler } from 'react';
 import type { DiscoverPage } from '@lore/shared';
 import { Avatar } from '../../components/avatar';
 import { formatDate } from '../../lib/date-time';
@@ -7,14 +8,23 @@ export function DiscoverResults({
   page,
   query,
   hasPrevious,
+  navigation,
 }: {
   page: DiscoverPage;
   query: string;
   hasPrevious: boolean;
+  navigation?: {
+    rootHref: string;
+    communityHref: (slug: string) => string;
+    catchupHref: (slug: string) => string;
+    onSearch: FormEventHandler<HTMLFormElement>;
+  };
 }) {
   const search = new URLSearchParams();
   if (query) search.set('q', query);
-  const firstHref = `/discover${search.size ? `?${search}` : ''}`;
+  const rootHref = navigation?.rootHref ?? '/discover';
+  const separator = rootHref.includes('?') ? '&' : '?';
+  const firstHref = `${rootHref}${search.size ? `${separator}${search}` : ''}`;
   if (page.nextCursor) search.set('cursor', page.nextCursor);
   return (
     <main id="main-content" className="discover-page">
@@ -28,7 +38,9 @@ export function DiscoverResults({
       <form
         className="discover-search"
         method="GET"
-        action="/discover"
+        action={rootHref}
+        onSubmit={navigation?.onSearch}
+        key={query}
         role="search"
         aria-label="Find a community"
       >
@@ -51,7 +63,7 @@ export function DiscoverResults({
       </form>
       <div className="discover-results-heading">
         <h2>{query ? `Results for “${query}”` : 'Explore communities'}</h2>
-        {query && <Link href="/discover">Clear search</Link>}
+        {query && <Link href={rootHref}>Clear search</Link>}
       </div>
       {!page.items.length ? (
         <div className="discover-empty">
@@ -63,7 +75,7 @@ export function DiscoverResults({
               : 'As channels connect to Lore and publish their first stories, you’ll find them here.'}
           </p>
           {query ? (
-            <Link className="button secondary" href="/discover">
+            <Link className="button secondary" href={rootHref}>
               Browse all communities
             </Link>
           ) : (
@@ -75,7 +87,9 @@ export function DiscoverResults({
       ) : (
         <div className="discover-grid">
           {page.items.map((channel) => {
-            const href = `/c/${encodeURIComponent(channel.slug)}`;
+            const href =
+              navigation?.communityHref(channel.slug) ??
+              `/c/${encodeURIComponent(channel.slug)}`;
             return (
               <article
                 className="discover-card"
@@ -111,7 +125,13 @@ export function DiscoverResults({
                     Explore community{' '}
                     <ArrowRight size={16} aria-hidden="true" />
                   </Link>
-                  <Link href={`${href}/catch-up`} prefetch={false}>
+                  <Link
+                    href={
+                      navigation?.catchupHref(channel.slug) ??
+                      `${href}/catch-up`
+                    }
+                    prefetch={false}
+                  >
                     Catch up
                   </Link>
                 </nav>
@@ -137,7 +157,7 @@ export function DiscoverResults({
           {page.nextCursor && (
             <Link
               className="button secondary"
-              href={`/discover?${search}`}
+              href={`${rootHref}${separator}${search}`}
               prefetch={false}
             >
               More communities <ArrowRight size={16} aria-hidden="true" />

@@ -109,9 +109,11 @@ test('production CSP permits hydration, themes and the seeded command-to-brief/r
     page.getByText('Browser journey commitment.', { exact: true }),
   ).toHaveCount(0);
   await expect(
-    page.getByText('Finish the community island tour next stream.', {
-      exact: true,
-    }),
+    page
+      .getByRole('list', { name: 'Active promises' })
+      .getByText('Finish the community island tour next stream.', {
+        exact: true,
+      }),
   ).toBeVisible();
   expect(failures).toEqual([]);
 });
@@ -1993,4 +1995,150 @@ test('expanded demo fixtures populate review filters, public privacy and shift h
     page.getByText('Earlier spoiler appeal', { exact: true }).first(),
   ).toBeVisible();
   await expect(page.getByText(/A spoiler appeal needs review/)).toBeVisible();
+});
+
+test('submission demo connects directory search, public Q&A and recent brief activity without leaving the demo', async ({
+  page,
+}, info) => {
+  await page.goto('/demo?view=chat');
+  await page
+    .getByLabel('Simulated chat message')
+    .fill('!promise Keep the directory tour promise.');
+  await page
+    .getByRole('button', { name: 'Simulate command', exact: true })
+    .click();
+  await page.locator('.demo-tools summary').click();
+  await page
+    .getByRole('link', { name: 'Discover sample communities', exact: true })
+    .click();
+  await expect(
+    page.getByRole('article', { name: 'cozybyte', exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('searchbox', { name: 'Search channels' })
+    .fill('@cozybyte');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page).toHaveURL(/\/demo\?view=discover&q=%40cozybyte/);
+  await page
+    .getByRole('link', { name: 'Explore community', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/demo\?view=community/);
+  await page
+    .getByRole('button', { name: 'Ask about the community', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'What do they do on stream?', exact: true })
+    .click();
+  await expect(
+    page
+      .getByText(/Cozybyte streams relaxed building and exploration games/)
+      .last(),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('dialog')
+      .getByRole('link', { name: 'What cozybyte streams', exact: true }),
+  ).toHaveAttribute('href', /\/demo\?view=community&entry=/);
+  await page
+    .getByRole('button', { name: 'Clear conversation', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'What’s been happening lately?', exact: true })
+    .click();
+  await expect(
+    page.getByRole('dialog').getByRole('link', {
+      name: 'Previously, in our corner of chat…',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Close community chat', exact: true })
+    .click();
+  await page
+    .getByRole('link', { name: 'Discover communities', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/demo\?view=discover/);
+  await page
+    .getByRole('searchbox', { name: 'Search channels' })
+    .fill('a-community-not-in-this-demo');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'No community found yet' }),
+  ).toBeVisible();
+  await page
+    .getByRole('link', { name: 'Browse all communities', exact: true })
+    .click();
+  await expect(
+    page.getByRole('article', { name: 'cozybyte', exact: true }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({ path: info.outputPath('demo-discover-phone.png') });
+  await page
+    .getByRole('link', { name: 'Back to demo guide', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Open navigation', exact: true })
+    .click();
+  await page
+    .getByRole('dialog', { name: 'Community menu', exact: true })
+    .getByRole('link', { name: 'Next-stream brief', exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole('list', { name: 'Active promises' })
+      .getByText('Keep the directory tour promise.', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Recent sample activity', exact: true }),
+  ).toBeVisible();
+  const stories = page.getByRole('list', { name: 'Recent community stories' });
+  await expect(
+    stories.getByText('What cozybyte streams', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    stories.getByText('Help name the garden pond', { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    stories.getByText('Old bonus-stream announcement', { exact: true }),
+  ).toHaveCount(0);
+});
+
+test('landing page explains discovery, public questions, OBS and story media on desktop and mobile', async ({
+  page,
+}, info) => {
+  await page.goto('/');
+  await expect(
+    page.getByRole('link', { name: 'Preview the stream overlay', exact: true }),
+  ).toHaveAttribute('href', '/demo?view=overlay');
+  await expect(
+    page.getByRole('link', { name: 'Try the public guide', exact: true }),
+  ).toHaveAttribute('href', '/demo?view=community');
+  await expect(
+    page.getByText(
+      /Public stories can also carry a Twitch clip and a screenshot/,
+    ),
+  ).toBeVisible();
+  await page
+    .getByText('Can the community guide read private chat or cases?', {
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByText(/It answers from that channel’s approved public stories/),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole('link', { name: 'Preview the stream overlay', exact: true })
+    .scrollIntoViewIfNeeded();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({ path: info.outputPath('landing-overlay-phone.png') });
 });

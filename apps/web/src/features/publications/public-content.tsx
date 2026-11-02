@@ -30,6 +30,7 @@ export function PublicShell({
   feedHref = `/c/${slug}`,
   catchupHref = `/c/${slug}/catch-up`,
   preview,
+  discoverHref = '/discover',
 }: {
   slug: string;
   name: string;
@@ -37,6 +38,7 @@ export function PublicShell({
   feedHref?: string;
   catchupHref?: string;
   preview?: React.ReactNode;
+  discoverHref?: string;
 }) {
   return (
     <div className="community-shell reader-shell">
@@ -49,7 +51,7 @@ export function PublicShell({
         </Link>
         <nav aria-label="Community pages">
           <Link
-            href="/discover"
+            href={discoverHref}
             className="reader-discover-nav"
             aria-label="Discover communities"
             title="Discover communities"

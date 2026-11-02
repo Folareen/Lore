@@ -113,7 +113,8 @@ function Shell({
         <span>{label}</span>
       </Link>
     ));
-  if (preview && route === 'community') return <>{children}</>;
+  if (preview && ['community', 'discover'].includes(route))
+    return <>{children}</>;
   return (
     <PageTitleContext.Provider value={setPageTitle}>
       <div className="workspace">

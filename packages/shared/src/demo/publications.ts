@@ -84,4 +84,25 @@ export const previewPublications: ManagedPublication[] = [
     status: 'unpublished',
     version: 3,
   },
+  {
+    ...base,
+    id: '00000000-0000-4000-8000-000000007009',
+    kind: 'story',
+    title: 'What cozybyte streams',
+    body: 'Cozybyte streams relaxed building and exploration games. Our island garden is a shared project: chat suggests plants, names places and joins the tours. We take our time, welcome first-time viewers and explain the moss-club jokes as we go.',
+  },
+  {
+    ...base,
+    id: '00000000-0000-4000-8000-000000007010',
+    kind: 'story',
+    title: 'How the greenhouse became the Glasshouse',
+    body: 'During the garden tour, chat started calling the unfinished greenhouse the Glasshouse. The name stuck after everyone suggested a different window shape. The reveal is still ahead; the build itself is part of our ongoing island story.',
+  },
+  {
+    ...base,
+    id: '00000000-0000-4000-8000-000000007011',
+    kind: 'reference',
+    title: 'What is the pond parliament?',
+    body: 'Pond parliament is chat’s nickname for our pond-naming vote. It is a playful garden reference, not a formal group or a separate event schedule. Bring a name when the streamer opens the vote.',
+  },
 ];

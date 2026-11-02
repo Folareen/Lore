@@ -36,6 +36,9 @@ export function DemoToolbar() {
         <summary>Demo tools</summary>
         <div className="demo-tools-menu">
           <nav aria-label="Demo tools">
+            <Link href={href('discover')} onClick={close}>
+              Discover sample communities
+            </Link>
             <Link href="/demo?view=chat" onClick={close}>
               Chat simulation
             </Link>
@@ -129,10 +132,10 @@ const journeys: Record<
   ],
   viewers: [
     {
-      title: 'Enter as a newcomer',
-      body: 'Read the latest approved recap and browse the community tabs. Only published stories appear here.',
-      view: 'community',
-      action: 'Catch up as a newcomer',
+      title: 'Find a community, then join the story',
+      body: 'Search for cozybyte in the sample directory, open the channel and read its latest approved recap. Only published stories appear here.',
+      view: 'discover',
+      action: 'Discover the sample community',
     },
     {
       title: 'Learn an inside reference',
