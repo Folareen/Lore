@@ -24,6 +24,7 @@ if command -v docker >/dev/null; then
   postgres="$(docker ps -q --filter label=com.docker.compose.project=lore-production --filter label=com.docker.compose.service=postgres)"
 
 fi
+mkdir -p "$release/web/apps/web/.next/cache"
 chown -R deploy:deploy "$release"
 chmod 700 "$release"
 chmod 600 "$release/.env.production"
@@ -63,7 +64,7 @@ if [ -n "${postgres:-}" ]; then
   done
   docker exec "$postgres" pg_dump -U lore -d lore -Fc > "$root/backups/before-native-$stamp.dump"
   users="$(docker exec "$postgres" psql -U lore -d lore -Atc 'select count(*) from users')"
-  if [ "$users" != 0 ]; then
+  if [ "$users" != 0 ] && [ "${LORE_MANAGED_DATA_MIGRATED:-0}" != 1 ]; then
     echo 'Existing Lore users found. Migrate the protected backup to Neon before cutover.' >&2
     false
   fi
