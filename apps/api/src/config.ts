@@ -23,6 +23,12 @@ export const env = z
         (url) => ['redis:', 'rediss:'].includes(new URL(url).protocol),
         'Expected a Redis URL',
       ),
+    QUEUE_JOB_HISTORY_LIMIT: z.coerce
+      .number()
+      .int()
+      .min(20)
+      .max(10000)
+      .default(1000),
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
     API_HOST: z.enum(['127.0.0.1', '0.0.0.0']).default('127.0.0.1'),
     QUEUE_PREFIX: z

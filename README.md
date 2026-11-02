@@ -6,11 +6,11 @@ Shared memory for Twitch communities: follow through on promises, preserve moder
 
 Built with **OpenAI Codex** for the [Codex x TwitchCon Hackathon](https://twitchcon-codex.devpost.com/).
 
-**Live demo:**
+**Live demo:** [lore.afolarin.cv](https://lore.afolarin.cv)
 
-**Demo video:**
+**Demo video:** [Watch on YouTube](https://youtu.be/R3vjTGb_Po0)
 
-**Codex session ID:**
+**Codex session ID:** `01a17990-4ecf-7950-bda5-a7c6c1a0d130`
 
 ## Why Lore
 
@@ -91,4 +91,4 @@ This hackathon build is designed around connected channels already publishing on
 
 - **User guides:** the app’s Help & guides pages cover streamers, moderators and viewers.
 - **Developer documentation:** [setup](docs/setup.md), [frontend](docs/frontend.md), [backend](docs/backend.md), [design system](docs/design-system.md) and [product specification](docs/product/LORE_Product_PRD_Technical_Spec_v1.1.md).
-- **Submission reference:** the [official requirements](https://twitchcon-codex.devpost.com/#requirements) call for a runnable repository, a project description, the main Codex session ID and a public YouTube demo of at most three minutes showing the working Twitch integration and how Codex was used. The submission links above are intentionally blank until supplied.
+- **Submission reference:** the [official requirements](https://twitchcon-codex.devpost.com/#requirements) call for a runnable repository, a project description, the main Codex session ID and a public YouTube demo of at most three minutes showing the working Twitch integration and how Codex was used.

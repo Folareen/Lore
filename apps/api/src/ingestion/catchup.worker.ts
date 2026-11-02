@@ -1,3 +1,4 @@
+import { env } from '../config';
 import {
   Inject,
   Injectable,
@@ -79,8 +80,11 @@ export class CatchupRecovery
             jobId: id,
             attempts: 3,
             backoff: { type: 'exponential', delay: 1000 },
-            removeOnComplete: { age: 86400, count: 1000 },
-            removeOnFail: { age: 86400, count: 1000 },
+            removeOnComplete: {
+              age: 86400,
+              count: env.QUEUE_JOB_HISTORY_LIMIT,
+            },
+            removeOnFail: { age: 86400, count: env.QUEUE_JOB_HISTORY_LIMIT },
           },
         );
       }

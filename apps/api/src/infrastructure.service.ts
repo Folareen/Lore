@@ -7,15 +7,16 @@ import { env } from './config';
 export class InfrastructureService implements OnApplicationShutdown {
   readonly pool = new Pool({
     connectionString: env.DATABASE_URL,
-    connectionTimeoutMillis: 2000,
-    query_timeout: 2000,
+    max: 5,
+    connectionTimeoutMillis: 15000,
+    query_timeout: 15000,
   });
   readonly db = drizzle(this.pool);
   readonly redis = new Redis(env.REDIS_URL, {
     lazyConnect: true,
     maxRetriesPerRequest: 1,
-    connectTimeout: 2000,
-    commandTimeout: 2000,
+    connectTimeout: 10000,
+    commandTimeout: 5000,
     retryStrategy: () => null,
   });
   constructor() {

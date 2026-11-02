@@ -1,3 +1,4 @@
+import { env } from '../config';
 import {
   Inject,
   Injectable,
@@ -90,8 +91,14 @@ export class AiRecovery
           aiJobSchema.parse({ runId: run.id, revision: run.revision }),
           {
             jobId,
-            removeOnComplete: { age: 86400, count: 1000 },
-            removeOnFail: { age: 7 * 86400, count: 1000 },
+            removeOnComplete: {
+              age: 86400,
+              count: env.QUEUE_JOB_HISTORY_LIMIT,
+            },
+            removeOnFail: {
+              age: 7 * 86400,
+              count: env.QUEUE_JOB_HISTORY_LIMIT,
+            },
           },
         );
       }
