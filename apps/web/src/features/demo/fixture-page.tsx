@@ -1,3 +1,4 @@
+import { HelpScreen } from '../help/help-screen';
 import { DemoHome } from './demo-home';
 import { DemoChat } from '../demo/demo-chat';
 import { OverlayScreen } from '../overlay/overlay-settings';
@@ -28,6 +29,7 @@ export default async function FixturePage({
   const focused = z.uuid().safeParse(loop);
   const current = z
     .enum([
+      'help',
       'guide',
       'chat',
       'overview',
@@ -59,6 +61,7 @@ export default async function FixturePage({
     );
   }
   const Screen = {
+    help: HelpScreen,
     guide: DemoHome,
     chat: DemoChat,
     overview: Overview,

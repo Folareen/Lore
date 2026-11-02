@@ -69,6 +69,11 @@ export function PublicShell({
       <main id="main-content">{children}</main>
       <footer className="community-footer reader-footer">
         <span>{name}’s community stories</span>
+        <Link
+          href={preview ? '/demo?view=help&audience=viewers' : '/help/viewers'}
+        >
+          Viewer guide
+        </Link>
         <Link href="/">Made with Lore</Link>
       </footer>
     </div>

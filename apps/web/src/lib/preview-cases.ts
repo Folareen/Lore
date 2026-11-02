@@ -8,7 +8,8 @@ export function previewPrecedents(
     (r) =>
       r.channelId === record.channelId &&
       r.id !== record.id &&
-      r.status === 'decided',
+      r.status === 'decided' &&
+      r.ruleTitle === record.ruleTitle,
   );
   return {
     id: crypto.randomUUID(),
@@ -40,26 +41,30 @@ export function previewPrecedents(
       ruleText: p.ruleText,
       similarity: 0.82,
     })),
-    recommendation: {
-      task_type: 'case_review',
-      proposed_action: 'modify',
-      summary:
-        'Check the timing and clarity of the reminder before deciding whether the timeout was proportionate.',
-      source_record_ids: [record.id, ...prior.map((p) => p.id)],
-      comparisons: prior.map((p) => ({
-        case_id: p.id,
-        similarities:
-          'Both cases concern a location spoiler and a request to review a timeout.',
-        differences:
-          'This case mentions an earlier reminder; the precedent used a different rule version and had no clear reminder.',
-      })),
-      evidence_gaps: ['Full chat context and timeout duration are missing.'],
-      uncertainties: [
-        'The viewer’s understanding cannot be established from these notes.',
-      ],
-      requires_human_approval: true,
-      suggested_next_step:
-        'Review the exact messages and rule version, then record your own decision.',
-    },
+    recommendation: prior.length
+      ? {
+          task_type: 'case_review',
+          proposed_action: 'modify',
+          summary:
+            'Check the timing and clarity of the reminder before deciding whether the timeout was proportionate.',
+          source_record_ids: [record.id, ...prior.map((p) => p.id)],
+          comparisons: prior.map((p) => ({
+            case_id: p.id,
+            similarities:
+              'Both cases concern a location spoiler and a request to review a timeout.',
+            differences:
+              'This case mentions an earlier reminder; the precedent used a different rule version and had no clear reminder.',
+          })),
+          evidence_gaps: [
+            'Full chat context and timeout duration are missing.',
+          ],
+          uncertainties: [
+            'The viewer’s understanding cannot be established from these notes.',
+          ],
+          requires_human_approval: true,
+          suggested_next_step:
+            'Review the exact messages and rule version, then record your own decision.',
+        }
+      : null,
   };
 }

@@ -33,8 +33,8 @@ export function MarketingMenu() {
         <Link href="/#your-crew" onClick={close}>
           For your crew
         </Link>
-        <Link href="/#questions" onClick={close}>
-          Questions
+        <Link href="/help" onClick={close}>
+          Help & guides
         </Link>
         <Link href="/demo" onClick={close}>
           Try the demo

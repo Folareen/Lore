@@ -4061,7 +4061,14 @@ details[open] > summary {
 /* Keep marketing navigation available without covering content or anchored sections. */
 .landing {
   --marketing-header-height: 88px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
   padding-top: var(--marketing-header-height);
+}
+.landing > .marketing-footer {
+  margin-top: auto;
+  flex-shrink: 0;
 }
 .marketing-header {
   position: fixed;

@@ -19,6 +19,12 @@ export function fixtureHistory(loop: OpenLoop): OpenLoopHistory[] {
           version: 2,
           fromStatus: 'confirmed',
           toStatus: loop.status,
+          reason:
+            loop.status === 'fulfilled'
+              ? 'The demo team confirmed this work was completed.'
+              : ['postponed', 'cancelled'].includes(loop.status)
+                ? loop.source.excerpt
+                : null,
         },
       ];
 }
