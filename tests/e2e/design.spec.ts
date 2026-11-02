@@ -382,18 +382,20 @@ test('marketing headers stay fixed and tour layout and anchor navigation stay cl
       await page.keyboard.press('Escape');
       await expect(menu).toBeHidden();
       await page.getByLabel('Explore Lore', { exact: true }).click();
-      await menu.getByRole('link', { name: 'Questions', exact: true }).click();
+      await menu
+        .getByRole('link', { name: 'For your crew', exact: true })
+        .click();
       await expect(menu).toBeHidden();
     } else {
       await page
         .getByRole('navigation', { name: 'Main navigation' })
-        .getByRole('link', { name: 'Questions', exact: true })
+        .getByRole('link', { name: 'For your crew', exact: true })
         .click();
     }
-    await expect(page).toHaveURL(/\/#questions$/);
+    await expect(page).toHaveURL(/\/#your-crew$/);
     await expect
       .poll(async () => {
-        const section = await page.locator('#questions').boundingBox();
+        const section = await page.locator('#your-crew').boundingBox();
         const header = await page.locator('.marketing-header').boundingBox();
         return section!.y >= header!.height;
       })
