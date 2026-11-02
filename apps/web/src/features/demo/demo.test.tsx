@@ -123,7 +123,9 @@ it.each([
     screen.getByRole('heading', { name: 'The next stream remembers.' }),
   ).toBeTruthy();
   await change(user, 'brief');
-  await screen.findByText(demoSeed.loops[0].wording);
+  await within(
+    await screen.findByRole('list', { name: 'Active promises' }),
+  ).findByText(demoSeed.loops[0].wording);
   await change(user, 'chat');
   await user.click(screen.getByRole('button', { name: 'Simulate command' }));
   await screen.findByText(
@@ -145,7 +147,11 @@ it('uses the validated backend snapshot when available', async () => {
   render(await DemoLayout({ children: <Screens /> }));
   await change(userEvent.setup(), 'brief');
   await screen.findByText('Current backend seed');
-  expect(screen.queryByText(demoSeed.loops[0].wording)).toBeNull();
+  expect(
+    within(screen.getByRole('list', { name: 'Active promises' })).queryByText(
+      demoSeed.loops[0].wording,
+    ),
+  ).toBeNull();
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 it('starts all three surfaces from the supplied seeded snapshot and keeps navigation in demo mode', async () => {
@@ -206,7 +212,9 @@ it('captures simulated authorized chat into the brief and resets only this visit
     }),
   );
   await change(user, 'brief');
-  await screen.findByText(demoSeed.loops[0].wording);
+  await within(
+    await screen.findByRole('list', { name: 'Active promises' }),
+  ).findByText(demoSeed.loops[0].wording);
   expect(
     screen.queryByText('Name the garden pond with chat next stream.'),
   ).toBeNull();
@@ -236,6 +244,17 @@ it('updates simulated catch-up after human source withdrawal and restores the re
     }),
   );
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  await change(user, 'brief');
+  const stories = await screen.findByRole('list', {
+    name: 'Recent community stories',
+  });
+  expect(
+    within(stories).queryByText(demoSeed.publications[0].title),
+  ).toBeNull();
+  expect(
+    within(stories).getByText(demoSeed.publications[1].title),
+  ).toBeTruthy();
+  expect(within(stories).queryByText('Help name the garden pond')).toBeNull();
   await change(user, 'chat');
   await user.click(screen.getByRole('button', { name: 'Use !catchup' }));
   await user.click(screen.getByRole('button', { name: 'Simulate command' }));

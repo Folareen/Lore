@@ -149,6 +149,10 @@ The three surfaces share approved underlying records, not unrestricted access to
 - F4. Require human approval before a record becomes public.
 - F5. Allow editing, unpublishing and deleting public entries.
 - F6. Never expose private cases, appeals, internal notes or repair plans through public search or AI answers.
+- F7. Offer an anonymous Discover directory of connected channels that have published on Lore. Search by name or slug; do not imply a search of every Twitch channel.
+- F8. Provide a source-linked public community Q&A guide, enabled by default and owner-disableable. Use only same-channel published story text, a separately configurable lower-cost Gemini model and bounded/cacheable requests. Unknown answers must remain unknown.
+- F9. Let teams manually attach one Twitch clip URL and one screenshot to a story. Include media in publication review, preserve revocation/access boundaries and leave video hosted on Twitch. No automatic clip import or video-upload pipeline is included.
+- F10. Keep community story/reference/plan tabs in-page, with search and full story links. Supply role-specific help and safe, synthetic demo walkthroughs.
 
 **Result:** New viewers can join the story without accessing private team information.
 
@@ -156,7 +160,7 @@ The three surfaces share approved underlying records, not unrestricted access to
 
 - G1. Support a !catchup chat command that returns the latest approved public community summary. If there is no approved summary, return a short, neutral response.
 - G2. Sending a !catchup reply requires the appropriate Twitch chat sending permission. Verify the exact scope and account requirements before enabling the command.
-- G3. Provide an OBS browser source overlay with a transparent background. At stream start, it can show open loops or a short "previously on" recap.
+- G3. Provide an OBS browser source overlay with a transparent background. It can show a reviewed public recap or up to three published commitment titles; private promises are never an overlay input.
 - G4. Protect the overlay with a cryptographically unguessable token. Store only a hash of the token, allow the channel to revoke and regenerate it, and reject old tokens immediately.
 - G5. Show only channel-approved overlay content. Do not expose private moderation evidence or full case records through the overlay.
 
@@ -172,7 +176,7 @@ The three surfaces share approved underlying records, not unrestricted access to
 6. Lore creates the next-stream brief with confirmed commitments and unresolved questions.
 7. The streamer fulfills, postpones or cancels each item.
 8. Selected updates are reviewed and published for viewers.
-9. Optional chat confirmations and microphone listen mode remain disabled unless separately enabled and authorized.
+9. Optional chat confirmations and bounded microphone suggestions remain disabled unless separately enabled and authorized. Microphone recording is explicit, previewable and limited to 30 seconds; it is not continuous listening.
 
 ### Moderator workflow
 
@@ -185,11 +189,12 @@ The three surfaces share approved underlying records, not unrestricted access to
 
 ### Viewer workflow
 
-1. Open the public Lore page for a channel.
+1. Find a channel in Discover or open its public Lore page.
 2. Read the short catch-up feed.
 3. Explore approved stories, context and commitment updates.
 4. See only material explicitly approved for public access.
-5. Use !catchup in chat to receive the latest approved public summary when chat sending is enabled.
+5. Ask the community guide a question and inspect its public source links, or open an attached clip/screenshot.
+6. Use !catchup in chat to receive the latest approved public summary when chat sending is enabled.
 
 ## 6. Confirmed technology
 
@@ -392,6 +397,8 @@ Validate structured responses server side. Store AI drafts separately from human
 
 ### Main pages
 
+Public routes include `/discover`, `/help` and its streamer/moderator/viewer guides. Workspace help is `/app/help`. The demo has guided role paths, a sample directory and the same task screens with local state and a repeatable seed.
+
 - /app: channel overview and attention queue
 - /app/streamer: Open Loops, live context and prestream brief
 - /app/moderation: cases, consistency reviews and handoffs
@@ -480,9 +487,9 @@ The complete product vision remains in scope. The hackathon implementation must 
 17. A hosted demo mode lets judges use Streamer Home, Moderator Desk and Community Lore without connecting a Twitch account. All seeded records are labeled Demo fixture.
 18. The demo video shows the live Twitch integration path, including a verified event and !promise capture.
 19. The repository includes a working README with pnpm setup, environment variable names, Docker Compose commands, migrations, seeding and test instructions.
-20. The repository records Codex usage through AGENTS.md files, milestone prompts and a short account of parallel coding threads.
-21. The submission target is November 2, 2026 at 2:00 PM Pacific Time, as provided for this project. Verify it against the official event page before submission.
-22. The stated judging period is November 5 to 15, 2026. Keep the VPS and hosted demo online throughout that period, with restart policies and an uptime check. Verify official dates before deployment planning is finalized.
+20. The repository records Codex usage through AGENTS.md files, the README’s development account, feature commits and pull requests.
+21. The submission deadline is November 2, 2026 at 2:00 PM Pacific Time, according to the [official event page](https://twitchcon-codex.devpost.com/).
+22. The stated judging period is November 5 to 15, 2026. Keep the VPS and hosted demo online throughout that period, with restart policies and an uptime check. The [official rules](https://twitchcon-codex.devpost.com/rules) are the source of truth for submission and judging dates.
 23. Automated tests for webhooks, status transitions and authorization run successfully in the repository.
 
 ## 15. Three-minute judge demo

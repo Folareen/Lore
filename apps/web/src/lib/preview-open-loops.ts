@@ -46,11 +46,37 @@ export function previewBrief(
       a.createdAt.localeCompare(b.createdAt) ||
       a.id.localeCompare(b.id),
   );
+  const changed = loops
+    .filter((loop) => loop.channelId === channelId && loop.version > 1)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const latest = Math.max(
+    ...loops
+      .filter((loop) => loop.channelId === channelId)
+      .map((loop) => Date.parse(loop.updatedAt)),
+  );
+  const since = new Date(
+    (Number.isFinite(latest) ? latest : Date.now()) - 7 * 86400000,
+  ).toISOString();
   return {
     channelId,
     generatedAt: new Date().toISOString(),
     activeCount: items.length,
     items: items.slice(0, 20),
     method: 'saved_open_loops',
+    context: {
+      since,
+      basis: 'recent_seven_days',
+      recentChanges: changed
+        .filter((loop) => loop.updatedAt >= since)
+        .slice(0, 20)
+        .map(({ id, wording, status, updatedAt }) => ({
+          id,
+          wording,
+          status,
+          updatedAt,
+        })),
+      community: [],
+      truncated: changed.length > 20,
+    },
   };
 }

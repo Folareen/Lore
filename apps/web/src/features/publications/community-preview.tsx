@@ -45,6 +45,7 @@ export function CommunityPreview() {
     <PublicShell
       slug={feed.channel.slug}
       name={feed.channel.displayName}
+      discoverHref={href('discover')}
       feedHref={feedHref}
       catchupHref={catchupHref}
       preview={

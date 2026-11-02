@@ -1,6 +1,7 @@
 export const audiences = ['streamers', 'moderators', 'viewers'] as const;
 export type GuideAudience = (typeof audiences)[number];
 export const guideViews = {
+  discover: 'discover',
   team: 'team',
   streamer: 'streamer',
   publications: 'publications',

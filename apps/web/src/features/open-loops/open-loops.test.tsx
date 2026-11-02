@@ -135,9 +135,14 @@ it('requires a completion reason and removes fulfilled work from the brief', asy
     ).toBeTruthy(),
   );
   await user.click(screen.getByRole('button', { name: 'Show brief' }));
-  await screen.findByRole('link', { name: previewOpenLoops[1].wording });
+  await within(
+    await screen.findByRole('list', { name: 'Active promises' }),
+  ).findByRole('link', { name: previewOpenLoops[1].wording });
   expect(
-    screen.queryByRole('link', { name: previewOpenLoops[0].wording }),
+    within(screen.getByRole('list', { name: 'Active promises' })).queryByRole(
+      'link',
+      { name: previewOpenLoops[0].wording },
+    ),
   ).toBeNull();
   expect(fetchMock).not.toHaveBeenCalled();
 });

@@ -7,6 +7,7 @@ import {
   LockKeyhole,
   MessageCircle,
   ShieldCheck,
+  MonitorPlay,
 } from 'lucide-react';
 import { TwitchMark } from '../components/brand';
 import { LandingStory } from '../components/landing-story';
@@ -84,8 +85,9 @@ export default function Home() {
               </h2>
               <p>
                 Save a promise from your dashboard or with <code>!promise</code>{' '}
-                in chat. Your next-stream brief brings open commitments and
-                recent community updates together.
+                in chat. Review optional chat or microphone suggestions before
+                confirming them. Your next-stream brief brings open commitments
+                and recent community updates together.
               </p>
               <Link href="/demo?view=brief" className="text-link">
                 Explore a stream brief{' '}
@@ -140,7 +142,7 @@ export default function Home() {
               </div>
               <h3>Spoiler appeal needs a second look</h3>
               <p>
-                Read the saved clip context and rule version before making the
+                Read the saved incident note and rule version before making the
                 call.
               </p>
               <div className="sample-source">
@@ -160,13 +162,20 @@ export default function Home() {
             <div className="workflow-description">
               <h2>You don’t have to have been there.</h2>
               <p>
-                Publish the stories your community wants to share. New viewers
-                get a catch-up page they can read without an account, and{' '}
-                <code>!catchup</code> can share the approved recap in chat.
+                Find a channel through Discover, read its catch-up and ask the
+                community guide about a stream or an inside reference. Answers
+                link to the published stories behind them. No account needed.
               </p>
-              <Link href="/demo?view=community" className="text-link">
-                Be the new viewer <ArrowUpRight size={16} aria-hidden="true" />
-              </Link>
+              <div className="landing-task-links">
+                <Link href="/discover" className="text-link">
+                  Discover communities{' '}
+                  <ArrowUpRight size={16} aria-hidden="true" />
+                </Link>
+                <Link href="/demo?view=community" className="text-link">
+                  Try the public guide{' '}
+                  <ArrowUpRight size={16} aria-hidden="true" />
+                </Link>
+              </div>
             </div>
             <div className="community-window">
               <div className="newcomer-arrival">
@@ -178,7 +187,7 @@ export default function Home() {
               </div>
               <div className="product-sample sample-community">
                 <p className="sample-caption">
-                  Example · Public Community Lore
+                  Example · Public community guide
                 </p>
                 <MessageCircle size={28} aria-hidden="true" />
                 <h3>So, what’s with the garden?</h3>
@@ -186,6 +195,13 @@ export default function Home() {
                   Chat built an island garden together. We’re naming the pond
                   next — bring your worst puns.
                 </p>
+                <Link
+                  className="text-link"
+                  href="/demo?view=community&entry=00000000-0000-4000-8000-000000007002"
+                >
+                  Source: The community garden is open{' '}
+                  <ArrowRight size={15} aria-hidden="true" />
+                </Link>
                 <div className="sample-source">
                   <span className="mini-faces">
                     <Avatar name="pixel" size={28} />
@@ -195,6 +211,51 @@ export default function Home() {
                   <span>You’re caught up. Welcome in.</span>
                 </div>
               </div>
+            </div>
+          </article>
+          <article className="workflow-scene overlay-scene">
+            <div className="workflow-description">
+              <h2>Bring the context back on stream.</h2>
+              <p>
+                Choose an approved recap or public plans for your OBS overlay.
+                Let <code>!catchup</code> share the reviewed short version in
+                Twitch chat. Update the story once, then share it where your
+                viewers are.
+              </p>
+              <p>
+                Public stories can also carry a Twitch clip and a screenshot, so
+                the moment has something to point to.
+              </p>
+              <Link href="/demo?view=overlay" className="text-link">
+                Preview the stream overlay{' '}
+                <ArrowUpRight size={16} aria-hidden="true" />
+              </Link>
+            </div>
+            <div className="product-sample sample-overlay">
+              <p className="sample-caption">
+                Example · Approved public overlay
+              </p>
+              <div className="sample-heading">
+                <MonitorPlay size={24} aria-hidden="true" />
+                <strong>Previously on cozybyte</strong>
+                <span className="status purple">Reviewed</span>
+              </div>
+              <div className="landing-overlay-preview">
+                <p>
+                  The community garden is open! Chat picked the first plants.
+                  Next up: naming the pond together.
+                </p>
+              </div>
+              <p className="muted">
+                Only your approved public selection appears on stream.
+              </p>
+              <Link
+                href="/demo?view=community&entry=00000000-0000-4000-8000-000000007005"
+                className="text-link"
+              >
+                Open a story with a clip{' '}
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
             </div>
           </article>
         </section>
@@ -235,8 +296,9 @@ export default function Home() {
             <p>
               Case files and team notes stay in your private team area. Public
               stories are separate records that an owner or moderator reviews
-              before publishing. Optional AI features require owner consent and
-              human review.
+              before publishing. Team AI tools require owner opt-in and human
+              review. The public guide uses only published story text; owners
+              can turn it off.
             </p>
             <Link href="/how-it-works#permissions" className="text-link">
               How access works <ArrowRight size={15} aria-hidden="true" />
@@ -268,7 +330,8 @@ export default function Home() {
               <p>
                 You get a sample community with promises, cases and public
                 stories to explore. Changes stay in your browser session and
-                reset on refresh. Nothing is sent to Twitch.
+                reset on refresh. Chat, AI and OBS actions are simulations; the
+                optional sample clip loads real Twitch playback.
               </p>
             </details>
             <details>
@@ -276,7 +339,27 @@ export default function Home() {
               <p>
                 Yes. You can capture promises, review cases, manage handoffs and
                 publish stories yourself. Gemini suggestions are optional, and
-                every suggestion needs human review.
+                every suggestion needs human review. The live public Q&A guide
+                needs a configured Gemini connection.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Can the community guide read private chat or cases?
+              </summary>
+              <p>
+                No. It answers from that channel’s approved public stories and
+                links to its sources. If the published material does not cover
+                your question, it should say so. Check the linked story before
+                treating an AI answer as a fact.
+              </p>
+            </details>
+            <details>
+              <summary>Can I search for any Twitch channel?</summary>
+              <p>
+                Discover searches connected communities that have published on
+                Lore. It does not search every Twitch channel or reveal private,
+                unpublished workspaces.
               </p>
             </details>
           </div>

@@ -96,12 +96,43 @@ export function CommunityAssistant({
         const words = text
           .toLowerCase()
           .split(/\W+/)
-          .filter((word) => word.length > 3);
-        const source = demoSources.find((source) =>
-          words.some((word) =>
-            `${source.title} ${source.body}`.toLowerCase().includes(word),
-          ),
-        );
+          .filter(
+            (word) =>
+              word.length > 3 &&
+              ![
+                'what',
+                'they',
+                'their',
+                'does',
+                'about',
+                'with',
+                'from',
+                'have',
+                'this',
+                'that',
+              ].includes(word),
+          );
+        const source = demoSources
+          .map((item) => ({
+            item,
+            score:
+              words.reduce(
+                (score, word) =>
+                  score +
+                  (item.title.toLowerCase().includes(word) ? 3 : 0) +
+                  (item.body.toLowerCase().includes(word) ? 1 : 0),
+                0,
+              ) +
+              (/inside|reference|joke/i.test(text) && item.kind === 'reference'
+                ? 2
+                : 0) +
+              (/recent|lately|happening|catch.*up/i.test(text) &&
+              item.kind === 'summary'
+                ? 2
+                : 0),
+          }))
+          .filter((match) => match.score > 0)
+          .sort((a, b) => b.score - a.score)[0]?.item;
         reply = source
           ? {
               answer: source.body.slice(0, 800),

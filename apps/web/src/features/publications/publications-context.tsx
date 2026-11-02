@@ -466,3 +466,8 @@ export function usePublications() {
   if (!value) throw new Error('PublicationsProvider required');
   return value;
 }
+
+/** The brief can also render in standalone promise previews without publishing tools. */
+export function useOptionalPublications() {
+  return useContext(Context);
+}

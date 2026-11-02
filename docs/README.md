@@ -1,7 +1,8 @@
 # Documentation
 
-Local setup and commands live in the [project README](../README.md).
+The [project README](../README.md) introduces Lore, its reviewer walkthrough, Codex usage and local quick start. Detailed configuration and provider checks live in [setup and integrations](setup.md).
 
+- [Setup and integrations](setup.md)
 - [Design system](design-system.md)
 - [Frontend conventions](frontend.md)
 - [Backend conventions](backend.md)
