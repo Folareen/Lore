@@ -1,3 +1,5 @@
+import { config } from 'dotenv';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { createServer } from 'node:http';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
@@ -11,6 +13,17 @@ import { queueNames, twitchModeratorScope } from '@lore/shared';
 import { seedDemo } from '../src/database/seed-demo';
 import { encryptTokens, hashToken } from '../src/auth/auth-crypto';
 const root = resolve(__dirname, '../../..');
+const liveMedia = process.env.LORE_LIVE_MEDIA_TEST === '1';
+if (liveMedia) {
+  config({ path: resolve(root, '.env'), quiet: true });
+  for (const name of [
+    'R2_ACCOUNT_ID',
+    'R2_BUCKET',
+    'R2_ACCESS_KEY_ID',
+    'R2_SECRET_ACCESS_KEY',
+  ])
+    if (!process.env[name]) throw new Error(`Live media test requires ${name}`);
+}
 const database = `lore_e2e_${randomBytes(8).toString('hex')}`;
 const testUrl = process.env.TEST_DATABASE_URL;
 if (!testUrl)
@@ -150,7 +163,7 @@ async function stop() {
   if (stopping) return;
   stopping = true;
   for (const child of children.reverse())
-    if (child.exitCode === null) {
+    if (child.exitCode === null && child.signalCode === null) {
       const ended = once(child, 'exit');
       child.kill('SIGTERM');
       await ended;
@@ -170,13 +183,53 @@ async function stop() {
     await q.obliterate({ force: true });
     await q.close();
   }
+  if (liveMedia) {
+    const storage = new S3Client({
+      endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      region: 'auto',
+      forcePathStyle: true,
+      maxAttempts: 3,
+      requestHandler: {
+        connectionTimeout: 10000,
+        requestTimeout: 15000,
+        throwOnRequestTimeout: true,
+      },
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+      },
+    });
+    try {
+      const images = await pool.query<{ storage_key: string }>(
+        'SELECT storage_key FROM publication_images WHERE storage_key IS NOT NULL',
+      );
+      for (const image of images.rows)
+        await storage.send(
+          new DeleteObjectCommand({
+            Bucket: process.env.R2_BUCKET,
+            Key: image.storage_key,
+          }),
+        );
+      console.log('Live media test uploads removed from R2.');
+    } finally {
+      storage.destroy();
+    }
+  }
   await pool.end();
   await admin.query(`DROP DATABASE IF EXISTS ${database} WITH (FORCE)`);
   await admin.end();
 }
 for (const signal of ['SIGTERM', 'SIGINT'] as const)
   process.on(signal, () => {
-    void stop().then(() => process.exit(0));
+    void stop().then(
+      () => process.exit(0),
+      () => {
+        console.error(
+          `E2E cleanup failed; disposable database ${database} retained for retry. Credentials omitted.`,
+        );
+        process.exit(1);
+      },
+    );
   });
 function start(cmd: string, args: string[], env: NodeJS.ProcessEnv) {
   const child = spawn(cmd, args, { cwd: root, env, stdio: 'inherit' });
@@ -285,11 +338,15 @@ async function main() {
     GEMINI_API_KEY: 'synthetic',
     GEMINI_MODEL: 'test-model',
     AI_TEST_BASE_URL: `http://127.0.0.1:${address.port}`,
-    R2_ACCOUNT_ID: 'a'.repeat(32),
-    R2_BUCKET: 'test-bucket',
-    R2_ACCESS_KEY_ID: 'mock-key',
-    R2_SECRET_ACCESS_KEY: 'mock-secret',
-    R2_TEST_ENDPOINT: `http://127.0.0.1:${address.port}`,
+    R2_ACCOUNT_ID: liveMedia ? process.env.R2_ACCOUNT_ID : 'a'.repeat(32),
+    R2_BUCKET: liveMedia ? process.env.R2_BUCKET : 'test-bucket',
+    R2_ACCESS_KEY_ID: liveMedia ? process.env.R2_ACCESS_KEY_ID : 'mock-key',
+    R2_SECRET_ACCESS_KEY: liveMedia
+      ? process.env.R2_SECRET_ACCESS_KEY
+      : 'mock-secret',
+    R2_TEST_ENDPOINT: liveMedia
+      ? undefined
+      : `http://127.0.0.1:${address.port}`,
   });
   for (let i = 0; i < 100; i++) {
     try {

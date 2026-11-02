@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { demoDatasetSchema } from './demo';
+import { demoDatasetSchema, demoScreenshotAssets } from './demo';
 import { demoSeed } from './demo/seed';
 it('keeps the seeded story, moderation tasks and publication sources inside the demo dataset', () => {
   const data = demoDatasetSchema.parse(demoSeed);
@@ -85,4 +85,18 @@ it('contains no files, active OBS credentials or private moderation text in publ
     expect(publicCopy).not.toContain(record.subjectReference);
     expect(publicCopy).not.toContain(record.incident);
   }
+});
+
+it('seeds usable media examples without claiming the external clip is demo-community footage', () => {
+  const data = demoDatasetSchema.parse(demoSeed);
+  const image = data.publications.find((entry) => entry.screenshot);
+  expect(image?.screenshot?.alt).toContain('Demo');
+  expect(demoScreenshotAssets[image!.screenshot!.id]).toBe(
+    '/illustrations/memory-party.png',
+  );
+  const clip = data.publications.find((entry) => entry.clipId);
+  expect(clip?.clipId).toBe('IncredulousAbstemiousFennelImGlitch');
+  expect(clip?.body).toContain(
+    'not footage from this fictional demo community',
+  );
 });

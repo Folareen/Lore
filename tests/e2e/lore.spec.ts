@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { chooseSelect } from './select-control';
 import { test, expect, type BrowserContext } from '@playwright/test';
 const channelId = '00000000-0000-4000-8000-000000009200';
@@ -1628,6 +1629,11 @@ test('story clips and screenshots stay private until review and work on desktop 
   context,
   browser,
 }, info) => {
+  const liveMedia = process.env.LORE_LIVE_MEDIA_TEST === '1';
+  if (liveMedia) test.setTimeout(120000);
+  const clipId = liveMedia
+    ? 'IncredulousAbstemiousFennelImGlitch'
+    : 'GardenCrew-abc_123';
   await signIn(context);
   await page.goto('/app/publications');
   await page.getByRole('button', { name: 'New story', exact: true }).click();
@@ -1639,9 +1645,7 @@ test('story clips and screenshots stay private until review and work on desktop 
     .fill('Chat built the pond together. Here is the story behind the moment.');
   await page
     .getByLabel('Twitch clip link (optional)')
-    .fill(
-      'https://www.twitch.tv/cozybyte/clip/GardenCrew-abc_123?tt_content=clip',
-    );
+    .fill(`https://www.twitch.tv/cozybyte/clip/${clipId}?tt_content=clip`);
   await page.getByRole('button', { name: 'Save community draft' }).click();
   const article = page.getByRole('article', {
     name: 'The garden in pictures',
@@ -1654,10 +1658,12 @@ test('story clips and screenshots stay private until review and work on desktop 
   await article.getByLabel('Screenshot', { exact: true }).setInputFiles({
     name: 'garden.png',
     mimeType: 'image/png',
-    buffer: Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWOY6PYfjhiI4wAA9TIdYRk26IEAAAAASUVORK5CYII=',
-      'base64',
-    ),
+    buffer: liveMedia
+      ? readFileSync('apps/web/public/illustrations/memory-party.png')
+      : Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWOY6PYfjhiI4wAA9TIdYRk26IEAAAAASUVORK5CYII=',
+          'base64',
+        ),
   });
   await article
     .getByLabel('Describe the screenshot')
@@ -1667,7 +1673,7 @@ test('story clips and screenshots stay private until review and work on desktop 
     .click();
   await expect(
     article.getByText('Screenshot attached', { exact: true }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30000 });
   await article
     .getByRole('button', { name: 'Open draft', exact: true })
     .click();
@@ -1690,7 +1696,7 @@ test('story clips and screenshots stay private until review and work on desktop 
   ).toBeVisible();
   await expect(
     review.getByRole('link', { name: 'Open on Twitch' }),
-  ).toHaveAttribute('href', 'https://clips.twitch.tv/GardenCrew-abc_123');
+  ).toHaveAttribute('href', `https://clips.twitch.tv/${clipId}`);
   await page
     .getByLabel('Publication review reason')
     .fill('Reviewed the public text, image and clip link together.');
@@ -1707,19 +1713,21 @@ test('story clips and screenshots stay private until review and work on desktop 
   const visitorContext = await browser.newContext();
   try {
     const visitor = await visitorContext.newPage();
-    await visitor.route('https://clips.twitch.tv/embed?**', (route) =>
-      route.fulfill({
-        contentType: 'text/html',
-        body: '<html><body>Mock Twitch clip player</body></html>',
-      }),
-    );
+    if (!liveMedia)
+      await visitor.route('https://clips.twitch.tv/embed?**', (route) =>
+        route.fulfill({
+          contentType: 'text/html',
+          body: '<html><body>Mock Twitch clip player</body></html>',
+        }),
+      );
     await visitor.setViewportSize({ width: 1440, height: 1000 });
     await visitor.goto(`/c/browser-test/entries/${entry.id}`);
     const screenshot = visitor.getByRole('img', {
       name: 'The purple garden chosen by chat',
       exact: true,
     });
-    await expect(screenshot).toBeVisible();
+    await screenshot.scrollIntoViewIfNeeded();
+    await expect(screenshot).toBeVisible({ timeout: 30000 });
     await expect
       .poll(() =>
         screenshot.evaluate((image: HTMLImageElement) => image.naturalWidth),
@@ -1733,9 +1741,32 @@ test('story clips and screenshots stay private until review and work on desktop 
       exact: true,
     });
     await expect(frame).toBeVisible();
-    await expect(
-      visitor.frameLocator('iframe').getByText('Mock Twitch clip player'),
-    ).toBeVisible();
+    if (liveMedia) {
+      const player = visitor.frameLocator('iframe');
+      const video = player.locator('video');
+      await expect(video).toBeAttached({ timeout: 30000 });
+      await video.evaluate((element: HTMLVideoElement) => element.play());
+      await expect
+        .poll(
+          () =>
+            video.evaluate((element: HTMLVideoElement) => element.currentTime),
+          { timeout: 30000 },
+        )
+        .toBeGreaterThan(1);
+      expect(
+        await video.evaluate(
+          (element: HTMLVideoElement) =>
+            element.getVideoPlaybackQuality().totalVideoFrames,
+        ),
+      ).toBeGreaterThan(0);
+      console.log(
+        'Live Twitch video advanced and decoded frames; real R2 image rendered.',
+      );
+    } else {
+      await expect(
+        visitor.frameLocator('iframe').getByText('Mock Twitch clip player'),
+      ).toBeVisible();
+    }
     const embed = new URL((await frame.getAttribute('src'))!);
     expect(embed.hostname).toBe('clips.twitch.tv');
     expect(embed.searchParams.get('parent')).toBe('127.0.0.1');
@@ -1786,4 +1817,41 @@ test('story clips and screenshots stay private until review and work on desktop 
   } finally {
     await visitorContext.close();
   }
+});
+
+test('demo media examples render from the seeded snapshot on desktop and phone', async ({
+  page,
+}) => {
+  await page.goto(
+    '/demo?view=community&entry=00000000-0000-4000-8000-000000007002',
+  );
+  const image = page.getByRole('img', {
+    name: 'Demo community illustration — a sample attachment, not captured stream footage',
+  });
+  await image.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() =>
+      image.evaluate((element: HTMLImageElement) => element.naturalWidth),
+    )
+    .toBeGreaterThan(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(image).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.goto(
+    '/demo?view=community&entry=00000000-0000-4000-8000-000000007005',
+  );
+  await expect(
+    page.getByText(/not footage from this fictional demo community/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Open on Twitch' }),
+  ).toHaveAttribute(
+    'href',
+    'https://clips.twitch.tv/IncredulousAbstemiousFennelImGlitch',
+  );
+  await expect(page.locator('iframe')).toHaveCount(0);
 });

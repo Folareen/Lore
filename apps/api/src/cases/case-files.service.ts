@@ -85,7 +85,11 @@ export class CaseFileStorage implements OnApplicationShutdown {
         maxAttempts: 2,
         requestChecksumCalculation: 'WHEN_REQUIRED',
         responseChecksumValidation: 'WHEN_REQUIRED',
-        requestHandler: { connectionTimeout: 3000, requestTimeout: 15000 },
+        requestHandler: {
+          connectionTimeout: 3000,
+          requestTimeout: 15000,
+          throwOnRequestTimeout: true,
+        },
       })
     : null;
   onApplicationShutdown() {

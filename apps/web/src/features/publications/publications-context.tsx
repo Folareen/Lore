@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import {
+  demoScreenshotAssets,
   publicationPageSchema,
   publicationTransitions,
   managedPublicationSchema,
@@ -198,7 +199,7 @@ export function PublicationsProvider({
       value={{
         imageHref: (channelId, entryId, imageId) =>
           preview
-            ? (images[imageId] ?? '')
+            ? (images[imageId] ?? demoScreenshotAssets[imageId] ?? '')
             : `/api/channels/${channelId}/publications/${entryId}/screenshot/${imageId}`,
         screenshot: async (record, file, alt) => {
           if (!preview) {

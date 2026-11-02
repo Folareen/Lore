@@ -13,6 +13,9 @@ const base = {
   chatSummary: '',
   sourceIds: [],
 };
+export const demoScreenshotAssets: Readonly<Record<string, string>> = {
+  '00000000-0000-4000-8000-000000007101': '/illustrations/memory-party.png',
+};
 export const previewPublications: ManagedPublication[] = [
   {
     ...base,
@@ -26,6 +29,10 @@ export const previewPublications: ManagedPublication[] = [
     id: '00000000-0000-4000-8000-000000007002',
     kind: 'milestone',
     title: 'The community garden is open',
+    screenshot: {
+      id: '00000000-0000-4000-8000-000000007101',
+      alt: 'Demo community illustration — a sample attachment, not captured stream footage',
+    },
     body: 'Chat picked the first three plants for our little in-game garden. Next stream, we will name the pond together.',
   },
   {
@@ -40,5 +47,13 @@ export const previewPublications: ManagedPublication[] = [
       '00000000-0000-4000-8000-000000007001',
       '00000000-0000-4000-8000-000000007002',
     ],
+  },
+  {
+    ...base,
+    id: '00000000-0000-4000-8000-000000007005',
+    kind: 'milestone',
+    title: 'Try a Twitch clip',
+    body: 'This external clip is the example used in Twitch’s embed documentation. Load it to try the player, or open it on Twitch. It is not footage from this fictional demo community.',
+    clipId: 'IncredulousAbstemiousFennelImGlitch',
   },
 ];
