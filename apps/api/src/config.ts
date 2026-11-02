@@ -24,6 +24,7 @@ export const env = z
         'Expected a Redis URL',
       ),
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+    API_HOST: z.enum(['127.0.0.1', '0.0.0.0']).default('127.0.0.1'),
     QUEUE_PREFIX: z
       .string()
       .regex(/^[a-zA-Z0-9_-]+$/)

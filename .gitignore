@@ -12,3 +12,5 @@ coverage/
 .next-e2e/
 playwright-report/
 test-results/
+backups/
+lore-images.tar.gz

@@ -44,6 +44,6 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalFilters(new ApiExceptionFilter());
   app.enableShutdownHooks();
-  await app.listen(env.API_PORT, '127.0.0.1');
+  await app.listen(env.API_PORT, env.API_HOST);
 }
 void bootstrap();

@@ -3,6 +3,8 @@ import { loadEnvConfig } from '@next/env';
 import path from 'node:path';
 loadEnvConfig(path.resolve(process.cwd(), '../..'));
 const nextConfig: NextConfig = {
+  output: 'standalone',
+  outputFileTracingRoot: path.resolve(process.cwd(), '../..'),
   distDir: process.env.LORE_E2E_BUILD === '1' ? '.next-e2e' : '.next',
   poweredByHeader: false,
   transpilePackages: ['@lore/shared'],

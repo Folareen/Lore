@@ -2,6 +2,10 @@
   "name": "@lore/api",
   "version": "0.1.0",
   "private": true,
+  "files": [
+    "dist",
+    "drizzle"
+  ],
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
