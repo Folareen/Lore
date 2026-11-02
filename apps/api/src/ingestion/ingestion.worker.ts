@@ -1,3 +1,4 @@
+import { env } from '../config';
 import {
   Inject,
   Injectable,
@@ -100,8 +101,14 @@ export class IngestionRecovery
           ingestionJobSchema.parse({ deliveryId: event.id }),
           {
             jobId,
-            removeOnComplete: { age: 86400, count: 10000 },
-            removeOnFail: { age: 7 * 86400, count: 10000 },
+            removeOnComplete: {
+              age: 86400,
+              count: env.QUEUE_JOB_HISTORY_LIMIT,
+            },
+            removeOnFail: {
+              age: 7 * 86400,
+              count: env.QUEUE_JOB_HISTORY_LIMIT,
+            },
           },
         );
       }

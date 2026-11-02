@@ -11,7 +11,8 @@ COPY . .
 RUN pnpm --filter @lore/shared build && pnpm --filter @lore/api build
 RUN pnpm --filter @lore/api deploy --legacy --prod --frozen-lockfile /opt/api
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV API_INTERNAL_URL=http://api:4000
+ARG API_INTERNAL_URL=http://api:4000
+ENV API_INTERNAL_URL=${API_INTERNAL_URL}
 ENV APP_ORIGIN=https://lore.afolarin.cv
 RUN pnpm --filter @lore/web exec next build --webpack
 
@@ -32,3 +33,10 @@ COPY --from=build --chown=node:node /app/apps/web/public ./apps/web/public
 USER node
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]
+
+# Export Linux runtime files for a VPS running Node directly (no host Docker).
+FROM scratch AS native
+COPY --from=build /opt/api /api
+COPY --from=build /app/apps/web/.next/standalone /web
+COPY --from=build /app/apps/web/.next/static /web/apps/web/.next/static
+COPY --from=build /app/apps/web/public /web/apps/web/public

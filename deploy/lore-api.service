@@ -1,0 +1,25 @@
+[Unit]
+Description=Lore API and background workers
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/home/deploy/lore-native/current/api
+EnvironmentFile=/home/deploy/lore-native/current/.env.production
+Environment=NODE_ENV=production API_HOST=127.0.0.1 API_PORT=4200 NODE_OPTIONS=--max-old-space-size=256
+ExecStart=/usr/bin/node dist/main.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=60
+MemoryMax=384M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
